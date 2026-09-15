@@ -1,0 +1,69 @@
+# ---------- Python (Backend) ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv/
+*.db
+*.sqlite3
+*.sqlite
+.env
+*.log
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# ---------- Node (Frontend) ----------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Build outputs
+frontend/dist/
+frontend/dist-ssr/
+*.local
+
+# ---------- Environment Files ----------
+.env
+.env.local
+.env.*.local
+
+# ---------- Database Files ----------
+*.db
+*.sqlite
+*.sqlite3
+credit_tracker.db
+
+# ---------- IDE / Editor ----------
+.vscode/
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*~
+
+# ---------- OS ----------
+Thumbs.db
+.DS_Store
+
+# ---------- Logs ----------
+logs/
+*.log
+
+# ---------- Misc ----------
+desktop.ini

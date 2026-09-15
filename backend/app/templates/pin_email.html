@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>🔑 Your Login PIN</h2>
+
+<p>Hi {{ name }},</p>
+
+<p>You requested a login PIN for your Graduation Credit Tracker account.</p>
+
+<div class="highlight-box">
+    <div class="label">Your PIN:</div>
+    <div class="value" style="font-size:28px; letter-spacing:4px;">{{ pin }}</div>
+</div>
+
+<p>This PIN is valid for a single login session. If you didn't request this, please ignore this email.</p>
+
+<p>To log in, go to the student portal and enter your student number and this PIN.</p>
+
+<p style="margin-top:24px;">
+    <a href="{{ base_url }}" class="btn">Go to Portal</a>
+</p>
+
+<hr class="divider">
+
+<p style="font-size:14px; color:#64748b;">
+    <strong>Need help?</strong> Contact your academic advisor or the IT support desk.
+</p>
+{% endblock %}

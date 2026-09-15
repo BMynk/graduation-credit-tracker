@@ -1,0 +1,464 @@
+# app/schemas.py
+from datetime import datetime
+from typing import List, Optional
+from enum import Enum
+
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
+
+# ---------- Programme / Module ----------
+
+class ModuleOut(BaseModel):
+    code: str
+    name: str
+    credits: int
+    category: str
+    level: int
+    description: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class ModuleDetailOut(ModuleOut):
+    prerequisites: List[str] = []
+    unlocks: List[str] = []
+
+
+class ModuleCreate(BaseModel):
+    code: str
+    name: str
+    credits: int
+    category: str
+    level: int
+    description: Optional[str] = None
+
+
+class ModuleUpdate(BaseModel):
+    name: Optional[str] = None
+    credits: Optional[int] = None
+    category: Optional[str] = None
+    level: Optional[int] = None
+    description: Optional[str] = None
+
+
+class CurriculumModuleOut(ModuleOut):
+    is_compulsory: bool
+
+
+class ProgrammeOut(BaseModel):
+    code: str
+    name: str
+    faculty: Optional[str] = None
+    total_credits_required: int
+
+    model_config = {"from_attributes": True}
+
+
+class ProgrammeCurriculumOut(ProgrammeOut):
+    modules_by_level: dict[int, List[CurriculumModuleOut]]
+
+
+# ---------- Student models ----------
+
+class StudentOut(BaseModel):
+    id: int
+    name: str
+    student_number: str
+    email: str
+    current_year: int
+    target_average: float
+    programme: ProgrammeOut
+
+    model_config = {"from_attributes": True}
+
+
+class AdminStudentOut(StudentOut):
+    is_active: bool
+
+
+# ---------- Paginated Response ----------
+
+class PaginatedStudentResponse(BaseModel):
+    total: int
+    skip: int
+    limit: int
+    students: List[AdminStudentOut]
+
+
+# ---------- Student passwordless auth ----------
+
+class PinRequest(BaseModel):
+    student_number: str
+    email: EmailStr
+
+
+class StudentLoginRequest(BaseModel):
+    student_number: str
+    email: EmailStr
+    pin: str = Field(min_length=6, max_length=6)
+
+
+class TokenPair(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+
+class StudentUpdate(BaseModel):
+    target_average: Optional[float] = Field(default=None, ge=0, le=100)
+
+
+# ---------- Admin auth ----------
+
+class AdminLogin(BaseModel):
+    username: str
+    password: str
+
+
+# ---------- Admin-managed student records ----------
+
+class AdminStudentCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    student_number: str = Field(min_length=3, max_length=30)
+    email: EmailStr
+    programme_code: str
+    current_year: int = Field(default=1, ge=1, le=4)
+
+
+class AdminStudentUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    programme_code: Optional[str] = None
+    current_year: Optional[int] = Field(default=None, ge=1, le=4)
+    target_average: Optional[float] = Field(default=None, ge=0, le=100)
+    is_active: Optional[bool] = None
+
+
+class AdminStudentCreatedOut(AdminStudentOut):
+    login_pin: str
+
+
+# ---------- Admin account management ----------
+
+class AdminCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    username: str = Field(min_length=3, max_length=50)
+    password: str = Field(min_length=8, max_length=100)
+    is_super_admin: bool = False
+
+
+class AdminUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=2, max_length=120)
+    is_active: Optional[bool] = None
+    is_super_admin: Optional[bool] = None
+
+
+class AdminPasswordReset(BaseModel):
+    new_password: str = Field(min_length=8, max_length=100)
+
+
+class AdminOut(BaseModel):
+    id: int
+    name: str
+    username: str
+    email: Optional[str] = None
+    is_active: bool
+    is_super_admin: bool
+    created_at: datetime
+    created_by_id: Optional[int] = None
+    created_by_name: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class AdminProfileOut(BaseModel):
+    id: int
+    name: str
+    username: str
+    email: Optional[str] = None
+    is_active: bool
+    is_super_admin: bool
+
+    model_config = {"from_attributes": True}
+
+
+# ---------- Impersonation ----------
+
+class ImpersonateRequest(BaseModel):
+    student_id: int
+
+
+# ---------- Prerequisite Management ----------
+
+class PrerequisiteUpdate(BaseModel):
+    prerequisite_codes: List[str]
+
+
+# ---------- Programme-Module Management ----------
+
+class ProgrammeModuleAdd(BaseModel):
+    module_code: str
+    is_compulsory: bool = False
+
+
+class ProgrammeModuleUpdate(BaseModel):
+    is_compulsory: bool
+
+
+class ProgrammeModuleOut(BaseModel):
+    programme_code: str
+    programme_name: str
+    module_code: str
+    module_name: str
+    is_compulsory: bool
+
+    model_config = {"from_attributes": True}
+
+
+# ---------- Dashboard & Analytics ----------
+
+class ProgrammeCount(BaseModel):
+    programme_code: str
+    programme_name: str
+    student_count: int
+
+
+class AtRiskStudentOut(BaseModel):
+    id: int
+    name: str
+    student_number: str
+    programme_code: str
+    weighted_average: Optional[float]
+    target_average: float
+    failed_blocking_count: int
+    reasons: List[str]
+
+
+class DashboardStats(BaseModel):
+    total_students: int
+    active_students: int
+    students_by_programme: List[ProgrammeCount]
+    cohort_average: Optional[float]
+    at_risk_count: int
+    at_risk_students: List[AtRiskStudentOut]
+
+
+class BottleneckModuleOut(BaseModel):
+    code: str
+    name: str
+    fail_count: int
+
+
+class ProgrammeBreakdown(BaseModel):
+    programme_code: str
+    programme_name: str
+    student_count: int
+    avg_percentage_complete: Optional[float]
+    avg_weighted_average: Optional[float]
+    bottleneck_modules: List[BottleneckModuleOut]
+
+
+# ---------- Marks & Bulk Upload ----------
+
+class ModuleCompletion(BaseModel):
+    module_code: str
+    semester: str
+    grade: float = Field(ge=0, le=100)
+
+    @field_validator("semester")
+    @classmethod
+    def semester_not_blank(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("semester must not be blank")
+        return v.strip()
+
+
+class BulkUploadRowResult(BaseModel):
+    row: int
+    identifier: str
+    status: str
+    detail: Optional[str] = None
+
+
+class BulkUploadReport(BaseModel):
+    total_rows: int
+    succeeded: int
+    failed: int
+    results: List[BulkUploadRowResult]
+
+
+# ---------- Progress / Enrolments ----------
+
+class EnrolmentOut(BaseModel):
+    id: int
+    module: ModuleOut
+    semester: str
+    grade: Optional[float]
+    status: str
+    attempt: int
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class FailedModuleOut(BaseModel):
+    module: ModuleOut
+    semester: str
+    grade: Optional[float]
+    attempt: int
+    is_prerequisite_for_major: bool
+
+
+class CategoryBreakdown(BaseModel):
+    credits_completed: int
+    modules_completed: int
+
+
+class ProgressSummary(BaseModel):
+    programme: ProgrammeOut
+    current_year: int
+    credits_completed: int
+    credits_required: int
+    credits_remaining: int
+    percentage_complete: float
+    weighted_average: Optional[float]
+    modules_completed: int
+    modules_failed_pending_retake: int
+    category_breakdown: dict[str, CategoryBreakdown]
+    missing_compulsory_modules: List[ModuleOut]
+    failed_modules: List[FailedModuleOut]
+
+
+# ---------- Enhanced Graduation Audit ----------
+
+class ModuleRequirementItem(BaseModel):
+    code: str
+    name: str
+
+
+class RequirementCategory(BaseModel):
+    completed: int
+    total: int
+    percentage: float
+    completed_modules: List[ModuleRequirementItem]
+    missing_modules: List[ModuleRequirementItem]
+
+
+class LevelCredits(BaseModel):
+    total: int
+    completed: int
+
+
+class CategoryCredits(BaseModel):
+    total: int
+    completed: int
+
+
+class RequirementsBreakdown(BaseModel):
+    compulsory: RequirementCategory
+    elective: RequirementCategory
+    by_level: dict[int, LevelCredits]
+    by_category: dict[str, CategoryCredits]
+
+
+class PrerequisiteWarning(BaseModel):
+    module: str
+    missing_prereq: str
+
+
+class GraduationAudit(BaseModel):
+    on_track: bool
+    reasons: List[str]
+    urgent_items: List[str]
+    projected_semesters_remaining: Optional[int]
+    average_credits_per_semester: Optional[float]
+    requirements_breakdown: RequirementsBreakdown
+    prerequisite_warnings: List[PrerequisiteWarning]
+    in_progress_modules: int
+    summary: ProgressSummary
+
+
+# ---------- Grade Predictor ----------
+
+class GradePredictionItem(BaseModel):
+    module_code: str
+    predicted_grade: float = Field(ge=0, le=100)
+
+
+class GradePredictionRequest(BaseModel):
+    predictions: List[GradePredictionItem]
+
+
+class GradePredictionResult(BaseModel):
+    current_weighted_average: Optional[float]
+    new_weighted_average: float
+    change: float
+    credits_completed: int
+    credits_with_predictions: int
+    total_credits_after: int
+    modules_affected: List[dict]
+    eligibility_warnings: List[str]
+    graduation_impact: str
+
+
+# ---------- Semester View ----------
+
+class SemesterOut(BaseModel):
+    semester: str
+    modules: List[EnrolmentOut]
+    credits_completed: int
+    average: Optional[float]
+
+
+# ---------- Module Details ----------
+
+class ModuleStatus(str, Enum):
+    COMPLETED = "completed"
+    FAILED = "failed"
+    IN_PROGRESS = "in-progress"
+    PLANNED = "planned"
+    NOT_TAKEN = "not_taken"
+
+
+class ModuleDetailOut(ModuleOut):
+    prerequisites: List[str] = []
+    unlocks: List[str] = []
+    status: Optional[str] = None
+    grade: Optional[float] = None
+    attempt: Optional[int] = None
+    is_compulsory: Optional[bool] = None
+
+
+class ModuleWithPrerequisitesOut(ModuleDetailOut):
+    pass
+
+
+class EligibleModuleOut(ModuleOut):
+    reason: str
+
+
+# ---------- Bulk Email ----------
+
+class BulkEmailRequest(BaseModel):
+    subject: str = Field(min_length=1, max_length=200)
+    body: str = Field(min_length=1, max_length=10000)
+    programme_code: Optional[str] = None  # If None, all programmes
+    current_year: Optional[int] = None    # If None, all years
+    is_active: bool = True                # Only send to active students by default
+    send_test: bool = False               # If True, only send to the admin's email
+
+
+class BulkEmailPreview(BaseModel):
+    recipient_count: int
+    sample_recipients: List[str]  # First 5 email addresses
+
+
+class BulkEmailResult(BaseModel):
+    total_sent: int
+    failed: int
+    recipients: List[str]
+    errors: List[str]

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>{{ subject }}</h2>
+
+<p>Dear Student,</p>
+
+<div style="white-space:pre-wrap; font-size:15px; line-height:1.7;">
+    {{ body|safe }}
+</div>
+
+<hr class="divider">
+
+<p style="font-size:13px; color:#64748b;">
+    This announcement was sent by the academic administration. For more information, please contact your programme coordinator.
+</p>
+{% endblock %}

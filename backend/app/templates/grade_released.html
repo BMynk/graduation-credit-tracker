@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>📊 Grade Released</h2>
+
+<p>Hi {{ name }},</p>
+
+<p>Your grade for <strong>{{ module_code }} – {{ module_name }}</strong> has been released.</p>
+
+<div class="highlight-box">
+    <div class="label">Semester:</div>
+    <div class="value" style="font-weight:400;">{{ semester }}</div>
+    <br>
+    <div class="label">Grade:</div>
+    <div class="value" style="font-size:24px;">
+        {{ grade }}%
+        <span style="font-size:16px; font-weight:400; margin-left:8px; {% if passed %}color:#10b981;{% else %}color:#ef4444;{% endif %}">
+            {% if passed %}✅ Passed{% else %}❌ Failed{% endif %}
+        </span>
+    </div>
+</div>
+
+<p>
+    {% if passed %}
+    Congratulations on passing this module! Keep up the great work.
+    {% else %}
+    Don't be discouraged – you can retake this module in the next semester.
+    {% endif %}
+</p>
+
+<p>
+    <a href="{{ base_url }}/history" class="btn">View Full Transcript</a>
+</p>
+
+<hr class="divider">
+
+<p style="font-size:14px; color:#64748b;">
+    <strong>Next steps:</strong> Check your progress dashboard to see how this module affects your graduation plan.
+</p>
+{% endblock %}

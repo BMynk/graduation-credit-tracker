@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>🏆 Achievement Unlocked!</h2>
+
+<p>Hi {{ name }},</p>
+
+<p>🎉 Congratulations! You've unlocked a new achievement:</p>
+
+<div class="highlight-box" style="text-align:center;">
+    <div style="font-size:48px; margin-bottom:8px;">{{ icon }}</div>
+    <div style="font-size:20px; font-weight:700; color:#0f172a;">{{ achievement_title }}</div>
+    <div style="color:#475569; margin-top:4px;">{{ achievement_description }}</div>
+</div>
+
+<p>You're making excellent progress. Keep going to unlock more achievements!</p>
+
+<p>
+    <a href="{{ base_url }}/achievements" class="btn">View All Achievements</a>
+</p>
+
+<hr class="divider">
+
+<p style="font-size:14px; color:#64748b;">
+    <strong>Did you know?</strong> Achievements are earned by reaching academic milestones. Complete modules, maintain a high GPA, and explore electives to unlock them all.
+</p>
+{% endblock %}
