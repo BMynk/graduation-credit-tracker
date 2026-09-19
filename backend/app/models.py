@@ -1,4 +1,5 @@
 # app/models.py
+
 from datetime import datetime
 
 from sqlalchemy import (
@@ -17,56 +18,191 @@ from sqlalchemy.orm import relationship
 
 from app.database import Base
 
+
+# ============================================================
+# MODULE PREREQUISITES ASSOCIATION TABLE
+# ============================================================
+
 module_prerequisites = Table(
     "module_prerequisites",
     Base.metadata,
-    Column("module_id", Integer, ForeignKey("modules.id"), primary_key=True),
-    Column("prerequisite_id", Integer, ForeignKey("modules.id"), primary_key=True),
+    Column(
+        "module_id",
+        Integer,
+        ForeignKey("modules.id"),
+        primary_key=True,
+    ),
+    Column(
+        "prerequisite_id",
+        Integer,
+        ForeignKey("modules.id"),
+        primary_key=True,
+    ),
 )
 
+
+# ============================================================
+# ADMIN
+# ============================================================
 
 class Admin(Base):
     __tablename__ = "admins"
     __table_args__ = {"extend_existing": True}
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)
-    username = Column(String, unique=True, index=True, nullable=False)
-    email = Column(String, unique=True, nullable=True)
-    hashed_password = Column(String, nullable=False)
-    is_active = Column(Boolean, default=True, nullable=False)
-    is_super_admin = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    created_by_id = Column(Integer, ForeignKey("admins.id"), nullable=True)
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
 
-    created_by = relationship("Admin", remote_side=[id], backref="created_admins")
+    name = Column(
+        String,
+        nullable=False,
+    )
 
+    username = Column(
+        String,
+        unique=True,
+        index=True,
+        nullable=False,
+    )
+
+    email = Column(
+        String,
+        unique=True,
+        nullable=True,
+    )
+
+    hashed_password = Column(
+        String,
+        nullable=False,
+    )
+
+    is_active = Column(
+        Boolean,
+        default=True,
+        nullable=False,
+    )
+
+    is_super_admin = Column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )
+
+    created_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+    )
+
+    created_by_id = Column(
+        Integer,
+        ForeignKey("admins.id"),
+        nullable=True,
+    )
+
+    created_by = relationship(
+        "Admin",
+        remote_side=[id],
+        backref="created_admins",
+    )
+
+
+# ============================================================
+# PROGRAMME
+# ============================================================
 
 class Programme(Base):
     __tablename__ = "programmes"
 
-    id = Column(Integer, primary_key=True, index=True)
-    code = Column(String, unique=True, index=True, nullable=False)
-    name = Column(String, unique=True, nullable=False)
-    faculty = Column(String, nullable=True)
-    total_credits_required = Column(Integer, default=384, nullable=False)
-
-    students = relationship("Student", back_populates="programme")
-    programme_modules = relationship(
-        "ProgrammeModule", back_populates="programme", cascade="all, delete-orphan"
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
     )
 
+    code = Column(
+        String,
+        unique=True,
+        index=True,
+        nullable=False,
+    )
+
+    name = Column(
+        String,
+        unique=True,
+        nullable=False,
+    )
+
+    faculty = Column(
+        String,
+        nullable=True,
+    )
+
+    total_credits_required = Column(
+        Integer,
+        default=384,
+        nullable=False,
+    )
+
+    students = relationship(
+        "Student",
+        back_populates="programme",
+    )
+
+    programme_modules = relationship(
+        "ProgrammeModule",
+        back_populates="programme",
+        cascade="all, delete-orphan",
+    )
+
+
+# ============================================================
+# MODULE
+# ============================================================
 
 class Module(Base):
     __tablename__ = "modules"
 
-    id = Column(Integer, primary_key=True, index=True)
-    code = Column(String, unique=True, index=True, nullable=False)
-    name = Column(String, nullable=False)
-    credits = Column(Integer, nullable=False)
-    category = Column(String, default="core", nullable=False)
-    level = Column(Integer, nullable=False)
-    description = Column(Text, nullable=True)
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
+
+    code = Column(
+        String,
+        unique=True,
+        index=True,
+        nullable=False,
+    )
+
+    name = Column(
+        String,
+        nullable=False,
+    )
+
+    credits = Column(
+        Integer,
+        nullable=False,
+    )
+
+    category = Column(
+        String,
+        default="core",
+        nullable=False,
+    )
+
+    level = Column(
+        Integer,
+        nullable=False,
+    )
+
+    description = Column(
+        Text,
+        nullable=True,
+    )
 
     prerequisites = relationship(
         "Module",
@@ -75,77 +211,461 @@ class Module(Base):
         secondaryjoin=id == module_prerequisites.c.prerequisite_id,
         backref="unlocks",
     )
+
     programme_links = relationship(
-        "ProgrammeModule", back_populates="module", cascade="all, delete-orphan"
+        "ProgrammeModule",
+        back_populates="module",
+        cascade="all, delete-orphan",
     )
 
+
+# ============================================================
+# PROGRAMME MODULE
+# ============================================================
 
 class ProgrammeModule(Base):
     __tablename__ = "programme_modules"
 
-    id = Column(Integer, primary_key=True, index=True)
-    programme_id = Column(Integer, ForeignKey("programmes.id"), nullable=False)
-    module_id = Column(Integer, ForeignKey("modules.id"), nullable=False)
-    is_compulsory = Column(Boolean, default=False, nullable=False)
-
-    programme = relationship("Programme", back_populates="programme_modules")
-    module = relationship("Module", back_populates="programme_links")
-
-    __table_args__ = (
-        UniqueConstraint("programme_id", "module_id", name="uq_programme_module"),
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
     )
 
+    programme_id = Column(
+        Integer,
+        ForeignKey("programmes.id"),
+        nullable=False,
+    )
+
+    module_id = Column(
+        Integer,
+        ForeignKey("modules.id"),
+        nullable=False,
+    )
+
+    is_compulsory = Column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )
+
+    programme = relationship(
+        "Programme",
+        back_populates="programme_modules",
+    )
+
+    module = relationship(
+        "Module",
+        back_populates="programme_links",
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "programme_id",
+            "module_id",
+            name="uq_programme_module",
+        ),
+    )
+
+
+# ============================================================
+# STUDENT
+# ============================================================
 
 class Student(Base):
     __tablename__ = "students"
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)
-    student_number = Column(String, unique=True, index=True, nullable=False)
-    email = Column(String, unique=True, nullable=False)
-    pin_hash = Column(String, nullable=True)
-    programme_id = Column(Integer, ForeignKey("programmes.id"), nullable=False)
-    current_year = Column(Integer, default=1, nullable=False)
-    target_average = Column(Float, default=60.0, nullable=False)
-    is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-
-    programme = relationship("Programme", back_populates="students")
-    enrolments = relationship(
-        "Enrolment", back_populates="student", cascade="all, delete-orphan"
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
     )
 
+    name = Column(
+        String,
+        nullable=False,
+    )
+
+    student_number = Column(
+        String,
+        unique=True,
+        index=True,
+        nullable=False,
+    )
+
+    email = Column(
+        String,
+        unique=True,
+        nullable=False,
+    )
+
+    # --------------------------------------------------------
+    # Student login PIN
+    #
+    # The plaintext PIN is never stored in the database.
+    # Only the hashed PIN is stored.
+    #
+    # The student keeps the same PIN until a new PIN is
+    # requested. When a new PIN is generated, this hash is
+    # replaced and the old PIN immediately stops working.
+    # --------------------------------------------------------
+
+    pin_hash = Column(
+        String,
+        nullable=True,
+    )
+
+    # --------------------------------------------------------
+    # Academic information
+    # --------------------------------------------------------
+
+    programme_id = Column(
+        Integer,
+        ForeignKey("programmes.id"),
+        nullable=False,
+    )
+
+    current_year = Column(
+        Integer,
+        default=1,
+        nullable=False,
+    )
+
+    target_average = Column(
+        Float,
+        default=60.0,
+        nullable=False,
+    )
+
+    is_active = Column(
+        Boolean,
+        default=True,
+        nullable=False,
+    )
+
+    created_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+    )
+
+    # --------------------------------------------------------
+    # Relationships
+    # --------------------------------------------------------
+
+    programme = relationship(
+        "Programme",
+        back_populates="students",
+    )
+
+    enrolments = relationship(
+        "Enrolment",
+        back_populates="student",
+        cascade="all, delete-orphan",
+    )
+
+
+# ============================================================
+# ENROLMENT
+# ============================================================
 
 class Enrolment(Base):
     __tablename__ = "enrolments"
 
-    id = Column(Integer, primary_key=True, index=True)
-    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
-    module_id = Column(Integer, ForeignKey("modules.id"), nullable=False)
-    semester = Column(String, nullable=False)
-    grade = Column(Float, nullable=True)
-    status = Column(String, default="planned", nullable=False)
-    attempt = Column(Integer, default=1, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
 
-    student = relationship("Student", back_populates="enrolments")
-    module = relationship("Module")
+    student_id = Column(
+        Integer,
+        ForeignKey("students.id"),
+        nullable=False,
+    )
+
+    module_id = Column(
+        Integer,
+        ForeignKey("modules.id"),
+        nullable=False,
+    )
+
+    semester = Column(
+        String,
+        nullable=False,
+    )
+
+    grade = Column(
+        Float,
+        nullable=True,
+    )
+
+    status = Column(
+        String,
+        default="planned",
+        nullable=False,
+    )
+
+    attempt = Column(
+        Integer,
+        default=1,
+        nullable=False,
+    )
+
+    updated_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+    student = relationship(
+        "Student",
+        back_populates="enrolments",
+    )
+
+    module = relationship(
+        "Module",
+    )
 
     __table_args__ = (
-        UniqueConstraint("student_id", "module_id", "attempt", name="uq_student_module_attempt"),
+        UniqueConstraint(
+            "student_id",
+            "module_id",
+            "attempt",
+            name="uq_student_module_attempt",
+        ),
     )
+
+
+# ============================================================
+# STUDENT ACHIEVEMENT
+# ============================================================
 
 class StudentAchievement(Base):
     __tablename__ = "student_achievements"
 
-    id = Column(Integer, primary_key=True, index=True)
-    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
-    achievement_id = Column(String, nullable=False)  # e.g., "first_steps"
-    unlocked_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    notified = Column(Boolean, default=False, nullable=False)
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
 
-    student = relationship("Student", backref="achievements")
+    student_id = Column(
+        Integer,
+        ForeignKey("students.id"),
+        nullable=False,
+    )
+
+    achievement_id = Column(
+        String,
+        nullable=False,
+    )
+
+    unlocked_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+    )
+
+    notified = Column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )
+
+    student = relationship(
+        "Student",
+        backref="achievements",
+    )
 
     __table_args__ = (
-        UniqueConstraint("student_id", "achievement_id", name="uq_student_achievement"),
+        UniqueConstraint(
+            "student_id",
+            "achievement_id",
+            name="uq_student_achievement",
+        ),
+    )
+
+# ============================================================
+# SUPPORT SERVICE
+# ============================================================
+
+class SupportService(Base):
+    __tablename__ = "support_services"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
+
+    name = Column(
+        String,
+        nullable=False,
+        index=True,
+    )
+
+    short_name = Column(
+        String,
+        nullable=True,
+        index=True,
+    )
+
+    category = Column(
+        String,
+        nullable=False,
+        default="student_support",
+    )
+
+    description = Column(
+        Text,
+        nullable=False,
+    )
+
+    location = Column(
+        String,
+        nullable=True,
+    )
+
+    campus = Column(
+        String,
+        nullable=True,
+    )
+
+    email = Column(
+        String,
+        nullable=True,
+    )
+
+    phone = Column(
+        String,
+        nullable=True,
+    )
+
+    website = Column(
+        String,
+        nullable=True,
+    )
+
+    opening_hours = Column(
+        String,
+        nullable=True,
+    )
+
+    how_to_access = Column(
+        Text,
+        nullable=True,
+    )
+
+    is_emergency = Column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )
+
+    is_active = Column(
+        Boolean,
+        default=True,
+        nullable=False,
+    )
+
+    verified_at = Column(
+        DateTime,
+        nullable=True,
+    )
+
+    created_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+    )
+
+    updated_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+# ============================================================
+# FACILITATOR
+# ============================================================
+
+class Facilitator(Base):
+    __tablename__ = "facilitators"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
+
+    name = Column(
+        String,
+        nullable=False,
+        index=True,
+    )
+
+    # SI or ELEP
+    programme_type = Column(
+        String,
+        nullable=False,
+        index=True,
+    )
+
+    # Preserve module assignment exactly as supplied
+    # in the official profile document.
+    module_assignment = Column(
+        String,
+        nullable=False,
+        index=True,
+    )
+
+    campus = Column(
+        String,
+        nullable=False,
+        default="Alice",
+        index=True,
+    )
+
+    session_time = Column(
+        String,
+        nullable=True,
+    )
+
+    consultation_time = Column(
+        String,
+        nullable=True,
+    )
+
+    is_assistant = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+    )
+
+    is_active = Column(
+        Boolean,
+        nullable=False,
+        default=True,
+    )
+
+    verified_at = Column(
+        DateTime,
+        nullable=True,
+    )
+
+    created_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+    )
+
+    updated_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
     )

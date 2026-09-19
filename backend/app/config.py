@@ -1,5 +1,5 @@
 # app/config.py
-import os
+
 from typing import List
 
 from pydantic_settings import BaseSettings
@@ -17,8 +17,8 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
 
-    # PIN
-    pin_expire_minutes: int = 15
+    # Gemini AI
+    gemini_api_key: str = ""
 
     # CORS
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     email_dev_mode: bool = True
 
     # Frontend base URL (for links in emails)
-    base_url: str = "http://localhost:5173"  # 👈 ADDED
+    base_url: str = "http://localhost:5173"
 
     # Academic thresholds
     pass_mark: float = 50.0
@@ -45,7 +45,11 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> List[str]:
         """Parse CORS origins from comma-separated string."""
-        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+        return [
+            origin.strip()
+            for origin in self.cors_origins.split(",")
+            if origin.strip()
+        ]
 
     class Config:
         env_file = ".env"

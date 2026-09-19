@@ -4,16 +4,35 @@ import { api } from "./api";
 import AdminApp from "./AdminApp";
 import PeerComparison from "./components/PeerComparison";
 import YearlyBreakdown from "./components/YearlyBreakdown";
+import StudentLayout from "./components/layout/StudentLayout";
+import SummaryPage from "./pages/student/SummaryPage";
+import HistoryPage from "./pages/student/HistoryPage";
+import PlanningPage from "./pages/student/PlanningPage";
+import TimelinePage from "./pages/student/TimelinePage";
+import AchievementsPage from "./pages/student/AchievementsPage";
+import AssistantWidget from "./components/assistant/AssistantWidget";
 
 // Import student components
 import DegreeProgressBar from "./components/DegreeProgressBar";
 import ModuleStatusBadge from "./components/ModuleStatusBadge";
-import SemesterTimeline from "./components/SemesterTimeline";
 import ModuleDetailModal from "./components/ModuleDetailModal";
-import GradePredictor from "./components/GradePredictor";
-import CoursePlanner from "./components/CoursePlanner";
 import EnhancedGraduationAudit from "./components/EnhancedGraduationAudit";
-import Achievements from "./components/Achievements";
+import PredictorPage from "./pages/student/PredictorPage";
+import PlannerPage from "./pages/student/PlannerPage";
+
+import {
+  ArrowRight,
+  BarChart3,
+  BookOpenCheck,
+  CheckCircle2,
+  GraduationCap,
+  ShieldCheck,
+  Sparkles,
+  Target,
+  Users,
+} from "lucide-react";
+
+import { motion } from "framer-motion";
 
 // ---------- Shared UI ----------
 function Card({ title, children, className = "" }) {
@@ -70,32 +89,331 @@ function StatusPill({ status }) {
 
 // ---------- Role Picker ----------
 function RolePicker({ onPick }) {
+  const features = [
+    {
+      icon: BarChart3,
+      title: "Track your progress",
+      description: "See credits, modules and degree completion.",
+    },
+    {
+      icon: BookOpenCheck,
+      title: "Plan ahead",
+      description: "Understand what you've completed and what's next.",
+    },
+    {
+      icon: Target,
+      title: "Stay on course",
+      description: "Make informed decisions throughout your degree.",
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm text-center">
-        <h1 className="text-2xl font-bold text-slate-800 mb-1">Graduation Credit Tracker</h1>
-        <p className="text-slate-500 text-sm mb-8">Choose how you'd like to sign in</p>
-        <div className="grid gap-3">
-          <button
-            onClick={() => onPick("student")}
-            className="bg-white border border-slate-200 hover:border-indigo-400 hover:shadow-sm rounded-xl px-6 py-5 text-left transition"
-          >
-            <div className="font-semibold text-slate-800">I'm a student</div>
-            <div className="text-sm text-slate-500">Check your progress with your PIN</div>
-          </button>
-          <button
-            onClick={() => onPick("admin")}
-            className="bg-white border border-slate-200 hover:border-indigo-400 hover:shadow-sm rounded-xl px-6 py-5 text-left transition"
-          >
-            <div className="font-semibold text-slate-800">I'm an administrator</div>
-            <div className="text-sm text-slate-500">Manage student records and marks</div>
-          </button>
-        </div>
+    <div className="min-h-screen bg-white dark:bg-zinc-950">
+      <div className="grid min-h-screen lg:grid-cols-[0.95fr_1.05fr]">
+        {/* Left branding panel */}
+        <section className="relative hidden overflow-hidden bg-[#0b1220] lg:flex lg:flex-col">
+          {/* Decorative background */}
+          <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            <div className="absolute -left-32 -top-32 size-[420px] rounded-full bg-blue-600/20 blur-[100px]" />
+
+            <div className="absolute -bottom-40 right-[-100px] size-[500px] rounded-full bg-indigo-500/10 blur-[120px]" />
+
+            <div
+              className="absolute inset-0 opacity-[0.035]"
+              style={{
+                backgroundImage:
+                  "linear-gradient(rgba(255,255,255,.7) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.7) 1px, transparent 1px)",
+                backgroundSize: "44px 44px",
+              }}
+            />
+          </div>
+
+          <div className="relative z-10 flex h-full flex-col px-12 py-10 xl:px-16 xl:py-12">
+            {/* Brand */}
+            <div className="flex items-center gap-3">
+              <div className="flex size-11 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-950/40">
+                <GraduationCap size={23} strokeWidth={2.2} />
+              </div>
+
+              <div>
+                <p className="text-[15px] font-semibold tracking-tight text-white">
+                  Graduation Credit Tracker
+                </p>
+
+                <p className="text-[11px] font-medium text-zinc-500">
+                  Academic progress platform
+                </p>
+              </div>
+            </div>
+
+            {/* Main message */}
+            <div className="my-auto max-w-xl py-12">
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.45 }}
+              >
+                <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1.5 text-xs font-medium text-blue-300">
+                  <Sparkles size={13} />
+                  Your degree, clearly mapped
+                </div>
+
+                <h1 className="max-w-lg text-4xl font-semibold leading-[1.12] tracking-[-0.035em] text-white xl:text-5xl">
+                  Stay on track.
+                  <br />
+                  Graduate with
+                  <span className="text-blue-400"> confidence.</span>
+                </h1>
+
+                <p className="mt-6 max-w-lg text-[15px] leading-7 text-zinc-400">
+                  One place to understand academic progress,
+                  plan future semesters and keep your degree
+                  journey moving forward.
+                </p>
+              </motion.div>
+
+              {/* Features */}
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: 0.45,
+                  delay: 0.15,
+                }}
+                className="mt-10 space-y-5"
+              >
+                {features.map((feature) => {
+                  const Icon = feature.icon;
+
+                  return (
+                    <div
+                      key={feature.title}
+                      className="flex items-center gap-4"
+                    >
+                      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-blue-400">
+                        <Icon size={18} />
+                      </div>
+
+                      <div>
+                        <p className="text-sm font-medium text-zinc-200">
+                          {feature.title}
+                        </p>
+
+                        <p className="mt-0.5 text-xs leading-5 text-zinc-500">
+                          {feature.description}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </motion.div>
+
+              {/* Academic snapshot */}
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: 0.45,
+                  delay: 0.25,
+                }}
+                className="mt-10 max-w-md rounded-2xl border border-white/10 bg-white/[0.045] p-5 backdrop-blur"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-zinc-500">
+                      Academic journey
+                    </p>
+
+                    <p className="mt-1 text-sm font-medium text-zinc-200">
+                      Progress with purpose
+                    </p>
+                  </div>
+
+                  <div className="flex size-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+                    <CheckCircle2 size={18} />
+                  </div>
+                </div>
+
+                <div className="mt-5 grid grid-cols-3 gap-3">
+                  <div>
+                    <p className="text-lg font-semibold text-white">
+                      Track
+                    </p>
+                    <p className="text-[10px] text-zinc-500">
+                      your credits
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-lg font-semibold text-white">
+                      Plan
+                    </p>
+                    <p className="text-[10px] text-zinc-500">
+                      your modules
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-lg font-semibold text-white">
+                      Achieve
+                    </p>
+                    <p className="text-[10px] text-zinc-500">
+                      your goals
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div className="h-full w-[72%] rounded-full bg-gradient-to-r from-blue-600 to-blue-400" />
+                </div>
+              </motion.div>
+            </div>
+
+            <p className="text-[11px] text-zinc-600">
+              Graduation Credit Tracker · Academic Progress System
+            </p>
+          </div>
+        </section>
+
+        {/* Right side */}
+        <section className="relative flex min-h-screen items-center justify-center bg-[#f8f9fb] px-5 py-10 sm:px-8 dark:bg-zinc-950">
+          <div className="w-full max-w-[520px]">
+            {/* Mobile brand */}
+            <div className="mb-12 flex items-center gap-3 lg:hidden">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
+                <GraduationCap size={21} />
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold tracking-tight text-zinc-950 dark:text-white">
+                  Graduation Credit Tracker
+                </p>
+
+                <p className="text-[11px] text-zinc-500">
+                  Academic progress platform
+                </p>
+              </div>
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: 0.45,
+                delay: 0.08,
+              }}
+            >
+              <div className="mb-9">
+                <div className="mb-4 flex size-11 items-center justify-center rounded-xl border border-zinc-200 bg-white text-blue-600 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                  <GraduationCap size={21} />
+                </div>
+
+                <h2 className="text-3xl font-semibold tracking-[-0.025em] text-zinc-950 dark:text-white">
+                  Welcome
+                </h2>
+
+                <p className="mt-2 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
+                  Choose how you'd like to access the Graduation
+                  Credit Tracker.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {/* Student */}
+                <button
+                  type="button"
+                  onClick={() => onPick("student")}
+                  className="group relative w-full overflow-hidden rounded-2xl border border-zinc-200 bg-white p-5 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-950/[0.06] focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-blue-700"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 transition group-hover:bg-blue-600 group-hover:text-white dark:bg-blue-500/10 dark:text-blue-400">
+                      <GraduationCap size={22} />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-zinc-950 dark:text-white">
+                          I'm a student
+                        </h3>
+
+                        <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
+                          Student
+                        </span>
+                      </div>
+
+                      <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                        View your academic progress and plan your degree.
+                      </p>
+                    </div>
+
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full border border-zinc-200 text-zinc-400 transition group-hover:border-blue-200 group-hover:bg-blue-50 group-hover:text-blue-600 dark:border-zinc-700 dark:group-hover:border-blue-800 dark:group-hover:bg-blue-500/10">
+                      <ArrowRight
+                        size={17}
+                        className="transition-transform group-hover:translate-x-0.5"
+                      />
+                    </div>
+                  </div>
+                </button>
+
+                {/* Administrator */}
+                <button
+                  type="button"
+                  onClick={() => onPick("admin")}
+                  className="group relative w-full overflow-hidden rounded-2xl border border-zinc-200 bg-white p-5 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-zinc-400 hover:shadow-lg hover:shadow-zinc-950/[0.05] focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-600"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-700 transition group-hover:bg-zinc-900 group-hover:text-white dark:bg-zinc-800 dark:text-zinc-300 dark:group-hover:bg-zinc-700">
+                      <ShieldCheck size={22} />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-zinc-950 dark:text-white">
+                          I'm an administrator
+                        </h3>
+
+                        <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                          Admin
+                        </span>
+                      </div>
+
+                      <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                        Manage students, marks and academic records.
+                      </p>
+                    </div>
+
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full border border-zinc-200 text-zinc-400 transition group-hover:border-zinc-300 group-hover:bg-zinc-100 group-hover:text-zinc-700 dark:border-zinc-700 dark:group-hover:bg-zinc-800 dark:group-hover:text-white">
+                      <ArrowRight
+                        size={17}
+                        className="transition-transform group-hover:translate-x-0.5"
+                      />
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              {/* Access information */}
+              <div className="mt-7 flex items-start gap-3 rounded-xl border border-zinc-200/80 bg-white/60 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
+                <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500 dark:bg-zinc-800">
+                  <Users size={14} />
+                </div>
+
+                <p className="text-xs leading-5 text-zinc-500 dark:text-zinc-400">
+                  Students sign in using their student details and PIN.
+                  Administrator access is restricted to authorised accounts.
+                </p>
+              </div>
+            </motion.div>
+
+            <p className="mt-10 text-center text-[11px] text-zinc-400 lg:text-left">
+              Secure academic progress management
+            </p>
+          </div>
+        </section>
       </div>
     </div>
   );
 }
-
 // ---------- Student Login ----------
 function StudentLogin({ onLoggedIn, onBack }) {
   const [studentNumber, setStudentNumber] = useState("");
@@ -496,64 +814,77 @@ function StudentDashboard({ onLogout }) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div>
-            <h1 className="font-bold text-slate-800">Graduation Credit Tracker</h1>
-            {me && <p className="text-xs text-slate-400">{me.name} · {me.student_number}</p>}
-          </div>
-          <button
-            onClick={onLogout}
-            className="text-sm text-slate-500 hover:text-red-600 font-medium"
-          >
-            Log out
-          </button>
-        </div>
-        <nav className="max-w-5xl mx-auto px-4 flex gap-1 overflow-x-auto">
-          {STUDENT_TABS.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`px-3 py-2 text-sm font-medium border-b-2 whitespace-nowrap transition ${
-                tab === t.id
-                  ? "border-indigo-600 text-indigo-600"
-                  : "border-transparent text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </nav>
-      </header>
+    <StudentLayout
+      activeTab={tab}
+      onTabChange={setTab}
+      student={me}
+      onLogout={onLogout}
+    >
+      <ErrorBanner message={error} onDismiss={() => setError("")} />
 
-      <main className="max-w-5xl mx-auto px-4 py-6">
-        <ErrorBanner message={error} onDismiss={() => setError("")} />
-        {loading && <p className="text-sm text-slate-400">Loading your progress...</p>}
-        
-        {!loading && tab === "summary" && <SummaryPanel summary={summary} />}
-        {!loading && tab === "yearly" && <YearlyBreakdown onModuleClick={handleModuleClick} />}
-        {!loading && tab === "peers" && <PeerComparison />}
-        {!loading && tab === "history" && <HistoryPanel history={history} onModuleClick={handleModuleClick} />}
-        {!loading && tab === "planning" && 
-        (
-          <div className="space-y-6">
-            <EnhancedGraduationAudit />
-            <EligibleModulesPanel modules={eligible} />
+      {loading && (
+        <div className="flex min-h-[400px] items-center justify-center">
+          <div className="text-center">
+            <div className="mx-auto mb-4 size-8 animate-spin rounded-full border-2 border-zinc-200 border-t-brand-500" />
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              Loading your academic progress...
+            </p>
           </div>
-        )}
-        {!loading && tab === "timeline" && <SemesterTimeline onModuleClick={handleModuleClick} />}
-        {!loading && tab === "predictor" && <GradePredictor />}
-        {!loading && tab === "planner" && <CoursePlanner />}
-        {!loading && tab === "achievements" && <Achievements />}  
-      </main>
+        </div>
+      )}
+
+      {!loading && tab === "summary" && (
+  <SummaryPage
+    summary={summary}
+    student={me}
+    onNavigate={setTab}
+  />
+)}
+      {!loading && tab === "yearly" && (
+        <YearlyBreakdown onModuleClick={handleModuleClick} />
+      )}
+      {!loading && tab === "peers" && <PeerComparison />}
+      {!loading && tab === "history" && (
+  <HistoryPage
+
+    history={history}
+    onModuleClick={handleModuleClick}
+  />
+)}
+      {!loading && tab === "planning" && (
+  <PlanningPage
+    audit={audit}
+    eligible={eligible}
+    onModuleClick={handleModuleClick}
+    onNavigate={setTab}
+  />
+)}
+      {!loading && tab === "timeline" && (
+  <TimelinePage
+    onModuleClick={handleModuleClick}
+  />
+)}
+      {!loading && tab === "predictor" && (
+  <PredictorPage
+    eligible={eligible}
+    summary={summary}
+  />
+)}
+      {!loading && tab === "planner" && (
+  <PlannerPage
+    onModuleClick={handleModuleClick}
+  />
+)}
+      {!loading && tab === "achievements" && (
+  <AchievementsPage />
+)}
 
       <ModuleDetailModal
         moduleCode={selectedModule}
         isOpen={isModalOpen}
         onClose={closeModal}
       />
-    </div>
+    </StudentLayout>
   );
 }
 
@@ -572,16 +903,45 @@ export default function App() {
     setPickedRole(null);
   }
 
-  if (role === "admin") return <AdminApp onLogout={handleLogout} />;
-  if (role === "student") return <StudentDashboard onLogout={handleLogout} />;
+  let content;
 
-  if (pickedRole === "student") {
-    return <StudentLogin onLoggedIn={handleLoggedIn} onBack={() => setPickedRole(null)} />;
+  if (role === "admin") {
+    content = <AdminApp onLogout={handleLogout} />;
+  } else if (role === "student") {
+    content = <StudentDashboard onLogout={handleLogout} />;
+  } else if (pickedRole === "student") {
+    content = (
+      <StudentLogin
+        onLoggedIn={handleLoggedIn}
+        onBack={() => setPickedRole(null)}
+      />
+    );
+  } else if (pickedRole === "admin") {
+    content = (
+      <AdminApp
+        onLogout={handleLogout}
+        loginOnly
+        onLoggedIn={handleLoggedIn}
+        onBack={() => setPickedRole(null)}
+      />
+    );
+  } else {
+    content = <RolePicker onPick={setPickedRole} />;
   }
 
-  if (pickedRole === "admin") {
-    return <AdminApp onLogout={handleLogout} loginOnly onLoggedIn={handleLoggedIn} onBack={() => setPickedRole(null)} />;
-  }
+  return (
+    <>
+      {content}
 
-  return <RolePicker onPick={setPickedRole} />;
+      <AssistantWidget
+        userRole={
+          role === "admin"
+            ? "admin"
+            : role === "student"
+              ? "student"
+              : "guest"
+        }
+      />
+    </>
+  );
 }

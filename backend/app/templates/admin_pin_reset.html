@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div
+    style="
+        display:inline-block;
+        padding:6px 11px;
+        background:#fff7e6;
+        color:#946200;
+        border-radius:20px;
+        font-size:12px;
+        font-weight:700;
+        margin-bottom:18px;
+    "
+>
+    ⚙ ADMINISTRATOR PIN RESET
+</div>
+
+<h1
+    style="
+        margin:0 0 18px;
+        font-size:28px;
+        line-height:1.2;
+        color:#0f172a;
+    "
+>
+    Your login PIN was reset
+</h1>
+
+<p>
+    Hi <strong>{{ name }}</strong>,
+</p>
+
+<p style="color:#475569;">
+    A system administrator issued a new login PIN
+    for your Graduation Credit Tracker account.
+</p>
+
+<div
+    style="
+        background:#f4f7ff;
+        border:1px solid #dce6ff;
+        border-radius:14px;
+        padding:24px;
+        margin:24px 0;
+    "
+>
+    <div
+        style="
+            color:#64748b;
+            font-size:12px;
+            font-weight:700;
+            text-transform:uppercase;
+            letter-spacing:.8px;
+        "
+    >
+        Your new login PIN
+    </div>
+
+    <div
+        style="
+            color:#245eea;
+            font-size:36px;
+            font-weight:800;
+            letter-spacing:9px;
+            margin-top:10px;
+        "
+    >
+        {{ pin }}
+    </div>
+</div>
+
+<p style="color:#475569;">
+    Your previous PIN no longer works. Keep this
+    new PIN private and use it for future sign-ins.
+</p>
+
+<table
+    role="presentation"
+    cellspacing="0"
+    cellpadding="0"
+    style="margin:26px 0;"
+>
+<tr>
+<td style="background:#3b6ff5; border-radius:9px;">
+    <a
+        href="{{ base_url }}"
+        style="
+            display:inline-block;
+            padding:13px 22px;
+            color:#ffffff;
+            text-decoration:none;
+            font-size:14px;
+            font-weight:700;
+        "
+    >
+        Open Graduation Credit Tracker →
+    </a>
+</td>
+</tr>
+</table>
+
+<div
+    style="
+        background:#f8fafc;
+        border-radius:12px;
+        padding:17px 19px;
+        color:#64748b;
+        font-size:13px;
+    "
+>
+    <strong style="color:#334155;">
+        Need help?
+    </strong>
+
+    <br>
+
+    If you did not expect this change, contact your
+    administrator for assistance.
+</div>
+
+{% endblock %}

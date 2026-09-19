@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div
+    style="
+        display:inline-block;
+        padding:6px 11px;
+        background:#eef4ff;
+        color:#2859d9;
+        border-radius:20px;
+        font-size:12px;
+        font-weight:700;
+        margin-bottom:18px;
+    "
+>
+    🎓 NEW STUDENT ACCOUNT
+</div>
+
+<h1
+    style="
+        margin:0 0 18px;
+        font-size:28px;
+        line-height:1.2;
+        color:#0f172a;
+    "
+>
+    Welcome to Graduation Credit Tracker
+</h1>
+
+<p style="margin:0 0 16px;">
+    Hi <strong>{{ name }}</strong>,
+</p>
+
+<p style="margin:0 0 22px; color:#475569;">
+    Your student account has been created successfully.
+    You can now track your credits, modules, academic
+    progress and graduation requirements.
+</p>
+
+<div
+    style="
+        background:#f4f7ff;
+        border:1px solid #dce6ff;
+        border-radius:14px;
+        padding:24px;
+        margin:24px 0;
+    "
+>
+    <div
+        style="
+            color:#64748b;
+            font-size:12px;
+            font-weight:700;
+            text-transform:uppercase;
+            letter-spacing:.8px;
+        "
+    >
+        Your permanent login PIN
+    </div>
+
+    <div
+        style="
+            color:#245eea;
+            font-size:36px;
+            font-weight:800;
+            letter-spacing:9px;
+            margin-top:10px;
+        "
+    >
+        {{ pin }}
+    </div>
+</div>
+
+<p style="color:#475569;">
+    This PIN will remain the same for future sign-ins.
+    Keep it private and do not share it with anyone.
+</p>
+
+<table
+    role="presentation"
+    cellspacing="0"
+    cellpadding="0"
+    style="margin:26px 0;"
+>
+<tr>
+<td
+    style="
+        background:#3b6ff5;
+        border-radius:9px;
+    "
+>
+    <a
+        href="{{ base_url }}"
+        style="
+            display:inline-block;
+            padding:13px 22px;
+            color:#ffffff;
+            text-decoration:none;
+            font-size:14px;
+            font-weight:700;
+        "
+    >
+        Open Graduation Credit Tracker →
+    </a>
+</td>
+</tr>
+</table>
+
+<div
+    style="
+        background:#f8fafc;
+        border-radius:12px;
+        padding:17px 19px;
+        color:#64748b;
+        font-size:13px;
+    "
+>
+    <strong style="color:#334155;">
+        Important
+    </strong>
+
+    <br>
+
+    If you forget your PIN, use the
+    <strong>Forgot PIN</strong> option on the student
+    login page. A new PIN will be emailed to your
+    registered email address.
+</div>
+
+{% endblock %}

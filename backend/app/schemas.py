@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import List, Optional
 from enum import Enum
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 # ---------- Programme / Module ----------
@@ -462,3 +462,253 @@ class BulkEmailResult(BaseModel):
     failed: int
     recipients: List[str]
     errors: List[str]
+
+
+# ============================================================
+# SUPPORT SERVICES
+# ============================================================
+
+class SupportServiceCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=150)
+
+    short_name: Optional[str] = Field(
+        default=None,
+        max_length=50,
+    )
+
+    category: str = Field(
+        default="student_support",
+        max_length=100,
+    )
+
+    description: str = Field(
+        min_length=2,
+        max_length=3000,
+    )
+
+    location: Optional[str] = Field(
+        default=None,
+        max_length=255,
+    )
+
+    campus: Optional[str] = Field(
+        default=None,
+        max_length=150,
+    )
+
+    email: Optional[str] = Field(
+        default=None,
+        max_length=255,
+    )
+
+    phone: Optional[str] = Field(
+        default=None,
+        max_length=100,
+    )
+
+    website: Optional[str] = Field(
+        default=None,
+        max_length=500,
+    )
+
+    opening_hours: Optional[str] = Field(
+        default=None,
+        max_length=500,
+    )
+
+    how_to_access: Optional[str] = Field(
+        default=None,
+        max_length=2000,
+    )
+
+    is_emergency: bool = False
+
+    is_active: bool = True
+
+
+class SupportServiceUpdate(BaseModel):
+    name: Optional[str] = Field(
+        default=None,
+        min_length=2,
+        max_length=150,
+    )
+
+    short_name: Optional[str] = Field(
+        default=None,
+        max_length=50,
+    )
+
+    category: Optional[str] = Field(
+        default=None,
+        max_length=100,
+    )
+
+    description: Optional[str] = Field(
+        default=None,
+        min_length=2,
+        max_length=3000,
+    )
+
+    location: Optional[str] = Field(
+        default=None,
+        max_length=255,
+    )
+
+    campus: Optional[str] = Field(
+        default=None,
+        max_length=150,
+    )
+
+    email: Optional[str] = Field(
+        default=None,
+        max_length=255,
+    )
+
+    phone: Optional[str] = Field(
+        default=None,
+        max_length=100,
+    )
+
+    website: Optional[str] = Field(
+        default=None,
+        max_length=500,
+    )
+
+    opening_hours: Optional[str] = Field(
+        default=None,
+        max_length=500,
+    )
+
+    how_to_access: Optional[str] = Field(
+        default=None,
+        max_length=2000,
+    )
+
+    is_emergency: Optional[bool] = None
+
+    is_active: Optional[bool] = None
+
+
+class SupportServiceOut(BaseModel):
+    id: int
+    name: str
+    short_name: Optional[str] = None
+    category: str
+    description: str
+
+    location: Optional[str] = None
+    campus: Optional[str] = None
+
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    website: Optional[str] = None
+
+    opening_hours: Optional[str] = None
+    how_to_access: Optional[str] = None
+
+    is_emergency: bool
+    is_active: bool
+
+    verified_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
+# ============================================================
+# FACILITATORS
+# ============================================================
+
+class FacilitatorCreate(BaseModel):
+    name: str = Field(
+        min_length=2,
+        max_length=150,
+    )
+
+    programme_type: str = Field(
+        min_length=2,
+        max_length=20,
+    )
+
+    module_assignment: str = Field(
+        min_length=1,
+        max_length=500,
+    )
+
+    campus: str = Field(
+        default="Alice",
+        max_length=100,
+    )
+
+    session_time: Optional[str] = Field(
+        default=None,
+        max_length=500,
+    )
+
+    consultation_time: Optional[str] = Field(
+        default=None,
+        max_length=500,
+    )
+
+    is_assistant: bool = False
+    is_active: bool = True
+
+
+class FacilitatorUpdate(BaseModel):
+    name: Optional[str] = Field(
+        default=None,
+        min_length=2,
+        max_length=150,
+    )
+
+    programme_type: Optional[str] = Field(
+        default=None,
+        min_length=2,
+        max_length=20,
+    )
+
+    module_assignment: Optional[str] = Field(
+        default=None,
+        min_length=1,
+        max_length=500,
+    )
+
+    campus: Optional[str] = Field(
+        default=None,
+        max_length=100,
+    )
+
+    session_time: Optional[str] = Field(
+        default=None,
+        max_length=500,
+    )
+
+    consultation_time: Optional[str] = Field(
+        default=None,
+        max_length=500,
+    )
+
+    is_assistant: Optional[bool] = None
+    is_active: Optional[bool] = None
+
+
+class FacilitatorOut(BaseModel):
+    id: int
+    name: str
+    programme_type: str
+    module_assignment: str
+    campus: str
+
+    session_time: Optional[str] = None
+    consultation_time: Optional[str] = None
+
+    is_assistant: bool
+    is_active: bool
+
+    verified_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}

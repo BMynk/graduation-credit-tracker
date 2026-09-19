@@ -13,3 +13,5 @@ slowapi
 pytest
 httpx
 jinja2
+openai
+google-genai

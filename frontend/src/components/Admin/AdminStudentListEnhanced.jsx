@@ -1,215 +1,709 @@
-// frontend/src/components/admin/AdminStudentListEnhanced.jsx
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsUpDown,
+  GraduationCap,
+  RefreshCw,
+  Search,
+  UserCheck,
+  UserRound,
+  Users,
+  UserX,
+  X,
+} from "lucide-react";
 import { api } from "../../api";
-import Card from "../Card"; // Import existing Card or define inline
 
-function AdminStudentListEnhanced({ onSelectStudent }) {
+const PAGE_SIZE = 20;
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 8 },
+  visible: { opacity: 1, y: 0 },
+};
+
+function getProgrammeCode(student) {
+  return (
+    student.programme_code ||
+    student.programme?.code ||
+    "—"
+  );
+}
+
+function getProgrammeName(student) {
+  return (
+    student.programme_name ||
+    student.programme?.name ||
+    ""
+  );
+}
+
+function StatCard({ icon: Icon, label, value, helper, tone }) {
+  const tones = {
+    blue:
+      "bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400",
+    emerald:
+      "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400",
+    violet:
+      "bg-violet-50 text-violet-600 dark:bg-violet-950/40 dark:text-violet-400",
+    zinc:
+      "bg-zinc-100 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400",
+  };
+
+  return (
+    <motion.div
+      variants={fadeUp}
+      className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-zinc-500">
+            {label}
+          </p>
+
+          <p className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950 dark:text-white">
+            {value}
+          </p>
+
+          <p className="mt-1 text-xs text-zinc-400">
+            {helper}
+          </p>
+        </div>
+
+        <div
+          className={`flex size-10 items-center justify-center rounded-xl ${
+            tones[tone] || tones.blue
+          }`}
+        >
+          <Icon size={19} />
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function StatusBadge({ active }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+        active
+          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
+          : "bg-zinc-100 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400"
+      }`}
+    >
+      <span
+        className={`size-1.5 rounded-full ${
+          active ? "bg-emerald-500" : "bg-zinc-400"
+        }`}
+      />
+
+      {active ? "Active" : "Inactive"}
+    </span>
+  );
+}
+
+export default function AdminStudentListEnhanced({
+  onSelectStudent,
+}) {
   const [students, setStudents] = useState([]);
   const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
-  // Filter state
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
-  const [programmeFilter, setProgrammeFilter] = useState("");
-  const [yearFilter, setYearFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
 
-  // Sorting state
+  const [programme, setProgramme] = useState("");
+  const [year, setYear] = useState("");
+  const [status, setStatus] = useState("");
+
   const [sortBy, setSortBy] = useState("name");
   const [sortOrder, setSortOrder] = useState("asc");
 
-  // Pagination state
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(25);
-  const [programmes, setProgrammes] = useState([]);
 
-  const loadStudents = async () => {
-    setLoading(true);
-    try {
-      const params = {
-        skip: (page - 1) * limit,
-        limit,
-        sort_by: sortBy,
-        sort_order: sortOrder,
-      };
-      if (search) params.q = search;
-      if (programmeFilter) params.programme_code = programmeFilter;
-      if (yearFilter) params.current_year = parseInt(yearFilter);
-      if (statusFilter !== "") params.is_active = statusFilter === "active";
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
 
-      const response = await api.adminListStudents(params);
-      setStudents(response.students);
-      setTotal(response.total);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput.trim());
+      setPage(1);
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadStudents() {
+      setLoading(true);
+      setError("");
+
+      try {
+        const params = {
+          skip: (page - 1) * PAGE_SIZE,
+          limit: PAGE_SIZE,
+          sort_by: sortBy,
+          sort_order: sortOrder,
+        };
+
+        if (search) params.q = search;
+        if (programme) params.programme_code = programme;
+        if (year) params.current_year = year;
+        if (status !== "") params.is_active = status;
+
+        const data = await api.adminListStudents(params);
+
+        if (!cancelled) {
+          setStudents(
+            Array.isArray(data?.students) ? data.students : []
+          );
+          setTotal(Number(data?.total || 0));
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.message || "Unable to load students.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
     }
-  };
 
-  useEffect(() => {
     loadStudents();
-  }, [page, limit, sortBy, sortOrder, programmeFilter, yearFilter, statusFilter, search]);
 
-  useEffect(() => {
-    api.listProgrammes().then(setProgrammes).catch(() => {});
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    search,
+    programme,
+    year,
+    status,
+    sortBy,
+    sortOrder,
+    page,
+    refreshKey,
+  ]);
 
-  const handleSort = (field) => {
+  const programmeOptions = useMemo(() => {
+    const values = students
+      .map(getProgrammeCode)
+      .filter((value) => value && value !== "—");
+
+    return [...new Set(values)].sort();
+  }, [students]);
+
+  const activeOnPage = students.filter(
+    (student) => student.is_active
+  ).length;
+
+  const inactiveOnPage =
+    students.length - activeOnPage;
+
+  const pageCount = Math.max(
+    1,
+    Math.ceil(total / PAGE_SIZE)
+  );
+
+  const startResult =
+    total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+
+  const endResult = Math.min(
+    page * PAGE_SIZE,
+    total
+  );
+
+  const hasFilters =
+    searchInput ||
+    programme ||
+    year ||
+    status !== "";
+
+  function clearFilters() {
+    setSearchInput("");
+    setSearch("");
+    setProgramme("");
+    setYear("");
+    setStatus("");
+    setPage(1);
+  }
+
+  function toggleSort(field) {
     if (sortBy === field) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+      setSortOrder((current) =>
+        current === "asc" ? "desc" : "asc"
+      );
     } else {
       setSortBy(field);
       setSortOrder("asc");
     }
-    setPage(1);
-  };
 
-  const totalPages = Math.ceil(total / limit);
+    setPage(1);
+  }
+
+  function SortButton({ field, children }) {
+    return (
+      <button
+        type="button"
+        onClick={() => toggleSort(field)}
+        className="inline-flex items-center gap-1 transition hover:text-blue-600"
+      >
+        {children}
+        <ChevronsUpDown
+          size={12}
+          className={
+            sortBy === field
+              ? "text-blue-600"
+              : "text-zinc-300"
+          }
+        />
+      </button>
+    );
+  }
 
   return (
-    <Card title="Students">
-      {error && <div className="text-red-600 text-sm mb-4">{error}</div>}
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={{
+        visible: {
+          transition: { staggerChildren: 0.05 },
+        },
+      }}
+      className="space-y-6 pb-8"
+    >
+      {/* Header */}
+      <motion.section
+        variants={fadeUp}
+        className="relative overflow-hidden rounded-2xl border border-blue-200/70 bg-gradient-to-br from-blue-50 via-white to-violet-50 p-6 dark:border-blue-950 dark:from-blue-950/20 dark:via-zinc-950 dark:to-violet-950/20 sm:p-7"
+      >
+        <div className="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-blue-500/10 blur-3xl" />
 
-      {/* Filters */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 mb-4">
-        <input
-          className="border border-slate-300 rounded-lg px-3 py-2 text-sm"
-          placeholder="Search..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && loadStudents()}
+        <div className="relative">
+          <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white/70 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-300">
+            <Users size={14} />
+            Student Management
+          </div>
+
+          <h1 className="mt-4 text-2xl font-semibold tracking-tight text-zinc-950 dark:text-white sm:text-3xl">
+            Students
+          </h1>
+
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+            Search, filter and manage student records across
+            programmes and academic years.
+          </p>
+        </div>
+      </motion.section>
+
+      {/* Statistics */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard
+          icon={Users}
+          label="Students"
+          value={total}
+          helper="Matching current filters"
+          tone="blue"
         />
-        <select
-          className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
-          value={programmeFilter}
-          onChange={(e) => setProgrammeFilter(e.target.value)}
-        >
-          <option value="">All programmes</option>
-          {programmes.map((p) => (
-            <option key={p.code} value={p.code}>{p.code}</option>
-          ))}
-        </select>
-        <select
-          className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
-          value={yearFilter}
-          onChange={(e) => setYearFilter(e.target.value)}
-        >
-          <option value="">All years</option>
-          <option value="1">Year 1</option>
-          <option value="2">Year 2</option>
-          <option value="3">Year 3</option>
-          <option value="4">Year 4</option>
-        </select>
-        <select
-          className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="">All status</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-        </select>
-        <button
-          onClick={() => setPage(1)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg px-4 py-2 transition"
-        >
-          Apply Filters
-        </button>
+
+        <StatCard
+          icon={UserCheck}
+          label="Active"
+          value={activeOnPage}
+          helper="On this page"
+          tone="emerald"
+        />
+
+        <StatCard
+          icon={UserX}
+          label="Inactive"
+          value={inactiveOnPage}
+          helper="On this page"
+          tone="zinc"
+        />
+
+        <StatCard
+          icon={GraduationCap}
+          label="Programmes"
+          value={programmeOptions.length}
+          helper="Visible on this page"
+          tone="violet"
+        />
       </div>
 
-      {loading ? (
-        <p className="text-sm text-slate-400">Loading...</p>
-      ) : students.length === 0 ? (
-        <p className="text-sm text-slate-400">No students found.</p>
-      ) : (
-        <>
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-slate-400 border-b border-slate-100">
-                  <th className="py-2 font-medium cursor-pointer hover:text-slate-700" onClick={() => handleSort("name")}>
-                    Name {sortBy === "name" && (sortOrder === "asc" ? "↑" : "↓")}
-                  </th>
-                  <th className="py-2 font-medium cursor-pointer hover:text-slate-700" onClick={() => handleSort("student_number")}>
-                    Student # {sortBy === "student_number" && (sortOrder === "asc" ? "↑" : "↓")}
-                  </th>
-                  <th className="py-2 font-medium cursor-pointer hover:text-slate-700" onClick={() => handleSort("programme")}>
-                    Programme {sortBy === "programme" && (sortOrder === "asc" ? "↑" : "↓")}
-                  </th>
-                  <th className="py-2 font-medium cursor-pointer hover:text-slate-700" onClick={() => handleSort("year")}>
-                    Year {sortBy === "year" && (sortOrder === "asc" ? "↑" : "↓")}
-                  </th>
-                  <th className="py-2 font-medium cursor-pointer hover:text-slate-700" onClick={() => handleSort("average")}>
-                    Avg {sortBy === "average" && (sortOrder === "asc" ? "↑" : "↓")}
-                  </th>
-                  <th className="py-2 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {students.map((s) => (
-                  <tr
-                    key={s.id}
-                    onClick={() => onSelectStudent(s.id)}
-                    className="border-b border-slate-50 last:border-0 cursor-pointer hover:bg-slate-50 transition"
-                  >
-                    <td className="py-2 font-medium text-slate-800">{s.name}</td>
-                    <td className="py-2 text-slate-600">{s.student_number}</td>
-                    <td className="py-2 text-slate-600">{s.programme.code}</td>
-                    <td className="py-2 text-slate-600">{s.current_year}</td>
-                    <td className="py-2 text-slate-600">{s.weighted_average ?? "—"}</td>
-                    <td className="py-2">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${s.is_active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-                        {s.is_active ? "Active" : "Inactive"}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Filters */}
+      <motion.section
+        variants={fadeUp}
+        className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-5"
+      >
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 lg:flex-row">
+            <div className="relative flex-1">
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"
+              />
+
+              <input
+                value={searchInput}
+                onChange={(event) =>
+                  setSearchInput(event.target.value)
+                }
+                placeholder="Search name, student number or email..."
+                className="w-full rounded-xl border border-zinc-200 bg-white py-2.5 pl-9 pr-10 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white"
+              />
+
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={() => setSearchInput("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 transition hover:text-zinc-700"
+                >
+                  <X size={15} />
+                </button>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                setRefreshKey((key) => key + 1)
+              }
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-600 transition hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900"
+            >
+              <RefreshCw
+                size={15}
+                className={loading ? "animate-spin" : ""}
+              />
+              Refresh
+            </button>
           </div>
 
-          {/* Pagination */}
-          <div className="flex justify-between items-center mt-4">
-            <div className="text-sm text-slate-500">
-              Showing {(page - 1) * limit + 1}–{Math.min(page * limit, total)} of {total}
-            </div>
-            <div className="flex gap-2 items-center">
-              <select
-                className="border border-slate-300 rounded-lg px-2 py-1 text-sm bg-white"
-                value={limit}
-                onChange={(e) => setLimit(Number(e.target.value))}
-              >
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <select
+              value={programme}
+              onChange={(event) => {
+                setProgramme(event.target.value);
+                setPage(1);
+              }}
+              className="rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-700 outline-none focus:border-blue-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"
+            >
+              <option value="">All programmes</option>
+
+              {programmeOptions.map((code) => (
+                <option key={code} value={code}>
+                  {code}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={year}
+              onChange={(event) => {
+                setYear(event.target.value);
+                setPage(1);
+              }}
+              className="rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-700 outline-none focus:border-blue-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"
+            >
+              <option value="">All years</option>
+              <option value="1">Year 1</option>
+              <option value="2">Year 2</option>
+              <option value="3">Year 3</option>
+              <option value="4">Year 4</option>
+            </select>
+
+            <select
+              value={status}
+              onChange={(event) => {
+                setStatus(event.target.value);
+                setPage(1);
+              }}
+              className="rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-700 outline-none focus:border-blue-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"
+            >
+              <option value="">All statuses</option>
+              <option value="true">Active</option>
+              <option value="false">Inactive</option>
+            </select>
+          </div>
+
+          {hasFilters && (
+            <div>
               <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="px-3 py-1 text-sm bg-slate-100 hover:bg-slate-200 rounded disabled:opacity-50"
+                type="button"
+                onClick={clearFilters}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-500 transition hover:text-red-600"
               >
-                Prev
+                <X size={13} />
+                Clear filters
               </button>
-              <span className="text-sm text-slate-600">
-                Page {page} of {totalPages || 1}
-              </span>
+            </div>
+          )}
+        </div>
+      </motion.section>
+
+      {/* Table */}
+      <motion.section
+        variants={fadeUp}
+        className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
+      >
+        <div className="flex items-center justify-between gap-4 border-b border-zinc-100 px-5 py-4 dark:border-zinc-900">
+          <div>
+            <h2 className="font-semibold text-zinc-950 dark:text-white">
+              Student directory
+            </h2>
+
+            <p className="mt-1 text-xs text-zinc-500">
+              {total
+                ? `Showing ${startResult}–${endResult} of ${total}`
+                : "No students to display"}
+            </p>
+          </div>
+        </div>
+
+        {error ? (
+          <div className="p-5">
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
+              {error}
+            </div>
+          </div>
+        ) : loading ? (
+          <div className="flex min-h-[300px] items-center justify-center">
+            <div className="text-center">
+              <div className="mx-auto size-8 animate-spin rounded-full border-2 border-zinc-200 border-t-blue-600" />
+
+              <p className="mt-3 text-sm text-zinc-500">
+                Loading students...
+              </p>
+            </div>
+          </div>
+        ) : students.length === 0 ? (
+          <div className="flex min-h-[300px] flex-col items-center justify-center px-6 text-center">
+            <div className="flex size-12 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-400 dark:bg-zinc-900">
+              <UserRound size={22} />
+            </div>
+
+            <h3 className="mt-4 font-semibold text-zinc-900 dark:text-white">
+              No students found
+            </h3>
+
+            <p className="mt-1 max-w-sm text-sm text-zinc-500">
+              {hasFilters
+                ? "No student records match your current filters."
+                : "There are currently no student records."}
+            </p>
+
+            {hasFilters && (
               <button
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages || totalPages === 0}
-                className="px-3 py-1 text-sm bg-slate-100 hover:bg-slate-200 rounded disabled:opacity-50"
+                type="button"
+                onClick={clearFilters}
+                className="mt-4 text-sm font-medium text-blue-600 hover:text-blue-700"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Desktop table */}
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-zinc-100 bg-zinc-50/70 text-left text-xs font-medium text-zinc-500 dark:border-zinc-900 dark:bg-zinc-900/40">
+                    <th className="px-5 py-3">
+                      <SortButton field="name">
+                        Student
+                      </SortButton>
+                    </th>
+
+                    <th className="px-4 py-3">
+                      <SortButton field="student_number">
+                        Student number
+                      </SortButton>
+                    </th>
+
+                    <th className="px-4 py-3">
+                      <SortButton field="programme">
+                        Programme
+                      </SortButton>
+                    </th>
+
+                    <th className="px-4 py-3">
+                      <SortButton field="year">
+                        Year
+                      </SortButton>
+                    </th>
+
+                    <th className="px-4 py-3">
+                      Status
+                    </th>
+
+                    <th className="w-12 px-4 py-3" />
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-900">
+                  {students.map((student) => (
+                    <tr
+                      key={student.id}
+                      onClick={() =>
+                        onSelectStudent?.(student.id)
+                      }
+                      className="group cursor-pointer transition hover:bg-blue-50/40 dark:hover:bg-blue-950/10"
+                    >
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-sm font-semibold text-blue-600 dark:bg-blue-950/40 dark:text-blue-400">
+                            {(student.name || "?")
+                              .charAt(0)
+                              .toUpperCase()}
+                          </div>
+
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-zinc-900 dark:text-white">
+                              {student.name}
+                            </p>
+
+                            <p className="mt-0.5 max-w-[200px] truncate text-xs text-zinc-400">
+                              {student.email || "No email"}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="px-4 py-4 text-sm text-zinc-600 dark:text-zinc-400">
+                        {student.student_number}
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <div>
+                          <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                            {getProgrammeCode(student)}
+                          </p>
+
+                          {getProgrammeName(student) && (
+                            <p className="max-w-[160px] truncate text-xs text-zinc-400">
+                              {getProgrammeName(student)}
+                            </p>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="px-4 py-4 text-sm text-zinc-600 dark:text-zinc-400">
+                        {student.current_year
+                          ? `Year ${student.current_year}`
+                          : "—"}
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <StatusBadge
+                          active={student.is_active}
+                        />
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <ChevronRight
+                          size={17}
+                          className="text-zinc-300 transition group-hover:translate-x-1 group-hover:text-blue-600"
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile cards */}
+            <div className="divide-y divide-zinc-100 dark:divide-zinc-900 md:hidden">
+              {students.map((student) => (
+                <button
+                  type="button"
+                  key={student.id}
+                  onClick={() =>
+                    onSelectStudent?.(student.id)
+                  }
+                  className="flex w-full items-center gap-3 p-4 text-left transition hover:bg-zinc-50 dark:hover:bg-zinc-900/50"
+                >
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 font-semibold text-blue-600 dark:bg-blue-950/40">
+                    {(student.name || "?")
+                      .charAt(0)
+                      .toUpperCase()}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-sm font-semibold text-zinc-900 dark:text-white">
+                        {student.name}
+                      </p>
+
+                      <StatusBadge
+                        active={student.is_active}
+                      />
+                    </div>
+
+                    <p className="mt-1 text-xs text-zinc-500">
+                      {student.student_number} ·{" "}
+                      {getProgrammeCode(student)}
+                    </p>
+
+                    <p className="mt-0.5 text-xs text-zinc-400">
+                      {student.current_year
+                        ? `Year ${student.current_year}`
+                        : "Year not set"}
+                    </p>
+                  </div>
+
+                  <ChevronRight
+                    size={17}
+                    className="shrink-0 text-zinc-300"
+                  />
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Pagination */}
+        {!loading && !error && total > 0 && (
+          <div className="flex flex-col gap-3 border-t border-zinc-100 px-5 py-4 dark:border-zinc-900 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-zinc-500">
+              Page {page} of {pageCount}
+            </p>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={page <= 1}
+                onClick={() =>
+                  setPage((current) =>
+                    Math.max(1, current - 1)
+                  )
+                }
+                className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-600 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-800 dark:text-zinc-300"
+              >
+                <ChevronLeft size={14} />
+                Previous
+              </button>
+
+              <button
+                type="button"
+                disabled={page >= pageCount}
+                onClick={() =>
+                  setPage((current) =>
+                    Math.min(pageCount, current + 1)
+                  )
+                }
+                className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-600 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-800 dark:text-zinc-300"
               >
                 Next
+                <ChevronRight size={14} />
               </button>
             </div>
           </div>
-        </>
-      )}
-    </Card>
+        )}
+      </motion.section>
+    </motion.div>
   );
 }
-
-export default AdminStudentListEnhanced;

@@ -349,205 +349,570 @@ def get_eligible_modules(db: Session, student: models.Student) -> List[dict]:
 
 # ---------- Peer Comparison ----------
 
-def get_peer_comparison(db: Session, student: models.Student) -> dict:
-    """Calculate anonymized peer comparison statistics for a student."""
-    peers = db.query(models.Student).filter(
-        models.Student.programme_id == student.programme_id,
-        models.Student.current_year == student.current_year,
-        models.Student.is_active == True,
-        models.Student.id != student.id
-    ).all()
-    
+def get_peer_comparison(
+    db: Session,
+    student: models.Student,
+) -> dict:
+    """
+    Calculate anonymized peer comparison statistics.
+
+    Students are compared only with active students
+    in the same programme and academic year.
+
+    No peer names, student numbers, or individual
+    peer marks are returned.
+    """
+
+    # ---------------------------------------------------------
+    # Find students in the same cohort
+    # ---------------------------------------------------------
+
+    peers = (
+        db.query(models.Student)
+        .filter(
+            models.Student.programme_id
+            == student.programme_id,
+            models.Student.current_year
+            == student.current_year,
+            models.Student.is_active.is_(True),
+            models.Student.id != student.id,
+        )
+        .all()
+    )
+
+    # ---------------------------------------------------------
+    # Get current student's weighted average
+    # ---------------------------------------------------------
+
+    own_summary = build_progress_summary(
+        db,
+        student,
+    )
+
+    own_avg = own_summary.get(
+        "weighted_average"
+    )
+
+    # ---------------------------------------------------------
+    # No other students in cohort
+    # ---------------------------------------------------------
+
     if not peers:
         return {
             "stats": {
-                "programme_code": student.programme.code,
-                "programme_name": student.programme.name,
-                "year": student.current_year,
+                "programme_code":
+                    student.programme.code,
+                "programme_name":
+                    student.programme.name,
+                "year":
+                    student.current_year,
+
                 "total_students": 1,
-                "your_rank": 1,
-                "percentile": 100,
-                "your_average": None,
-                "cohort_average": None,
-                "max_average": None,
-                "min_average": None,
-                "distribution": [],
+
+                "your_rank": (
+                    1
+                    if own_avg is not None
+                    else None
+                ),
+
+                "percentile": (
+                    100.0
+                    if own_avg is not None
+                    else None
+                ),
+
+                "your_average":
+                    own_avg,
+
+                "cohort_average":
+                    None,
+
+                "max_average":
+                    None,
+
+                "min_average":
+                    None,
+
+                "distribution":
+                    [],
+
+                "students_with_averages": (
+                    1
+                    if own_avg is not None
+                    else 0
+                ),
+
+                "peer_count": 0,
+
+                "students_without_averages": (
+                    0
+                    if own_avg is not None
+                    else 1
+                ),
             },
-            "message": "No other students in your cohort yet. Check back later!"
+
+            "message":
+                "No other students in your cohort yet. "
+                "Check back later!",
         }
-    
+
+    # ---------------------------------------------------------
+    # Calculate peer weighted averages
+    # ---------------------------------------------------------
+
     peer_averages = []
-    for p in peers:
-        summary = build_progress_summary(db, p)
-        avg = summary.get("weighted_average")
-        if avg is not None:
-            peer_averages.append(avg)
-    
-    own_summary = build_progress_summary(db, student)
-    own_avg = own_summary.get("weighted_average")
-    
+
+    for peer in peers:
+        peer_summary = build_progress_summary(
+            db,
+            peer,
+        )
+
+        peer_avg = peer_summary.get(
+            "weighted_average"
+        )
+
+        if peer_avg is not None:
+            peer_averages.append(
+                float(peer_avg)
+            )
+
+    # ---------------------------------------------------------
+    # Basic cohort counts
+    # ---------------------------------------------------------
+
+    total_students = len(peers) + 1
+
+    peer_count = len(peers)
+
+    students_with_averages = (
+        len(peer_averages)
+        + (
+            1
+            if own_avg is not None
+            else 0
+        )
+    )
+
+    students_without_averages = (
+        total_students
+        - students_with_averages
+    )
+
+    # ---------------------------------------------------------
+    # Peers exist, but none have graded averages yet
+    # ---------------------------------------------------------
+
     if not peer_averages:
+        distribution = []
+
+        if own_avg is not None:
+            bins = [
+                0,
+                10,
+                20,
+                30,
+                40,
+                50,
+                60,
+                70,
+                80,
+                90,
+                100,
+            ]
+
+            for i in range(
+                len(bins) - 1
+            ):
+                low = bins[i]
+                high = bins[i + 1]
+
+                if low == 90:
+                    count = (
+                        1
+                        if float(own_avg) >= 90
+                        else 0
+                    )
+                else:
+                    count = (
+                        1
+                        if (
+                            low
+                            <= float(own_avg)
+                            < high
+                        )
+                        else 0
+                    )
+
+                distribution.append(
+                    {
+                        "range": (
+                            f"{low}-{high}%"
+                            if low < 90
+                            else "90-100%"
+                        ),
+                        "count": count,
+                    }
+                )
+
         return {
             "stats": {
-                "programme_code": student.programme.code,
-                "programme_name": student.programme.name,
-                "year": student.current_year,
-                "total_students": 1,
-                "your_rank": 1,
-                "percentile": 100,
-                "your_average": own_avg,
-                "cohort_average": None,
-                "max_average": None,
-                "min_average": None,
-                "distribution": [],
+                "programme_code":
+                    student.programme.code,
+
+                "programme_name":
+                    student.programme.name,
+
+                "year":
+                    student.current_year,
+
+                "total_students":
+                    total_students,
+
+                "your_rank":
+                    None,
+
+                "percentile":
+                    None,
+
+                "your_average":
+                    own_avg,
+
+                "cohort_average":
+                    None,
+
+                "max_average":
+                    None,
+
+                "min_average":
+                    None,
+
+                "distribution":
+                    distribution,
+
+                "students_with_averages":
+                    students_with_averages,
+
+                "peer_count":
+                    peer_count,
+
+                "students_without_averages":
+                    students_without_averages,
             },
-            "message": "Your peers have not completed enough modules yet."
+
+            "message":
+                "Your peers have not completed "
+                "enough graded modules yet.",
         }
-    
+
+    # ---------------------------------------------------------
+    # Sort peer averages
+    # ---------------------------------------------------------
+
     peer_averages.sort()
-    total_peers = len(peer_averages)
-    
+
+    total_peers_with_averages = len(
+        peer_averages
+    )
+
+    # ---------------------------------------------------------
+    # Calculate current student's rank and percentile
+    # ---------------------------------------------------------
+
     if own_avg is None:
-        rank = total_peers + 1
+        higher = None
+        rank = None
+        percentile = None
+
     else:
-        higher = sum(1 for avg in peer_averages if avg > own_avg)
+        own_avg_float = float(
+            own_avg
+        )
+
+        higher = sum(
+            1
+            for avg in peer_averages
+            if avg > own_avg_float
+        )
+
         rank = higher + 1
-    
-    percentile = 100 - ((higher / total_peers) * 100) if total_peers > 0 else 100
-    
-    cohort_avg = sum(peer_averages) / total_peers if total_peers > 0 else None
-    max_avg = max(peer_averages) if peer_averages else None
-    min_avg = min(peer_averages) if peer_averages else None
-    
-    bins = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-    all_averages = peer_averages.copy()
+
+        comparison_population = (
+            total_peers_with_averages
+            + 1
+        )
+
+        lower_or_equal = sum(
+            1
+            for avg in peer_averages
+            if avg <= own_avg_float
+        )
+
+        percentile = (
+            (
+                lower_or_equal
+                / comparison_population
+            )
+            * 100
+        )
+
+    # ---------------------------------------------------------
+    # Calculate peer cohort statistics
+    #
+    # These statistics represent OTHER students,
+    # not the current student.
+    # ---------------------------------------------------------
+
+    cohort_avg = (
+        sum(peer_averages)
+        / total_peers_with_averages
+    )
+
+    max_avg = max(
+        peer_averages
+    )
+
+    min_avg = min(
+        peer_averages
+    )
+
+    # ---------------------------------------------------------
+    # Build distribution
+    #
+    # The distribution includes the current student's
+    # average when available so their position can be
+    # highlighted on the frontend.
+    # ---------------------------------------------------------
+
+    bins = [
+        0,
+        10,
+        20,
+        30,
+        40,
+        50,
+        60,
+        70,
+        80,
+        90,
+        100,
+    ]
+
+    all_averages = (
+        peer_averages.copy()
+    )
+
     if own_avg is not None:
-        all_averages.append(own_avg)
-    
+        all_averages.append(
+            float(own_avg)
+        )
+
     distribution = []
-    for i in range(len(bins) - 1):
+
+    for i in range(
+        len(bins) - 1
+    ):
         low = bins[i]
-        high = bins[i+1]
+        high = bins[i + 1]
+
         if low == 90:
-            count = sum(1 for avg in all_averages if avg >= 90)
+            count = sum(
+                1
+                for avg in all_averages
+                if avg >= 90
+            )
+
         else:
-            count = sum(1 for avg in all_averages if low <= avg < high)
-        distribution.append({
-            "range": f"{low}-{high}%" if low < 90 else "90-100%",
-            "count": count
-        })
-    
+            count = sum(
+                1
+                for avg in all_averages
+                if low <= avg < high
+            )
+
+        distribution.append(
+            {
+                "range": (
+                    f"{low}-{high}%"
+                    if low < 90
+                    else "90-100%"
+                ),
+                "count": count,
+            }
+        )
+
+    # ---------------------------------------------------------
+    # Calculate difference from cohort average
+    # ---------------------------------------------------------
+
+    average_difference = None
+
+    if (
+        own_avg is not None
+        and cohort_avg is not None
+    ):
+        average_difference = round(
+            float(own_avg)
+            - cohort_avg,
+            1,
+        )
+
+    # ---------------------------------------------------------
+    # Calculate top percentage
+    # ---------------------------------------------------------
+
+    top_percentage = None
+
+    if percentile is not None:
+        top_percentage = max(
+            1,
+            round(
+                100 - percentile
+            ),
+        )
+
+    # ---------------------------------------------------------
+    # Determine comparison status
+    # ---------------------------------------------------------
+
+    comparison_status = (
+        "unavailable"
+    )
+
+    if average_difference is not None:
+        if average_difference > 0:
+            comparison_status = (
+                "above_average"
+            )
+
+        elif average_difference < 0:
+            comparison_status = (
+                "below_average"
+            )
+
+        else:
+            comparison_status = (
+                "at_average"
+            )
+
+    # ---------------------------------------------------------
+    # Final response
+    # ---------------------------------------------------------
+
     return {
         "stats": {
-            "programme_code": student.programme.code,
-            "programme_name": student.programme.name,
-            "year": student.current_year,
-            "total_students": total_peers + 1,
-            "your_rank": rank,
-            "percentile": round(percentile, 1),
-            "your_average": own_avg,
-            "cohort_average": round(cohort_avg, 1) if cohort_avg is not None else None,
-            "max_average": round(max_avg, 1) if max_avg is not None else None,
-            "min_average": round(min_avg, 1) if min_avg is not None else None,
-            "distribution": distribution,
+            "programme_code":
+                student.programme.code,
+
+            "programme_name":
+                student.programme.name,
+
+            "year":
+                student.current_year,
+
+            "total_students":
+                total_students,
+
+            "peer_count":
+                peer_count,
+
+            "students_with_averages":
+                students_with_averages,
+
+            "students_without_averages":
+                students_without_averages,
+
+            "your_rank":
+                rank,
+
+            "percentile": (
+                round(
+                    percentile,
+                    1,
+                )
+                if percentile is not None
+                else None
+            ),
+
+            "top_percentage":
+                top_percentage,
+
+            "your_average": (
+                round(
+                    float(own_avg),
+                    1,
+                )
+                if own_avg is not None
+                else None
+            ),
+
+            "cohort_average": (
+                round(
+                    cohort_avg,
+                    1,
+                )
+                if cohort_avg is not None
+                else None
+            ),
+
+            "average_difference":
+                average_difference,
+
+            "max_average": (
+                round(
+                    max_avg,
+                    1,
+                )
+                if max_avg is not None
+                else None
+            ),
+
+            "min_average": (
+                round(
+                    min_avg,
+                    1,
+                )
+                if min_avg is not None
+                else None
+            ),
+
+            "comparison_status":
+                comparison_status,
+
+            "distribution":
+                distribution,
         },
-        "message": "Here's how you compare to your peers." if own_avg is not None else "Complete more modules to see your comparison."
+
+        "message": (
+            "Here's how you compare "
+            "to your peers."
+            if own_avg is not None
+            else
+            "Complete more graded "
+            "modules to see your comparison."
+        ),
     }
 
-
-# ---------- Achievements ----------
-
 ACHIEVEMENT_DEFINITIONS = {
+    # =========================================================
+    # PROGRESS / MILESTONES
+    # =========================================================
     "first_steps": {
         "id": "first_steps",
         "title": "First Steps",
         "description": "Complete your first module",
         "icon": "🌱",
         "category": "milestone",
+        "rarity": "common",
+        "xp": 100,
     },
-    "year_1_complete": {
-        "id": "year_1_complete",
-        "title": "Year 1 Complete",
-        "description": "Complete all first-year modules",
-        "icon": "📚",
+    "getting_started": {
+        "id": "getting_started",
+        "title": "Getting Started",
+        "description": "Complete 5 modules",
+        "icon": "🚀",
         "category": "milestone",
-    },
-    "year_2_complete": {
-        "id": "year_2_complete",
-        "title": "Year 2 Complete",
-        "description": "Complete all second-year modules",
-        "icon": "📚",
-        "category": "milestone",
-    },
-    "year_3_complete": {
-        "id": "year_3_complete",
-        "title": "Year 3 Complete",
-        "description": "Complete all third-year modules",
-        "icon": "📚",
-        "category": "milestone",
-    },
-    "all_compulsory_complete": {
-        "id": "all_compulsory_complete",
-        "title": "Compulsory Conqueror",
-        "description": "Complete all compulsory modules",
-        "icon": "🎯",
-        "category": "academic",
-    },
-    "halfway_there": {
-        "id": "halfway_there",
-        "title": "Halfway There!",
-        "description": "Complete 50% of your degree credits",
-        "icon": "🏔️",
-        "category": "milestone",
-    },
-    "credit_king": {
-        "id": "credit_king",
-        "title": "Credit King",
-        "description": "Complete 75% of your degree credits",
-        "icon": "👑",
-        "category": "milestone",
-    },
-    "gpa_70": {
-        "id": "gpa_70",
-        "title": "Academic Excellence",
-        "description": "Achieve a weighted average of 70% or higher",
-        "icon": "⭐",
-        "category": "excellence",
-    },
-    "gpa_75": {
-        "id": "gpa_75",
-        "title": "Top Achiever",
-        "description": "Achieve a weighted average of 75% or higher",
-        "icon": "🌟",
-        "category": "excellence",
-    },
-    "gpa_80": {
-        "id": "gpa_80",
-        "title": "Academic Elite",
-        "description": "Achieve a weighted average of 80% or higher",
-        "icon": "🏅",
-        "category": "excellence",
-    },
-    "perfect_semester": {
-        "id": "perfect_semester",
-        "title": "Perfect Semester",
-        "description": "Pass all modules in a single semester",
-        "icon": "💯",
-        "category": "academic",
-    },
-    "retake_success": {
-        "id": "retake_success",
-        "title": "Comeback King",
-        "description": "Pass a module you previously failed",
-        "icon": "🔄",
-        "category": "perseverance",
-    },
-    "elective_explorer": {
-        "id": "elective_explorer",
-        "title": "Elective Explorer",
-        "description": "Complete at least 2 elective modules",
-        "icon": "🧭",
-        "category": "academic",
+        "rarity": "common",
+        "xp": 150,
     },
     "module_master": {
         "id": "module_master",
@@ -555,223 +920,1033 @@ ACHIEVEMENT_DEFINITIONS = {
         "description": "Complete 10 modules",
         "icon": "🎓",
         "category": "milestone",
+        "rarity": "uncommon",
+        "xp": 250,
     },
-    "all_clear": {
-        "id": "all_clear",
-        "title": "No Failures",
-        "description": "Complete all taken modules without any failures",
+    "module_machine": {
+        "id": "module_machine",
+        "title": "Module Machine",
+        "description": "Complete 15 modules",
+        "icon": "⚙️",
+        "category": "milestone",
+        "rarity": "rare",
+        "xp": 350,
+    },
+    "quarter_way": {
+        "id": "quarter_way",
+        "title": "Quarter Way",
+        "description": "Complete 25% of your degree credits",
+        "icon": "🗺️",
+        "category": "milestone",
+        "rarity": "common",
+        "xp": 150,
+    },
+    "halfway_there": {
+        "id": "halfway_there",
+        "title": "Halfway There!",
+        "description": "Complete 50% of your degree credits",
+        "icon": "🏔️",
+        "category": "milestone",
+        "rarity": "uncommon",
+        "xp": 300,
+    },
+    "credit_king": {
+        "id": "credit_king",
+        "title": "Final Stretch",
+        "description": "Complete 75% of your degree credits",
+        "icon": "👑",
+        "category": "milestone",
+        "rarity": "rare",
+        "xp": 450,
+    },
+    "almost_there": {
+        "id": "almost_there",
+        "title": "Almost There!",
+        "description": "Complete 90% of your degree credits",
+        "icon": "🏁",
+        "category": "milestone",
+        "rarity": "epic",
+        "xp": 600,
+    },
+    "degree_conquered": {
+        "id": "degree_conquered",
+        "title": "Degree Conquered",
+        "description": "Complete all credits required for your degree",
+        "icon": "🏆",
+        "category": "milestone",
+        "rarity": "legendary",
+        "xp": 1000,
+    },
+
+    # =========================================================
+    # CREDIT ACHIEVEMENTS
+    # =========================================================
+    "credit_50": {
+        "id": "credit_50",
+        "title": "Credit Collector",
+        "description": "Earn 50 academic credits",
+        "icon": "💳",
+        "category": "milestone",
+        "rarity": "common",
+        "xp": 100,
+    },
+    "credit_100": {
+        "id": "credit_100",
+        "title": "Century Club",
+        "description": "Earn 100 academic credits",
+        "icon": "💯",
+        "category": "milestone",
+        "rarity": "uncommon",
+        "xp": 200,
+    },
+    "credit_200": {
+        "id": "credit_200",
+        "title": "Credit Machine",
+        "description": "Earn 200 academic credits",
+        "icon": "💰",
+        "category": "milestone",
+        "rarity": "rare",
+        "xp": 400,
+    },
+
+    # =========================================================
+    # YEAR / LEVEL ACHIEVEMENTS
+    # =========================================================
+    "year_1_complete": {
+        "id": "year_1_complete",
+        "title": "Year One Complete",
+        "description": "Complete all Level 1 modules in your programme",
+        "icon": "📚",
+        "category": "academic",
+        "rarity": "uncommon",
+        "xp": 300,
+    },
+    "year_2_complete": {
+        "id": "year_2_complete",
+        "title": "Year Two Complete",
+        "description": "Complete all Level 2 modules in your programme",
+        "icon": "📘",
+        "category": "academic",
+        "rarity": "rare",
+        "xp": 450,
+    },
+    "year_3_complete": {
+        "id": "year_3_complete",
+        "title": "Final Boss Defeated",
+        "description": "Complete all Level 3 modules in your programme",
+        "icon": "🐉",
+        "category": "academic",
+        "rarity": "epic",
+        "xp": 700,
+    },
+
+    # =========================================================
+    # COMPULSORY / ELECTIVE ACHIEVEMENTS
+    # =========================================================
+    "all_compulsory_complete": {
+        "id": "all_compulsory_complete",
+        "title": "Compulsory Conqueror",
+        "description": "Complete every compulsory module in your programme",
+        "icon": "🎯",
+        "category": "academic",
+        "rarity": "legendary",
+        "xp": 800,
+    },
+    "elective_explorer": {
+        "id": "elective_explorer",
+        "title": "Elective Explorer",
+        "description": "Complete at least 2 elective modules",
+        "icon": "🧭",
+        "category": "academic",
+        "rarity": "common",
+        "xp": 150,
+    },
+    "elective_expert": {
+        "id": "elective_expert",
+        "title": "Elective Expert",
+        "description": "Complete at least 4 elective modules",
+        "icon": "🗺️",
+        "category": "academic",
+        "rarity": "rare",
+        "xp": 350,
+    },
+
+    # =========================================================
+    # ACADEMIC PERFORMANCE
+    # =========================================================
+    "gpa_65": {
+        "id": "gpa_65",
+        "title": "Rising Star",
+        "description": "Achieve a weighted average of 65% or higher",
         "icon": "✨",
         "category": "excellence",
+        "rarity": "common",
+        "xp": 150,
+    },
+    "gpa_70": {
+        "id": "gpa_70",
+        "title": "Academic Excellence",
+        "description": "Achieve a weighted average of 70% or higher",
+        "icon": "⭐",
+        "category": "excellence",
+        "rarity": "uncommon",
+        "xp": 250,
+    },
+    "gpa_75": {
+        "id": "gpa_75",
+        "title": "Top Achiever",
+        "description": "Achieve a weighted average of 75% or higher",
+        "icon": "🌟",
+        "category": "excellence",
+        "rarity": "rare",
+        "xp": 350,
+    },
+    "gpa_80": {
+        "id": "gpa_80",
+        "title": "Academic Elite",
+        "description": "Achieve a weighted average of 80% or higher",
+        "icon": "🏅",
+        "category": "excellence",
+        "rarity": "epic",
+        "xp": 500,
+    },
+    "gpa_85": {
+        "id": "gpa_85",
+        "title": "Elite Scholar",
+        "description": "Achieve a weighted average of 85% or higher",
+        "icon": "💎",
+        "category": "excellence",
+        "rarity": "legendary",
+        "xp": 750,
+    },
+
+    # =========================================================
+    # SEMESTER ACHIEVEMENTS
+    # =========================================================
+    "perfect_semester": {
+        "id": "perfect_semester",
+        "title": "Clean Semester",
+        "description": "Complete at least 3 modules in one semester without failing any",
+        "icon": "💯",
+        "category": "excellence",
+        "rarity": "uncommon",
+        "xp": 250,
+    },
+    "two_clean_semesters": {
+        "id": "two_clean_semesters",
+        "title": "On Fire",
+        "description": "Complete 2 clean semesters",
+        "icon": "🔥",
+        "category": "excellence",
+        "rarity": "rare",
+        "xp": 400,
+    },
+    "three_clean_semesters": {
+        "id": "three_clean_semesters",
+        "title": "Hat Trick",
+        "description": "Complete 3 clean semesters",
+        "icon": "🎩",
+        "category": "excellence",
+        "rarity": "epic",
+        "xp": 600,
+    },
+
+    # =========================================================
+    # PERSEVERANCE
+    # =========================================================
+    "retake_success": {
+        "id": "retake_success",
+        "title": "Comeback King",
+        "description": "Pass a module you previously failed",
+        "icon": "🔄",
+        "category": "perseverance",
+        "rarity": "uncommon",
+        "xp": 250,
+    },
+    "multiple_comebacks": {
+        "id": "multiple_comebacks",
+        "title": "Never Give Up",
+        "description": "Successfully recover from 2 previously failed modules",
+        "icon": "💪",
+        "category": "perseverance",
+        "rarity": "rare",
+        "xp": 400,
+    },
+    "redemption_arc": {
+        "id": "redemption_arc",
+        "title": "Redemption Arc",
+        "description": "Score 60% or higher when successfully retaking a failed module",
+        "icon": "⚡",
+        "category": "perseverance",
+        "rarity": "epic",
+        "xp": 500,
+    },
+
+    # =========================================================
+    # SPECIAL
+    # =========================================================
+    "all_clear": {
+        "id": "all_clear",
+        "title": "Flawless Record",
+        "description": "Complete your modules without recording a failed enrolment",
+        "icon": "✨",
+        "category": "excellence",
+        "rarity": "rare",
+        "xp": 350,
+    },
+    "final_module": {
+        "id": "final_module",
+        "title": "The Final Module",
+        "description": "Have only one programme module left to complete",
+        "icon": "⚔️",
+        "category": "milestone",
+        "rarity": "epic",
+        "xp": 500,
     },
 }
 
 
-def _get_completed_levels(db: Session, student: models.Student) -> dict:
-    """Get completion status by level."""
-    programme_modules = db.query(models.ProgrammeModule).filter(
-        models.ProgrammeModule.programme_id == student.programme_id
-    ).options(joinedload(models.ProgrammeModule.module)).all()
-    
-    completed_ids = set(e.module_id for e in db.query(models.Enrolment).filter(
-        models.Enrolment.student_id == student.id,
-        models.Enrolment.status == "completed"
-    ).all())
-    
+# XP level system
+ACHIEVEMENT_LEVELS = [
+    {
+        "level": 1,
+        "title": "Rookie",
+        "min_xp": 0,
+    },
+    {
+        "level": 2,
+        "title": "Explorer",
+        "min_xp": 500,
+    },
+    {
+        "level": 3,
+        "title": "Achiever",
+        "min_xp": 1200,
+    },
+    {
+        "level": 4,
+        "title": "Scholar",
+        "min_xp": 2200,
+    },
+    {
+        "level": 5,
+        "title": "Master",
+        "min_xp": 3500,
+    },
+    {
+        "level": 6,
+        "title": "Legend",
+        "min_xp": 5500,
+    },
+]
+
+
+def _get_completed_levels(
+    db: Session,
+    student: models.Student,
+) -> dict:
+    """Get completion status by programme module level."""
+
+    programme_modules = (
+        db.query(models.ProgrammeModule)
+        .filter(
+            models.ProgrammeModule.programme_id
+            == student.programme_id
+        )
+        .options(
+            joinedload(
+                models.ProgrammeModule.module
+            )
+        )
+        .all()
+    )
+
+    completed_ids = {
+        e.module_id
+        for e in db.query(models.Enrolment)
+        .filter(
+            models.Enrolment.student_id
+            == student.id,
+            models.Enrolment.status
+            == "completed",
+        )
+        .all()
+    }
+
     level_counts = {}
+
     for link in programme_modules:
         level = link.module.level
+
         if level not in level_counts:
-            level_counts[level] = {"total": 0, "completed": 0}
+            level_counts[level] = {
+                "total": 0,
+                "completed": 0,
+            }
+
         level_counts[level]["total"] += 1
+
         if link.module.id in completed_ids:
-            level_counts[level]["completed"] += 1
-    
+            level_counts[level][
+                "completed"
+            ] += 1
+
     return level_counts
 
 
-def _get_all_pass_count(db: Session, student: models.Student) -> bool:
-    """Check if student has no failures."""
-    failed = db.query(models.Enrolment).filter(
-        models.Enrolment.student_id == student.id,
-        models.Enrolment.status == "failed"
-    ).first()
+def _get_all_pass_count(
+    db: Session,
+    student: models.Student,
+) -> bool:
+    """Return True when no failed enrolment exists."""
+
+    failed = (
+        db.query(models.Enrolment)
+        .filter(
+            models.Enrolment.student_id
+            == student.id,
+            models.Enrolment.status
+            == "failed",
+        )
+        .first()
+    )
+
     return failed is None
 
 
-def calculate_achievements(db: Session, student: models.Student) -> set:
-    """Calculate all achievements for a student."""
-    summary = build_progress_summary(db, student)
-    completed_ids = set(e.module_id for e in db.query(models.Enrolment).filter(
-        models.Enrolment.student_id == student.id,
-        models.Enrolment.status == "completed"
-    ).all())
-    
-    programme_modules = db.query(models.ProgrammeModule).filter(
-        models.ProgrammeModule.programme_id == student.programme_id
-    ).options(joinedload(models.ProgrammeModule.module)).all()
-    
-    total_modules = len(programme_modules)
-    total_compulsory = len([pm for pm in programme_modules if pm.is_compulsory])
-    completed_compulsory = len([pm for pm in programme_modules if pm.is_compulsory and pm.module.id in completed_ids])
-    completed_elective = len([pm for pm in programme_modules if not pm.is_compulsory and pm.module.id in completed_ids])
-    total_elective = len([pm for pm in programme_modules if not pm.is_compulsory])
-    
-    credits_completed = summary["credits_completed"]
-    credits_required = summary["credits_required"]
-    
-    enrolments = db.query(models.Enrolment).filter(
-        models.Enrolment.student_id == student.id
-    ).all()
-    
-    failed_module_ids = set()
-    passed_module_ids = set()
-    for e in enrolments:
-        if e.status == "failed":
-            failed_module_ids.add(e.module_id)
-        elif e.status == "completed":
-            passed_module_ids.add(e.module_id)
-    
-    retake_success = len(failed_module_ids.intersection(passed_module_ids)) > 0
-    
-    semester_modules = {}
-    for e in enrolments:
-        if e.semester not in semester_modules:
-            semester_modules[e.semester] = []
-        semester_modules[e.semester].append(e)
-    
-    perfect_semester = False
-    for semester, modules in semester_modules.items():
-        if all(m.status == "completed" for m in modules):
-            perfect_semester = True
+def _get_achievement_level(
+    total_xp: int,
+) -> dict:
+    """Calculate achievement level from XP."""
+
+    current = ACHIEVEMENT_LEVELS[0]
+
+    for level in ACHIEVEMENT_LEVELS:
+        if total_xp >= level["min_xp"]:
+            current = level
+        else:
             break
-    
-    level_counts = _get_completed_levels(db, student)
-    
+
+    current_index = ACHIEVEMENT_LEVELS.index(
+        current
+    )
+
+    if (
+        current_index
+        < len(ACHIEVEMENT_LEVELS) - 1
+    ):
+        next_level = ACHIEVEMENT_LEVELS[
+            current_index + 1
+        ]
+
+        xp_to_next = max(
+            next_level["min_xp"] - total_xp,
+            0,
+        )
+
+        level_range = (
+            next_level["min_xp"]
+            - current["min_xp"]
+        )
+
+        progress_in_level = (
+            total_xp - current["min_xp"]
+        )
+
+        level_progress = (
+            round(
+                (
+                    progress_in_level
+                    / level_range
+                )
+                * 100,
+                1,
+            )
+            if level_range > 0
+            else 100
+        )
+
+        return {
+            "level": current["level"],
+            "level_title": current["title"],
+            "next_level": next_level[
+                "level"
+            ],
+            "next_level_title": next_level[
+                "title"
+            ],
+            "xp_to_next_level": xp_to_next,
+            "level_progress": min(
+                level_progress,
+                100,
+            ),
+            "current_level_min_xp": current[
+                "min_xp"
+            ],
+            "next_level_min_xp": next_level[
+                "min_xp"
+            ],
+        }
+
+    return {
+        "level": current["level"],
+        "level_title": current["title"],
+        "next_level": None,
+        "next_level_title": None,
+        "xp_to_next_level": 0,
+        "level_progress": 100,
+        "current_level_min_xp": current[
+            "min_xp"
+        ],
+        "next_level_min_xp": None,
+    }
+
+
+def calculate_achievements(
+    db: Session,
+    student: models.Student,
+) -> set:
+    """Calculate all unlocked achievements."""
+
+    summary = build_progress_summary(
+        db,
+        student,
+    )
+
+    enrolments = (
+        db.query(models.Enrolment)
+        .filter(
+            models.Enrolment.student_id
+            == student.id
+        )
+        .all()
+    )
+
+    completed_enrolments = [
+        e
+        for e in enrolments
+        if e.status == "completed"
+    ]
+
+    completed_ids = {
+        e.module_id
+        for e in completed_enrolments
+    }
+
+    programme_modules = (
+        db.query(models.ProgrammeModule)
+        .filter(
+            models.ProgrammeModule.programme_id
+            == student.programme_id
+        )
+        .options(
+            joinedload(
+                models.ProgrammeModule.module
+            )
+        )
+        .all()
+    )
+
+    total_modules = len(
+        programme_modules
+    )
+
+    total_compulsory = len(
+        [
+            pm
+            for pm in programme_modules
+            if pm.is_compulsory
+        ]
+    )
+
+    completed_compulsory = len(
+        [
+            pm
+            for pm in programme_modules
+            if pm.is_compulsory
+            and pm.module.id
+            in completed_ids
+        ]
+    )
+
+    completed_elective = len(
+        [
+            pm
+            for pm in programme_modules
+            if not pm.is_compulsory
+            and pm.module.id
+            in completed_ids
+        ]
+    )
+
+    credits_completed = (
+        summary["credits_completed"]
+    )
+
+    credits_required = (
+        summary["credits_required"]
+    )
+
+    weighted_average = summary.get(
+        "weighted_average"
+    )
+
     achievements = []
-    
-    if total_modules > 0 and len(completed_ids) >= 1:
-        achievements.append("first_steps")
-    
-    if len(completed_ids) >= 10:
-        achievements.append("module_master")
-    
-    if credits_completed >= credits_required * 0.5:
-        achievements.append("halfway_there")
-    
-    if credits_completed >= credits_required * 0.75:
-        achievements.append("credit_king")
-    
-    if total_compulsory > 0 and completed_compulsory == total_compulsory:
-        achievements.append("all_compulsory_complete")
-    
+
+    # ---------------------------------------------------------
+    # Module milestones
+    # ---------------------------------------------------------
+
+    completed_count = len(
+        completed_ids
+    )
+
+    if completed_count >= 1:
+        achievements.append(
+            "first_steps"
+        )
+
+    if completed_count >= 5:
+        achievements.append(
+            "getting_started"
+        )
+
+    if completed_count >= 10:
+        achievements.append(
+            "module_master"
+        )
+
+    if completed_count >= 15:
+        achievements.append(
+            "module_machine"
+        )
+
+    # ---------------------------------------------------------
+    # Degree progress
+    # ---------------------------------------------------------
+
+    if credits_required > 0:
+        degree_progress = (
+            credits_completed
+            / credits_required
+        )
+
+        if degree_progress >= 0.25:
+            achievements.append(
+                "quarter_way"
+            )
+
+        if degree_progress >= 0.50:
+            achievements.append(
+                "halfway_there"
+            )
+
+        if degree_progress >= 0.75:
+            achievements.append(
+                "credit_king"
+            )
+
+        if degree_progress >= 0.90:
+            achievements.append(
+                "almost_there"
+            )
+
+        if credits_completed >= credits_required:
+            achievements.append(
+                "degree_conquered"
+            )
+
+    # ---------------------------------------------------------
+    # Credit milestones
+    # ---------------------------------------------------------
+
+    if credits_completed >= 50:
+        achievements.append(
+            "credit_50"
+        )
+
+    if credits_completed >= 100:
+        achievements.append(
+            "credit_100"
+        )
+
+    if credits_completed >= 200:
+        achievements.append(
+            "credit_200"
+        )
+
+    # ---------------------------------------------------------
+    # Compulsory / elective
+    # ---------------------------------------------------------
+
+    if (
+        total_compulsory > 0
+        and completed_compulsory
+        == total_compulsory
+    ):
+        achievements.append(
+            "all_compulsory_complete"
+        )
+
     if completed_elective >= 2:
-        achievements.append("elective_explorer")
-    
-    if level_counts.get(1, {}).get("total", 0) > 0 and level_counts.get(1, {}).get("completed", 0) == level_counts.get(1, {}).get("total", 0):
-        achievements.append("year_1_complete")
-    
-    if level_counts.get(2, {}).get("total", 0) > 0 and level_counts.get(2, {}).get("completed", 0) == level_counts.get(2, {}).get("total", 0):
-        achievements.append("year_2_complete")
-    
-    if level_counts.get(3, {}).get("total", 0) > 0 and level_counts.get(3, {}).get("completed", 0) == level_counts.get(3, {}).get("total", 0):
-        achievements.append("year_3_complete")
-    
-    if summary["weighted_average"] is not None:
-        if summary["weighted_average"] >= 70:
-            achievements.append("gpa_70")
-        if summary["weighted_average"] >= 75:
-            achievements.append("gpa_75")
-        if summary["weighted_average"] >= 80:
-            achievements.append("gpa_80")
-    
-    if retake_success:
-        achievements.append("retake_success")
-    
-    if perfect_semester:
-        achievements.append("perfect_semester")
-    
-    if _get_all_pass_count(db, student) and len(completed_ids) > 0:
-        achievements.append("all_clear")
-    
+        achievements.append(
+            "elective_explorer"
+        )
+
+    if completed_elective >= 4:
+        achievements.append(
+            "elective_expert"
+        )
+
+    # ---------------------------------------------------------
+    # Programme levels
+    # ---------------------------------------------------------
+
+    level_counts = _get_completed_levels(
+        db,
+        student,
+    )
+
+    for level, achievement_id in [
+        (1, "year_1_complete"),
+        (2, "year_2_complete"),
+        (3, "year_3_complete"),
+    ]:
+        level_data = level_counts.get(
+            level,
+            {},
+        )
+
+        if (
+            level_data.get("total", 0) > 0
+            and level_data.get(
+                "completed",
+                0,
+            )
+            == level_data.get(
+                "total",
+                0,
+            )
+        ):
+            achievements.append(
+                achievement_id
+            )
+
+    # ---------------------------------------------------------
+    # Weighted-average achievements
+    # ---------------------------------------------------------
+
+    if weighted_average is not None:
+        if weighted_average >= 65:
+            achievements.append(
+                "gpa_65"
+            )
+
+        if weighted_average >= 70:
+            achievements.append(
+                "gpa_70"
+            )
+
+        if weighted_average >= 75:
+            achievements.append(
+                "gpa_75"
+            )
+
+        if weighted_average >= 80:
+            achievements.append(
+                "gpa_80"
+            )
+
+        if weighted_average >= 85:
+            achievements.append(
+                "gpa_85"
+            )
+
+    # ---------------------------------------------------------
+    # Semester achievements
+    # ---------------------------------------------------------
+
+    semester_modules = {}
+
+    for enrolment in enrolments:
+        if not enrolment.semester:
+            continue
+
+        semester_modules.setdefault(
+            enrolment.semester,
+            [],
+        ).append(enrolment)
+
+    clean_semesters = 0
+
+    for semester_enrolments in (
+        semester_modules.values()
+    ):
+        # Only count a meaningful semester.
+        # Planned/in-progress modules do not
+        # count as a completed clean semester.
+        finished = [
+            e
+            for e in semester_enrolments
+            if e.status
+            in ("completed", "failed")
+        ]
+
+        if (
+            len(finished) >= 3
+            and all(
+                e.status == "completed"
+                for e in finished
+            )
+        ):
+            clean_semesters += 1
+
+    if clean_semesters >= 1:
+        achievements.append(
+            "perfect_semester"
+        )
+
+    if clean_semesters >= 2:
+        achievements.append(
+            "two_clean_semesters"
+        )
+
+    if clean_semesters >= 3:
+        achievements.append(
+            "three_clean_semesters"
+        )
+
+    # ---------------------------------------------------------
+    # Retakes / perseverance
+    # ---------------------------------------------------------
+
+    failed_module_ids = {
+        e.module_id
+        for e in enrolments
+        if e.status == "failed"
+    }
+
+    recovered_module_ids = (
+        failed_module_ids
+        .intersection(completed_ids)
+    )
+
+    if recovered_module_ids:
+        achievements.append(
+            "retake_success"
+        )
+
+    if len(recovered_module_ids) >= 2:
+        achievements.append(
+            "multiple_comebacks"
+        )
+
+    # A successful retake with a mark >= 60.
+    redemption = False
+
+    for enrolment in completed_enrolments:
+        if (
+            enrolment.module_id
+            in failed_module_ids
+            and enrolment.grade is not None
+            and enrolment.grade >= 60
+        ):
+            redemption = True
+            break
+
+    if redemption:
+        achievements.append(
+            "redemption_arc"
+        )
+
+    # ---------------------------------------------------------
+    # Special achievements
+    # ---------------------------------------------------------
+
+    if (
+        _get_all_pass_count(
+            db,
+            student,
+        )
+        and completed_count > 0
+    ):
+        achievements.append(
+            "all_clear"
+        )
+
+    remaining_modules = max(
+        total_modules - completed_count,
+        0,
+    )
+
+    if (
+        total_modules > 0
+        and remaining_modules == 1
+    ):
+        achievements.append(
+            "final_module"
+        )
+
     return set(achievements)
 
 
-def get_achievement_summary(db: Session, student: models.Student) -> dict:
-    """Get a summary of achievements for a student."""
-    unlocked_ids = calculate_achievements(db, student)
-    
+def get_achievement_summary(
+    db: Session,
+    student: models.Student,
+) -> dict:
+    """Build achievement dashboard data."""
+
+    unlocked_ids = calculate_achievements(
+        db,
+        student,
+    )
+
     achievements = []
-    for key, defn in ACHIEVEMENT_DEFINITIONS.items():
-        unlocked = key in unlocked_ids
-        achievements.append({
-            "id": defn["id"],
-            "title": defn["title"],
-            "description": defn["description"],
-            "icon": defn["icon"],
-            "category": defn["category"],
-            "unlocked": unlocked,
-            "unlocked_at": datetime.now() if unlocked else None,
-            "progress": 100 if unlocked else None,
-            "progress_label": None,
-        })
-    
-    unlocked = [a for a in achievements if a["unlocked"]]
-    locked = [a for a in achievements if not a["unlocked"]]
-    
+
+    for key, defn in (
+        ACHIEVEMENT_DEFINITIONS.items()
+    ):
+        unlocked = (
+            key in unlocked_ids
+        )
+
+        achievements.append(
+            {
+                "id": defn["id"],
+                "title": defn["title"],
+                "description": defn[
+                    "description"
+                ],
+                "icon": defn["icon"],
+                "category": defn[
+                    "category"
+                ],
+                "rarity": defn.get(
+                    "rarity",
+                    "common",
+                ),
+                "xp": defn.get(
+                    "xp",
+                    100,
+                ),
+                "unlocked": unlocked,
+                "unlocked_at": (
+                    datetime.now()
+                    if unlocked
+                    else None
+                ),
+                "progress": (
+                    100
+                    if unlocked
+                    else None
+                ),
+                "progress_label": None,
+            }
+        )
+
+    unlocked = [
+        achievement
+        for achievement in achievements
+        if achievement["unlocked"]
+    ]
+
+    locked = [
+        achievement
+        for achievement in achievements
+        if not achievement["unlocked"]
+    ]
+
     total = len(achievements)
     unlocked_count = len(unlocked)
-    
-    return {
-        "total_achievements": total,
-        "unlocked_achievements": unlocked_count,
-        "completion_percentage": round((unlocked_count / total) * 100, 1) if total > 0 else 0,
-        "achievements": unlocked + locked,
-        "recent_unlocks": unlocked[-5:],
-        "next_milestones": locked[:5],
+
+    total_xp = sum(
+        achievement["xp"]
+        for achievement in unlocked
+    )
+
+    level_info = _get_achievement_level(
+        total_xp
+    )
+
+    rarity_summary = {
+        "common": 0,
+        "uncommon": 0,
+        "rare": 0,
+        "epic": 0,
+        "legendary": 0,
     }
 
-def notify_grade_released(db: Session, student: models.Student, module: models.Module, grade: float, semester: str) -> None:
+    for achievement in unlocked:
+        rarity = achievement.get(
+            "rarity",
+            "common",
+        )
+
+        rarity_summary[rarity] = (
+            rarity_summary.get(
+                rarity,
+                0,
+            )
+            + 1
+        )
+
+    return {
+        "total_achievements": total,
+        "unlocked_achievements": (
+            unlocked_count
+        ),
+        "locked_achievements": (
+            total - unlocked_count
+        ),
+        "completion_percentage": (
+            round(
+                (
+                    unlocked_count
+                    / total
+                )
+                * 100,
+                1,
+            )
+            if total > 0
+            else 0
+        ),
+
+        # XP / level system
+        "total_xp": total_xp,
+        **level_info,
+
+        # Extra stats
+        "rarity_summary": (
+            rarity_summary
+        ),
+
+        # Achievement lists
+        "achievements": (
+            unlocked + locked
+        ),
+        "recent_unlocks": (
+            unlocked[-5:]
+        ),
+        "next_milestones": (
+            locked[:5]
+        ),
+    }
+
+def notify_grade_released(
+    db: Session,
+    student: models.Student,
+    module: models.Module,
+    grade: float,
+    semester: str,
+) -> None:
     """
-    Send notification when a grade is released.
-    Only sends if grade is >= pass_mark (i.e., module completed).
+    Send a grade-release email when an official passing
+    grade is recorded for a student.
     """
     if grade >= settings.pass_mark:
-        send_grade_released_email(student, module, grade, semester)
-
-
-def check_and_notify_achievements(db: Session, student: models.Student) -> None:
-    """
-    Calculate current achievements, compare with stored ones,
-    send notifications for newly unlocked achievements, and update storage.
-    """
-    # Get currently unlocked achievement IDs
-    current_achievements = calculate_achievements(db, student)  # returns a set of achievement IDs
-
-    # Get already stored achievements for this student
-    stored = db.query(StudentAchievement).filter(
-        StudentAchievement.student_id == student.id
-    ).all()
-    stored_ids = {sa.achievement_id for sa in stored}
-
-    # Find newly unlocked achievements
-    newly_unlocked = current_achievements - stored_ids
-
-    if not newly_unlocked:
-        return
-
-    # For each new achievement, send email and store record
-    for ach_id in newly_unlocked:
-        ach_def = ACHIEVEMENT_DEFINITIONS.get(ach_id)
-        if ach_def:
-            # Send email
-            send_achievement_unlocked_email(student, ach_def)
-
-            # Store the achievement
-            db.add(StudentAchievement(
-                student_id=student.id,
-                achievement_id=ach_id,
-                unlocked_at=datetime.utcnow(),
-                notified=True,
-            ))
-
-    db.commit()
+        send_grade_released_email(
+            student,
+            module,
+            grade,
+            semester,
+        )
