@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     # Gemini AI
     gemini_api_key: str = ""
 
+    # Web search
+    tavily_api_key: str = ""
+
     # CORS
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
 

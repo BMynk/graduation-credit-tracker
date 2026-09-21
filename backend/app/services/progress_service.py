@@ -171,155 +171,519 @@ def build_progress_summary(db: Session, student: models.Student) -> dict:
     }
 
 
-def build_graduation_audit(db: Session, student: models.Student) -> dict:
-    """Enhanced graduation audit with detailed breakdowns."""
+def build_graduation_audit(
+    db: Session,
+    student: models.Student,
+) -> dict:
+    """
+    Enhanced graduation audit with curriculum year/semester
+    information for every programme module.
+    """
+
     summary = build_progress_summary(db, student)
-    
-    # Get all programme modules
-    programme_modules = db.query(models.ProgrammeModule).filter(
-        models.ProgrammeModule.programme_id == student.programme_id
-    ).options(joinedload(models.ProgrammeModule.module)).all()
-    
-    # Get completed module IDs
-    completed_enrolments = db.query(models.Enrolment).filter(
-        models.Enrolment.student_id == student.id,
-        models.Enrolment.status == "completed"
-    ).all()
-    completed_ids = {e.module_id for e in completed_enrolments}
-    
-    # Categorize requirements
-    compulsory_modules = []
-    elective_modules = []
-    completed_compulsory = []
-    completed_elective = []
-    missing_compulsory = []
-    missing_elective = []
-    
+
+    # ---------------------------------------------------------
+    # PROGRAMME CURRICULUM
+    # ---------------------------------------------------------
+
+    programme_modules = (
+        db.query(models.ProgrammeModule)
+        .filter(
+            models.ProgrammeModule.programme_id
+            == student.programme_id
+        )
+        .options(
+            joinedload(models.ProgrammeModule.module)
+            .joinedload(models.Module.prerequisites)
+        )
+        .all()
+    )
+
+    # ---------------------------------------------------------
+    # STUDENT COMPLETION STATE
+    # ---------------------------------------------------------
+
+    completed_enrolments = (
+        db.query(models.Enrolment)
+        .filter(
+            models.Enrolment.student_id == student.id,
+            models.Enrolment.status == "completed",
+        )
+        .all()
+    )
+
+    completed_ids = {
+        enrolment.module_id
+        for enrolment in completed_enrolments
+    }
+
+    # ---------------------------------------------------------
+    # HELPER
+    # ---------------------------------------------------------
+
+    def module_info(
+        link: models.ProgrammeModule,
+    ) -> dict:
+        """
+        Convert a ProgrammeModule relationship into the
+        curriculum-aware module object returned to the frontend.
+        """
+
+        module = link.module
+
+        return {
+            "code": module.code,
+            "name": module.name,
+            "credits": module.credits,
+            "level": module.level,
+            "category": module.category,
+            "year": link.year,
+            "semester": link.semester,
+            "is_compulsory": link.is_compulsory,
+        }
+
+    # ---------------------------------------------------------
+    # CATEGORIZE REQUIREMENTS
+    #
+    # Keep ProgrammeModule links rather than only Module objects.
+    # The link contains the authoritative curriculum year and
+    # semester.
+    # ---------------------------------------------------------
+
+    compulsory_links = []
+    elective_links = []
+
+    completed_compulsory_links = []
+    completed_elective_links = []
+
+    missing_compulsory_links = []
+    missing_elective_links = []
+
     for link in programme_modules:
         module = link.module
-        is_compulsory = link.is_compulsory
-        
-        if is_compulsory:
-            compulsory_modules.append(module)
+
+        if module is None:
+            continue
+
+        if link.is_compulsory:
+            compulsory_links.append(link)
+
             if module.id in completed_ids:
-                completed_compulsory.append(module)
+                completed_compulsory_links.append(link)
             else:
-                missing_compulsory.append(module)
+                missing_compulsory_links.append(link)
+
         else:
-            elective_modules.append(module)
+            elective_links.append(link)
+
             if module.id in completed_ids:
-                completed_elective.append(module)
+                completed_elective_links.append(link)
             else:
-                missing_elective.append(module)
-    
-    # Calculate credits by level
+                missing_elective_links.append(link)
+
+    # ---------------------------------------------------------
+    # SORT CURRICULUM
+    # ---------------------------------------------------------
+
+    curriculum_sort = lambda link: (
+        link.year,
+        link.semester,
+        link.module.code,
+    )
+
+    compulsory_links.sort(key=curriculum_sort)
+    elective_links.sort(key=curriculum_sort)
+
+    completed_compulsory_links.sort(
+        key=curriculum_sort
+    )
+
+    completed_elective_links.sort(
+        key=curriculum_sort
+    )
+
+    missing_compulsory_links.sort(
+        key=curriculum_sort
+    )
+
+    missing_elective_links.sort(
+        key=curriculum_sort
+    )
+
+    # ---------------------------------------------------------
+    # CREDITS BY LEVEL
+    # ---------------------------------------------------------
+
     credits_by_level = {}
+
     for link in programme_modules:
-        level = link.module.level
+        module = link.module
+
+        if module is None:
+            continue
+
+        level = module.level
+
         if level not in credits_by_level:
-            credits_by_level[level] = {"total": 0, "completed": 0}
-        credits_by_level[level]["total"] += link.module.credits
-        if link.module.id in completed_ids:
-            credits_by_level[level]["completed"] += link.module.credits
-    
-    # Calculate credits by category
+            credits_by_level[level] = {
+                "total": 0,
+                "completed": 0,
+            }
+
+        credits_by_level[level]["total"] += (
+            module.credits
+        )
+
+        if module.id in completed_ids:
+            credits_by_level[level][
+                "completed"
+            ] += module.credits
+
+    # ---------------------------------------------------------
+    # CREDITS BY CATEGORY
+    # ---------------------------------------------------------
+
     credits_by_category = {}
+
     for link in programme_modules:
-        cat = link.module.category
-        if cat not in credits_by_category:
-            credits_by_category[cat] = {"total": 0, "completed": 0}
-        credits_by_category[cat]["total"] += link.module.credits
-        if link.module.id in completed_ids:
-            credits_by_category[cat]["completed"] += link.module.credits
-    
-    # Calculate percentages
-    compulsory_percentage = round((len(completed_compulsory) / len(compulsory_modules)) * 100, 1) if compulsory_modules else 0
-    elective_percentage = round((len(completed_elective) / len(elective_modules)) * 100, 1) if elective_modules else 0
-    
-    # Determine if on track for graduation
+        module = link.module
+
+        if module is None:
+            continue
+
+        category = module.category
+
+        if category not in credits_by_category:
+            credits_by_category[category] = {
+                "total": 0,
+                "completed": 0,
+            }
+
+        credits_by_category[category][
+            "total"
+        ] += module.credits
+
+        if module.id in completed_ids:
+            credits_by_category[category][
+                "completed"
+            ] += module.credits
+
+    # ---------------------------------------------------------
+    # COMPLETION PERCENTAGES
+    # ---------------------------------------------------------
+
+    compulsory_percentage = (
+        round(
+            (
+                len(completed_compulsory_links)
+                / len(compulsory_links)
+            )
+            * 100,
+            1,
+        )
+        if compulsory_links
+        else 0
+    )
+
+    elective_percentage = (
+        round(
+            (
+                len(completed_elective_links)
+                / len(elective_links)
+            )
+            * 100,
+            1,
+        )
+        if elective_links
+        else 0
+    )
+
+    # ---------------------------------------------------------
+    # GRADUATION STATUS
+    # ---------------------------------------------------------
+
     on_track = True
     reasons = []
     urgent_items = []
-    
-    # Check missing compulsory modules
-    if missing_compulsory:
+
+    if missing_compulsory_links:
         on_track = False
-        reasons.append(f"Missing {len(missing_compulsory)} compulsory module(s)")
-        urgent_items.extend([m.code for m in missing_compulsory[:5]])
-    
-    # Check failed modules blocking major
-    failed_blocking = [f for f in summary["failed_modules"] if f["is_prerequisite_for_major"]]
+
+        reasons.append(
+            f"Missing "
+            f"{len(missing_compulsory_links)} "
+            f"compulsory module(s)"
+        )
+
+        urgent_items.extend(
+            [
+                link.module.code
+                for link
+                in missing_compulsory_links[:5]
+            ]
+        )
+
+    # ---------------------------------------------------------
+    # FAILED MODULES BLOCKING MAJOR
+    # ---------------------------------------------------------
+
+    failed_blocking = [
+        failed
+        for failed in summary["failed_modules"]
+        if failed["is_prerequisite_for_major"]
+    ]
+
     if failed_blocking:
         on_track = False
-        reasons.append(f"{len(failed_blocking)} failed module(s) blocking your major")
-        urgent_items.extend([f["module"].code for f in failed_blocking])
-    
-    # Check GPA
-    if summary["weighted_average"] is not None and summary["weighted_average"] < student.target_average:
+
+        reasons.append(
+            f"{len(failed_blocking)} failed "
+            f"module(s) blocking your major"
+        )
+
+        urgent_items.extend(
+            [
+                failed["module"].code
+                for failed in failed_blocking
+            ]
+        )
+
+    # ---------------------------------------------------------
+    # TARGET AVERAGE
+    # ---------------------------------------------------------
+
+    if (
+        summary["weighted_average"] is not None
+        and summary["weighted_average"]
+        < student.target_average
+    ):
         on_track = False
-        reasons.append(f"Current weighted average ({summary['weighted_average']}) below target ({student.target_average})")
-    
-    # Check if there are any in-progress modules
-    in_progress = db.query(models.Enrolment).filter(
-        models.Enrolment.student_id == student.id,
-        models.Enrolment.status == "in-progress"
-    ).all()
-    
-    # Check if any prerequisites are missing for upcoming modules
+
+        reasons.append(
+            f"Current weighted average "
+            f"({summary['weighted_average']}) "
+            f"below target "
+            f"({student.target_average})"
+        )
+
+    # ---------------------------------------------------------
+    # IN-PROGRESS MODULES
+    # ---------------------------------------------------------
+
+    in_progress = (
+        db.query(models.Enrolment)
+        .filter(
+            models.Enrolment.student_id
+            == student.id,
+            models.Enrolment.status
+            == "in-progress",
+        )
+        .all()
+    )
+
+    # ---------------------------------------------------------
+    # PREREQUISITE WARNINGS
+    # ---------------------------------------------------------
+
     prerequisite_warnings = []
-    for module in missing_compulsory + missing_elective:
-        for prereq in module.prerequisites:
-            if prereq.id not in completed_ids:
-                prerequisite_warnings.append({
-                    "module": module.code,
-                    "missing_prereq": prereq.code
-                })
-    
-    # Build detailed requirements breakdown
+
+    outstanding_links = (
+        missing_compulsory_links
+        + missing_elective_links
+    )
+
+    for link in outstanding_links:
+        module = link.module
+
+        for prerequisite in module.prerequisites:
+            if prerequisite.id not in completed_ids:
+                prerequisite_warnings.append(
+                    {
+                        "module": module.code,
+                        "missing_prereq":
+                            prerequisite.code,
+                        "year": link.year,
+                        "semester": link.semester,
+                    }
+                )
+
+    # ---------------------------------------------------------
+    # REQUIREMENTS BREAKDOWN
+    # ---------------------------------------------------------
+
     requirements_breakdown = {
         "compulsory": {
-            "completed": len(completed_compulsory),
-            "total": len(compulsory_modules),
-            "percentage": compulsory_percentage,
-            "completed_modules": [{"code": m.code, "name": m.name} for m in completed_compulsory],
-            "missing_modules": [{"code": m.code, "name": m.name} for m in missing_compulsory],
+            "completed":
+                len(completed_compulsory_links),
+
+            "total":
+                len(compulsory_links),
+
+            "percentage":
+                compulsory_percentage,
+
+            "completed_modules": [
+                module_info(link)
+                for link
+                in completed_compulsory_links
+            ],
+
+            "missing_modules": [
+                module_info(link)
+                for link
+                in missing_compulsory_links
+            ],
         },
+
         "elective": {
-            "completed": len(completed_elective),
-            "total": len(elective_modules),
-            "percentage": elective_percentage,
-            "completed_modules": [{"code": m.code, "name": m.name} for m in completed_elective],
-            "missing_modules": [{"code": m.code, "name": m.name} for m in missing_elective],
+            "completed":
+                len(completed_elective_links),
+
+            "total":
+                len(elective_links),
+
+            "percentage":
+                elective_percentage,
+
+            "completed_modules": [
+                module_info(link)
+                for link
+                in completed_elective_links
+            ],
+
+            "missing_modules": [
+                module_info(link)
+                for link
+                in missing_elective_links
+            ],
         },
-        "by_level": credits_by_level,
-        "by_category": credits_by_category,
+
+        "by_level":
+            credits_by_level,
+
+        "by_category":
+            credits_by_category,
     }
-    
-    # Calculate remaining semesters
+
+    # ---------------------------------------------------------
+    # CURRICULUM ROADMAP
+    #
+    # This gives PlanningPage a ready-made Year -> Semester
+    # structure without needing to guess from module levels.
+    # ---------------------------------------------------------
+
+    curriculum_by_year = {}
+
+    for link in programme_modules:
+        module = link.module
+
+        if module is None:
+            continue
+
+        year_key = str(link.year)
+        semester_key = str(link.semester)
+
+        if year_key not in curriculum_by_year:
+            curriculum_by_year[year_key] = {}
+
+        if (
+            semester_key
+            not in curriculum_by_year[year_key]
+        ):
+            curriculum_by_year[
+                year_key
+            ][semester_key] = []
+
+        info = module_info(link)
+
+        info["is_completed"] = (
+            module.id in completed_ids
+        )
+
+        curriculum_by_year[
+            year_key
+        ][semester_key].append(info)
+
+    # Sort each semester by module code.
+    for year_data in curriculum_by_year.values():
+        for semester_modules in year_data.values():
+            semester_modules.sort(
+                key=lambda item: item["code"]
+            )
+
+    # ---------------------------------------------------------
+    # REMAINING SEMESTERS
+    # ---------------------------------------------------------
+
     avg_credits_per_semester = None
     projected_semesters_remaining = None
-    
-    distinct_semesters = db.query(models.Enrolment.semester).filter(
-        models.Enrolment.student_id == student.id,
-        models.Enrolment.status == "completed"
-    ).distinct().count()
-    
+
+    distinct_semesters = (
+        db.query(models.Enrolment.semester)
+        .filter(
+            models.Enrolment.student_id
+            == student.id,
+            models.Enrolment.status
+            == "completed",
+        )
+        .distinct()
+        .count()
+    )
+
     if distinct_semesters > 0:
-        avg_credits_per_semester = round(summary["credits_completed"] / distinct_semesters, 1)
-        remaining_credits = summary["credits_remaining"]
+        avg_credits_per_semester = round(
+            summary["credits_completed"]
+            / distinct_semesters,
+            1,
+        )
+
+        remaining_credits = (
+            summary["credits_remaining"]
+        )
+
         if avg_credits_per_semester > 0:
-            projected_semesters_remaining = max(0, round(remaining_credits / avg_credits_per_semester))
-    
+            projected_semesters_remaining = max(
+                0,
+                round(
+                    remaining_credits
+                    / avg_credits_per_semester
+                ),
+            )
+
+    # ---------------------------------------------------------
+    # FINAL RESPONSE
+    # ---------------------------------------------------------
+
     return {
-        "on_track": on_track,
-        "reasons": reasons,
-        "urgent_items": urgent_items,
-        "projected_semesters_remaining": projected_semesters_remaining,
-        "average_credits_per_semester": avg_credits_per_semester,
-        "requirements_breakdown": requirements_breakdown,
-        "prerequisite_warnings": prerequisite_warnings,
-        "in_progress_modules": len(in_progress),
-        "summary": summary,
+        "on_track":
+            on_track,
+
+        "reasons":
+            reasons,
+
+        "urgent_items":
+            urgent_items,
+
+        "projected_semesters_remaining":
+            projected_semesters_remaining,
+
+        "average_credits_per_semester":
+            avg_credits_per_semester,
+
+        "requirements_breakdown":
+            requirements_breakdown,
+
+        "curriculum_by_year":
+            curriculum_by_year,
+
+        "prerequisite_warnings":
+            prerequisite_warnings,
+
+        "in_progress_modules":
+            len(in_progress),
+
+        "summary":
+            summary,
     }
 
 

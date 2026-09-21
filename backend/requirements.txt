@@ -15,3 +15,5 @@ httpx
 jinja2
 openai
 google-genai
+tavily-python
+psycopg[binary]

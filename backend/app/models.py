@@ -250,6 +250,22 @@ class ProgrammeModule(Base):
         nullable=False,
     )
 
+    # The academic year in which this module belongs
+    # within this specific programme.
+    year = Column(
+        Integer,
+        default=1,
+        nullable=False,
+    )
+
+    # 1 = Semester 1
+    # 2 = Semester 2
+    semester = Column(
+        Integer,
+        default=1,
+        nullable=False,
+    )
+
     programme = relationship(
         "Programme",
         back_populates="programme_modules",
@@ -267,7 +283,6 @@ class ProgrammeModule(Base):
             name="uq_programme_module",
         ),
     )
-
 
 # ============================================================
 # STUDENT

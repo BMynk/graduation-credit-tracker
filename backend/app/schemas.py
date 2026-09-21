@@ -43,6 +43,8 @@ class ModuleUpdate(BaseModel):
 
 class CurriculumModuleOut(ModuleOut):
     is_compulsory: bool
+    curriculum_year: int
+    curriculum_semester: int
 
 
 class ProgrammeOut(BaseModel):
@@ -203,10 +205,14 @@ class PrerequisiteUpdate(BaseModel):
 class ProgrammeModuleAdd(BaseModel):
     module_code: str
     is_compulsory: bool = False
+    year: int = Field(default=1, ge=1, le=6)
+    semester: int = Field(default=1, ge=1, le=2)
 
 
 class ProgrammeModuleUpdate(BaseModel):
-    is_compulsory: bool
+    is_compulsory: Optional[bool] = None
+    year: Optional[int] = Field(default=None, ge=1, le=6)
+    semester: Optional[int] = Field(default=None, ge=1, le=2)
 
 
 class ProgrammeModuleOut(BaseModel):
@@ -215,9 +221,10 @@ class ProgrammeModuleOut(BaseModel):
     module_code: str
     module_name: str
     is_compulsory: bool
+    year: int
+    semester: int
 
     model_config = {"from_attributes": True}
-
 
 # ---------- Dashboard & Analytics ----------
 
@@ -338,12 +345,24 @@ class ProgressSummary(BaseModel):
 class ModuleRequirementItem(BaseModel):
     code: str
     name: str
+    credits: int
+    level: int
+    category: str
+
+    year: Optional[int] = None
+    semester: Optional[int] = None
+
+    is_compulsory: bool = False
+
+    # Used by curriculum_by_year
+    is_completed: Optional[bool] = None
 
 
 class RequirementCategory(BaseModel):
     completed: int
     total: int
     percentage: float
+
     completed_modules: List[ModuleRequirementItem]
     missing_modules: List[ModuleRequirementItem]
 
@@ -361,6 +380,7 @@ class CategoryCredits(BaseModel):
 class RequirementsBreakdown(BaseModel):
     compulsory: RequirementCategory
     elective: RequirementCategory
+
     by_level: dict[int, LevelCredits]
     by_category: dict[str, CategoryCredits]
 
@@ -369,17 +389,49 @@ class PrerequisiteWarning(BaseModel):
     module: str
     missing_prereq: str
 
+    year: Optional[int] = None
+    semester: Optional[int] = None
+
 
 class GraduationAudit(BaseModel):
     on_track: bool
+
     reasons: List[str]
     urgent_items: List[str]
+
     projected_semesters_remaining: Optional[int]
     average_credits_per_semester: Optional[float]
+
     requirements_breakdown: RequirementsBreakdown
+
     prerequisite_warnings: List[PrerequisiteWarning]
+
     in_progress_modules: int
+
     summary: ProgressSummary
+
+    # Full programme roadmap:
+    #
+    # {
+    #     "1": {
+    #         "1": [module, module],
+    #         "2": [module, module]
+    #     },
+    #     "2": {
+    #         "1": [...],
+    #         "2": [...]
+    #     }
+    # }
+    #
+    # String keys are used because JSON object keys
+    # are strings when sent to the frontend.
+    curriculum_by_year: dict[
+        str,
+        dict[
+            str,
+            List[ModuleRequirementItem]
+        ]
+    ] = {}
 
 
 # ---------- Grade Predictor ----------

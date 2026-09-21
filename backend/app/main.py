@@ -136,6 +136,7 @@ app.include_router(progress.router)
 app.include_router(planning.router)
 app.include_router(email.router)
 app.include_router(assistant.router)
+app.include_router(facilitators.router)
 app.include_router(support_services.router)
 # ---------------------------------------------------------
 # Root endpoint

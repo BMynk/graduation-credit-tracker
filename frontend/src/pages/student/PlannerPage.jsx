@@ -6,12 +6,14 @@ import {
   CalendarDays,
   Check,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   CircleAlert,
   GraduationCap,
   Layers3,
   Loader2,
   LockKeyhole,
+  RotateCcw,
   Save,
   Search,
   Sparkles,
@@ -43,13 +45,166 @@ function getDefaultSemester() {
   return `${year}-${semester}`;
 }
 
+function normaliseYear(module) {
+  const value =
+    module.year ??
+    module.curriculum_year ??
+    module.academic_year ??
+    module.level;
+
+  const year = Number(value);
+
+  return Number.isFinite(year) && year > 0
+    ? year
+    : 1;
+}
+
+function normaliseSemester(module) {
+  const value =
+    module.semester ??
+    module.curriculum_semester ??
+    module.module_semester;
+
+  if (value === "S1" || value === "s1") return 1;
+  if (value === "S2" || value === "s2") return 2;
+
+  const semester = Number(value);
+
+  return semester === 2 ? 2 : 1;
+}
+
+function getStudentYear(modules) {
+  const explicitYears = modules
+    .map(
+      (module) =>
+        module.current_year ??
+        module.student_current_year ??
+        module.student_year,
+    )
+    .map(Number)
+    .filter(
+      (year) =>
+        Number.isFinite(year) && year > 0,
+    );
+
+  if (explicitYears.length > 0) {
+    return Math.max(...explicitYears);
+  }
+
+  const availableYears = modules
+    .filter((module) => module.is_eligible)
+    .map(normaliseYear);
+
+  if (availableYears.length > 0) {
+    return Math.max(...availableYears);
+  }
+
+  return 1;
+}
+
+function isOutstandingModule(module, currentYear) {
+  if (normaliseYear(module) >= currentYear) {
+    return false;
+  }
+
+  if (
+    module.is_failed === true ||
+    module.failed === true ||
+    module.needs_retake === true ||
+    module.is_retake === true ||
+    module.status === "failed" ||
+    module.status === "outstanding"
+  ) {
+    return true;
+  }
+
+  return module.is_eligible === true;
+}
+
+function isRetakeModule(module, currentYear) {
+  return (
+    normaliseYear(module) < currentYear &&
+    (
+      module.is_failed === true ||
+      module.failed === true ||
+      module.needs_retake === true ||
+      module.is_retake === true ||
+      module.status === "failed"
+    )
+  );
+}
+
+function semesterLabel(semester) {
+  return Number(semester) === 2
+    ? "Semester 2"
+    : "Semester 1";
+}
+
+function groupByYearAndSemester(modules) {
+  const grouped = {};
+
+  modules.forEach((module) => {
+    const year = normaliseYear(module);
+    const semester = normaliseSemester(module);
+
+    if (!grouped[year]) {
+      grouped[year] = {
+        1: [],
+        2: [],
+      };
+    }
+
+    grouped[year][semester].push(module);
+  });
+
+  Object.values(grouped).forEach((yearGroup) => {
+    [1, 2].forEach((semester) => {
+      yearGroup[semester].sort((a, b) =>
+        String(a.code).localeCompare(
+          String(b.code),
+        ),
+      );
+    });
+  });
+
+  return grouped;
+}
+
 function ModuleCard({
   module,
   selected,
+  currentYear,
   onToggle,
   onModuleClick,
 }) {
-  const locked = !module.is_eligible;
+  const year = normaliseYear(module);
+  const semester = normaliseSemester(module);
+
+  const futureYear = year > currentYear;
+  const outstanding = isOutstandingModule(
+    module,
+    currentYear,
+  );
+  const retake = isRetakeModule(
+    module,
+    currentYear,
+  );
+
+  const locked =
+    futureYear || !module.is_eligible;
+
+  let reason = module.reason;
+
+  if (futureYear) {
+    reason =
+      `Year ${year} modules become available when you progress to Year ${year}.`;
+  }
+
+  if (!reason) {
+    reason = module.is_eligible
+      ? "Eligible to take"
+      : "Not currently eligible";
+  }
 
   return (
     <motion.div
@@ -73,13 +228,17 @@ function ModuleCard({
                 ? "bg-brand-600 text-white"
                 : locked
                   ? "bg-zinc-100 text-zinc-400 dark:bg-zinc-800"
-                  : "bg-brand-500/10 text-brand-600 dark:text-brand-400"
+                  : outstanding
+                    ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                    : "bg-brand-500/10 text-brand-600 dark:text-brand-400"
             }`}
           >
             {selected ? (
               <Check className="size-4" />
             ) : locked ? (
               <LockKeyhole className="size-4" />
+            ) : retake ? (
+              <RotateCcw className="size-4" />
             ) : (
               <BookOpen className="size-4" />
             )}
@@ -91,16 +250,32 @@ function ModuleCard({
                 {module.code}
               </span>
 
-              {module.is_compulsory && (
+              {module.is_compulsory ? (
                 <Badge variant="primary">
                   Compulsory
                 </Badge>
-              )}
-
-              {!module.is_compulsory && (
+              ) : (
                 <Badge variant="neutral">
                   Elective
                 </Badge>
+              )}
+
+              {retake && (
+                <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold text-red-600 dark:text-red-400">
+                  Retake
+                </span>
+              )}
+
+              {!retake && outstanding && (
+                <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                  Outstanding
+                </span>
+              )}
+
+              {futureYear && (
+                <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                  Future year
+                </span>
               )}
             </div>
 
@@ -110,7 +285,10 @@ function ModuleCard({
 
             <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-zinc-400">
               <span>{module.credits} credits</span>
-              <span>Level {module.level}</span>
+              <span>Year {year}</span>
+              <span>
+                {semesterLabel(semester)}
+              </span>
 
               {module.category && (
                 <span>{module.category}</span>
@@ -121,27 +299,232 @@ function ModuleCard({
 
         <div
           className={`mt-3 rounded-lg px-3 py-2 text-xs ${
-            module.is_eligible
-              ? "bg-emerald-500/[0.07] text-emerald-700 dark:text-emerald-400"
+            !locked
+              ? outstanding
+                ? "bg-amber-500/[0.07] text-amber-700 dark:text-amber-400"
+                : "bg-emerald-500/[0.07] text-emerald-700 dark:text-emerald-400"
               : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800/70 dark:text-zinc-400"
           }`}
         >
-          {module.reason ||
-            (module.is_eligible
-              ? "Eligible to take"
-              : "Not currently eligible")}
+          {reason}
         </div>
       </button>
 
       <button
         type="button"
-        onClick={() => onModuleClick?.(module.code)}
+        onClick={() =>
+          onModuleClick?.(module.code)
+        }
         className="absolute right-3 top-3 flex size-7 items-center justify-center rounded-md text-zinc-400 opacity-0 transition hover:bg-zinc-100 hover:text-zinc-700 group-hover:opacity-100 dark:hover:bg-zinc-800 dark:hover:text-white"
         title="View module details"
       >
         <ChevronRight className="size-4" />
       </button>
     </motion.div>
+  );
+}
+
+function SemesterGroup({
+  semester,
+  modules,
+  currentYear,
+  selectedCodes,
+  onToggle,
+  onModuleClick,
+}) {
+  if (!modules.length) return null;
+
+  const compulsory = modules.filter(
+    (module) => module.is_compulsory,
+  ).length;
+
+  const available = modules.filter(
+    (module) =>
+      module.is_eligible &&
+      normaliseYear(module) <= currentYear,
+  ).length;
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 bg-zinc-50/70 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/70">
+        <div className="flex items-center gap-2">
+          <CalendarDays className="size-4 text-brand-500" />
+
+          <h4 className="text-sm font-semibold text-zinc-900 dark:text-white">
+            {semesterLabel(semester)}
+          </h4>
+        </div>
+
+        <div className="flex items-center gap-3 text-[11px] text-zinc-500">
+          <span>
+            {modules.length} modules
+          </span>
+
+          <span>
+            {compulsory} compulsory
+          </span>
+
+          <span className="font-medium text-emerald-600 dark:text-emerald-400">
+            {available} available
+          </span>
+        </div>
+      </div>
+
+      <div className="grid gap-3 p-3 md:grid-cols-2">
+        {modules.map((module) => (
+          <ModuleCard
+            key={module.code}
+            module={module}
+            selected={selectedCodes.includes(
+              module.code,
+            )}
+            currentYear={currentYear}
+            onToggle={onToggle}
+            onModuleClick={onModuleClick}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function YearGroup({
+  year,
+  modules,
+  currentYear,
+  selectedCodes,
+  onToggle,
+  onModuleClick,
+  outstanding = false,
+}) {
+  const [open, setOpen] = useState(true);
+
+  const moduleCount =
+    modules[1].length + modules[2].length;
+
+  if (moduleCount === 0) return null;
+
+  const isCurrent = year === currentYear;
+  const isFuture = year > currentYear;
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950/40">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left sm:px-5"
+      >
+        <div className="flex min-w-0 items-center gap-3">
+          <div
+            className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${
+              outstanding
+                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                : isCurrent
+                  ? "bg-brand-500/10 text-brand-600 dark:text-brand-400"
+                  : isFuture
+                    ? "bg-zinc-100 text-zinc-400 dark:bg-zinc-800"
+                    : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+            }`}
+          >
+            {isFuture ? (
+              <LockKeyhole className="size-4" />
+            ) : outstanding ? (
+              <RotateCcw className="size-4" />
+            ) : (
+              <GraduationCap className="size-4" />
+            )}
+          </div>
+
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-sm font-semibold text-zinc-950 dark:text-white">
+                Year {year}
+              </h3>
+
+              {outstanding && (
+                <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                  Previous year
+                </span>
+              )}
+
+              {isCurrent && (
+                <span className="rounded-full bg-brand-500/10 px-2 py-0.5 text-[10px] font-semibold text-brand-600 dark:text-brand-400">
+                  Current year
+                </span>
+              )}
+
+              {isFuture && (
+                <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold text-zinc-500 dark:bg-zinc-800">
+                  Locked
+                </span>
+              )}
+            </div>
+
+            <p className="mt-1 text-xs text-zinc-500">
+              {outstanding
+                ? "Outstanding modules carried forward from this year."
+                : isCurrent
+                  ? "Modules available during your current academic year."
+                  : isFuture
+                    ? `Available after progression to Year ${year}.`
+                    : "Previous curriculum year."}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-3">
+          <span className="text-xs text-zinc-400">
+            {moduleCount}
+          </span>
+
+          <ChevronDown
+            className={`size-4 text-zinc-400 transition ${
+              open ? "rotate-180" : ""
+            }`}
+          />
+        </div>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{
+              opacity: 0,
+              height: 0,
+            }}
+            animate={{
+              opacity: 1,
+              height: "auto",
+            }}
+            exit={{
+              opacity: 0,
+              height: 0,
+            }}
+            className="overflow-hidden"
+          >
+            <div className="space-y-4 border-t border-zinc-100 p-4 sm:p-5 dark:border-zinc-800">
+              <SemesterGroup
+                semester={1}
+                modules={modules[1]}
+                currentYear={currentYear}
+                selectedCodes={selectedCodes}
+                onToggle={onToggle}
+                onModuleClick={onModuleClick}
+              />
+
+              <SemesterGroup
+                semester={2}
+                modules={modules[2]}
+                currentYear={currentYear}
+                selectedCodes={selectedCodes}
+                onToggle={onToggle}
+                onModuleClick={onModuleClick}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </section>
   );
 }
 
@@ -160,10 +543,12 @@ function SelectedModule({
     >
       <button
         type="button"
-        onClick={() => onModuleClick?.(module.code)}
+        onClick={() =>
+          onModuleClick?.(module.code)
+        }
         className="min-w-0 flex-1 text-left"
       >
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="font-mono text-xs font-bold text-brand-600 dark:text-brand-400">
             {module.code}
           </span>
@@ -175,6 +560,13 @@ function SelectedModule({
 
         <p className="mt-0.5 truncate text-xs text-zinc-500">
           {module.name}
+        </p>
+
+        <p className="mt-1 text-[10px] text-zinc-400">
+          Year {normaliseYear(module)} ·{" "}
+          {semesterLabel(
+            normaliseSemester(module),
+          )}
         </p>
       </button>
 
@@ -198,12 +590,184 @@ function SelectedModule({
   );
 }
 
+function RecommendationGroups({
+  recommendations,
+  currentYear,
+  selectedCodes,
+  onToggle,
+}) {
+  const grouped = useMemo(
+    () =>
+      groupByYearAndSemester(
+        recommendations || [],
+      ),
+    [recommendations],
+  );
+
+  const years = Object.keys(grouped)
+    .map(Number)
+    .sort((a, b) => a - b);
+
+  if (!recommendations?.length) {
+    return (
+      <div className="py-7 text-center">
+        <CheckCircle2 className="mx-auto size-6 text-emerald-500" />
+
+        <p className="mt-3 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          No additional recommendations
+        </p>
+
+        <p className="mt-1 text-xs text-zinc-500">
+          Your current module selection covers
+          the immediate recommendations.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {years.map((year) => (
+        <div
+          key={year}
+          className="rounded-xl border border-zinc-200 p-3 dark:border-zinc-800"
+        >
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-zinc-900 dark:text-white">
+                Year {year}
+              </p>
+
+              <p className="text-[11px] text-zinc-500">
+                {year < currentYear
+                  ? "Outstanding previous-year modules"
+                  : year === currentYear
+                    ? "Current-year recommendations"
+                    : "Future-year modules"}
+              </p>
+            </div>
+
+            {year === currentYear && (
+              <Badge variant="primary">
+                Current
+              </Badge>
+            )}
+          </div>
+
+          {[1, 2].map((semester) => {
+            const semesterModules =
+              grouped[year][semester];
+
+            if (!semesterModules.length) {
+              return null;
+            }
+
+            return (
+              <div
+                key={semester}
+                className="mb-4 last:mb-0"
+              >
+                <p className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-400">
+                  <CalendarDays className="size-3.5" />
+                  {semesterLabel(semester)}
+                </p>
+
+                <div className="space-y-2">
+                  {semesterModules.map(
+                    (module) => {
+                      const future =
+                        normaliseYear(module) >
+                        currentYear;
+
+                      const available =
+                        module.is_eligible &&
+                        !future;
+
+                      const selected =
+                        selectedCodes.includes(
+                          module.code,
+                        );
+
+                      return (
+                        <button
+                          key={module.code}
+                          type="button"
+                          disabled={
+                            !available ||
+                            selected
+                          }
+                          onClick={() =>
+                            onToggle(module)
+                          }
+                          className="flex w-full items-center gap-3 rounded-lg border border-zinc-200 p-3 text-left transition hover:border-brand-300 hover:bg-brand-50/40 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-800 dark:hover:border-brand-500/30 dark:hover:bg-brand-500/[0.05]"
+                        >
+                          <div
+                            className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${
+                              available
+                                ? "bg-brand-500/10 text-brand-600 dark:text-brand-400"
+                                : "bg-zinc-100 text-zinc-400 dark:bg-zinc-800"
+                            }`}
+                          >
+                            {available ? (
+                              <BookOpen className="size-3.5" />
+                            ) : (
+                              <LockKeyhole className="size-3.5" />
+                            )}
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-mono text-xs font-bold text-brand-600 dark:text-brand-400">
+                                {module.code}
+                              </p>
+
+                              {isRetakeModule(
+                                module,
+                                currentYear,
+                              ) && (
+                                <span className="rounded-full bg-red-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-red-600 dark:text-red-400">
+                                  Retake
+                                </span>
+                              )}
+                            </div>
+
+                            <p className="mt-0.5 truncate text-xs text-zinc-500">
+                              {module.name}
+                            </p>
+                          </div>
+
+                          <div className="text-right">
+                            <span className="text-xs font-semibold text-zinc-500">
+                              {module.credits} cr
+                            </span>
+
+                            {selected && (
+                              <p className="mt-0.5 text-[9px] font-semibold text-emerald-600">
+                                Selected
+                              </p>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    },
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function PlannerPage({
   onModuleClick,
 }) {
   const [modules, setModules] = useState([]);
   const [selectedCodes, setSelectedCodes] =
     useState([]);
+
   const [semester, setSemester] = useState(
     getDefaultSemester(),
   );
@@ -214,8 +778,10 @@ export default function PlannerPage({
 
   const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(true);
+
   const [generating, setGenerating] =
     useState(false);
+
   const [saving, setSaving] = useState(false);
 
   const [error, setError] = useState("");
@@ -246,12 +812,18 @@ export default function PlannerPage({
     }
   }
 
+  const currentYear = useMemo(
+    () => getStudentYear(modules),
+    [modules],
+  );
+
   const selectedModules = useMemo(
     () =>
       selectedCodes
         .map((code) =>
           modules.find(
-            (module) => module.code === code,
+            (module) =>
+              module.code === code,
           ),
         )
         .filter(Boolean),
@@ -262,7 +834,8 @@ export default function PlannerPage({
     () =>
       selectedModules.reduce(
         (sum, module) =>
-          sum + Number(module.credits || 0),
+          sum +
+          Number(module.credits || 0),
         0,
       ),
     [selectedModules],
@@ -324,39 +897,112 @@ export default function PlannerPage({
           ?.toLowerCase()
           .includes(query);
 
+      const future =
+        normaliseYear(module) > currentYear;
+
       let matchesFilter = true;
 
       if (filter === "eligible") {
-        matchesFilter = module.is_eligible;
+        matchesFilter =
+          module.is_eligible && !future;
       }
 
       if (filter === "compulsory") {
         matchesFilter =
           module.is_compulsory &&
-          module.is_eligible;
+          module.is_eligible &&
+          !future;
       }
 
       if (filter === "elective") {
         matchesFilter =
           !module.is_compulsory &&
-          module.is_eligible;
+          module.is_eligible &&
+          !future;
       }
 
       if (filter === "locked") {
-        matchesFilter = !module.is_eligible;
+        matchesFilter =
+          !module.is_eligible || future;
       }
 
       return matchesSearch && matchesFilter;
     });
-  }, [modules, search, filter]);
+  }, [
+    modules,
+    search,
+    filter,
+    currentYear,
+  ]);
+
+  const outstandingModules = useMemo(
+    () =>
+      filteredModules.filter((module) =>
+        isOutstandingModule(
+          module,
+          currentYear,
+        ),
+      ),
+    [filteredModules, currentYear],
+  );
+
+  const regularModules = useMemo(
+    () =>
+      filteredModules.filter(
+        (module) =>
+          !isOutstandingModule(
+            module,
+            currentYear,
+          ),
+      ),
+    [filteredModules, currentYear],
+  );
+
+  const groupedOutstanding = useMemo(
+    () =>
+      groupByYearAndSemester(
+        outstandingModules,
+      ),
+    [outstandingModules],
+  );
+
+  const groupedModules = useMemo(
+    () =>
+      groupByYearAndSemester(
+        regularModules,
+      ),
+    [regularModules],
+  );
+
+  const outstandingYears = useMemo(
+    () =>
+      Object.keys(groupedOutstanding)
+        .map(Number)
+        .sort((a, b) => a - b),
+    [groupedOutstanding],
+  );
+
+  const curriculumYears = useMemo(
+    () =>
+      Object.keys(groupedModules)
+        .map(Number)
+        .sort((a, b) => a - b),
+    [groupedModules],
+  );
 
   function toggleModule(module) {
-    if (!module.is_eligible) return;
+    const future =
+      normaliseYear(module) > currentYear;
+
+    if (!module.is_eligible || future) {
+      return;
+    }
 
     setSelectedCodes((current) =>
       current.includes(module.code)
         ? current.filter(
-            (code) => code !== module.code,
+            (code) =>
+              code !== module.code,
           )
         : [...current, module.code],
     );
@@ -396,10 +1042,11 @@ export default function PlannerPage({
       setError("");
       setSuccess("");
 
-      const data = await api.generatePlan({
-        semester: semester.trim(),
-        module_codes: selectedCodes,
-      });
+      const data =
+        await api.generatePlan({
+          semester: semester.trim(),
+          module_codes: selectedCodes,
+        });
 
       setPlan(data);
     } catch (err) {
@@ -477,8 +1124,6 @@ export default function PlannerPage({
       }}
       className="space-y-6"
     >
-      {/* Header */}
-
       <motion.div variants={fadeUp}>
         <Badge variant="primary">
           <CalendarDays className="size-3.5" />
@@ -490,13 +1135,25 @@ export default function PlannerPage({
         </h1>
 
         <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-          Select your upcoming modules, balance
-          your credit load and check your plan
-          before saving it.
+          Plan modules by academic year and
+          semester while keeping prerequisites,
+          progression and outstanding modules in
+          view.
         </p>
-      </motion.div>
 
-      {/* Messages */}
+        <div className="mt-4 flex flex-wrap gap-2">
+          <span className="rounded-full bg-brand-500/10 px-3 py-1 text-xs font-semibold text-brand-600 dark:text-brand-400">
+            Current year: Year {currentYear}
+          </span>
+
+          {outstandingModules.length > 0 && (
+            <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
+              {outstandingModules.length}{" "}
+              outstanding
+            </span>
+          )}
+        </div>
+      </motion.div>
 
       <AnimatePresence>
         {error && (
@@ -530,14 +1187,10 @@ export default function PlannerPage({
         )}
       </AnimatePresence>
 
-      {/* Main Workspace */}
-
       <motion.div
         variants={fadeUp}
         className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_340px]"
       >
-        {/* Module browser */}
-
         <Card className="overflow-hidden">
           <div className="border-b border-zinc-100 p-5 sm:p-6 dark:border-zinc-800">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -551,14 +1204,14 @@ export default function PlannerPage({
                 </div>
 
                 <p className="mt-1 text-xs text-zinc-500">
-                  Select the modules you want to
-                  include in this semester.
+                  Modules are organised by
+                  curriculum year and semester.
                 </p>
               </div>
 
               <div className="w-full lg:w-52">
                 <label className="mb-1.5 block text-[11px] font-semibold text-zinc-500">
-                  Semester
+                  Planning period
                 </label>
 
                 <input
@@ -575,8 +1228,6 @@ export default function PlannerPage({
               </div>
             </div>
 
-            {/* Search */}
-
             <div className="relative mt-5">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
 
@@ -589,8 +1240,6 @@ export default function PlannerPage({
                 className="h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 pl-9 pr-3 text-sm text-zinc-900 outline-none transition focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/10 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:focus:bg-zinc-950"
               />
             </div>
-
-            {/* Filters */}
 
             <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
               {[
@@ -617,7 +1266,7 @@ export default function PlannerPage({
           </div>
 
           <div className="p-5 sm:p-6">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <p className="text-xs text-zinc-500">
                 {filteredModules.length} modules
               </p>
@@ -641,28 +1290,89 @@ export default function PlannerPage({
                 </p>
               </div>
             ) : (
-              <div className="grid gap-3 md:grid-cols-2">
-                {filteredModules.map(
-                  (module) => (
-                    <ModuleCard
-                      key={module.code}
-                      module={module}
-                      selected={selectedCodes.includes(
-                        module.code,
+              <div className="space-y-5">
+                {outstandingYears.length > 0 && (
+                  <div>
+                    <div className="mb-3">
+                      <div className="flex items-center gap-2">
+                        <RotateCcw className="size-4 text-amber-500" />
+
+                        <h3 className="text-sm font-semibold text-zinc-900 dark:text-white">
+                          Outstanding from previous
+                          years
+                        </h3>
+                      </div>
+
+                      <p className="mt-1 text-xs text-zinc-500">
+                        These modules remain
+                        available while you continue
+                        with your current year.
+                      </p>
+                    </div>
+
+                    <div className="space-y-4">
+                      {outstandingYears.map(
+                        (year) => (
+                          <YearGroup
+                            key={`outstanding-${year}`}
+                            year={year}
+                            modules={
+                              groupedOutstanding[
+                                year
+                              ]
+                            }
+                            currentYear={
+                              currentYear
+                            }
+                            selectedCodes={
+                              selectedCodes
+                            }
+                            onToggle={
+                              toggleModule
+                            }
+                            onModuleClick={
+                              onModuleClick
+                            }
+                            outstanding
+                          />
+                        ),
                       )}
-                      onToggle={toggleModule}
-                      onModuleClick={
-                        onModuleClick
-                      }
-                    />
-                  ),
+                    </div>
+                  </div>
                 )}
+
+                {outstandingYears.length > 0 &&
+                  curriculumYears.length > 0 && (
+                    <div className="border-t border-zinc-100 dark:border-zinc-800" />
+                  )}
+
+                <div className="space-y-4">
+                  {curriculumYears.map(
+                    (year) => (
+                      <YearGroup
+                        key={year}
+                        year={year}
+                        modules={
+                          groupedModules[year]
+                        }
+                        currentYear={
+                          currentYear
+                        }
+                        selectedCodes={
+                          selectedCodes
+                        }
+                        onToggle={toggleModule}
+                        onModuleClick={
+                          onModuleClick
+                        }
+                      />
+                    ),
+                  )}
+                </div>
               </div>
             )}
           </div>
         </Card>
-
-        {/* Plan Sidebar */}
 
         <div className="space-y-4 xl:sticky xl:top-6">
           <Card className="overflow-hidden">
@@ -676,6 +1386,10 @@ export default function PlannerPage({
                   <h2 className="mt-1 font-semibold text-zinc-950 dark:text-white">
                     {semester || "Semester"}
                   </h2>
+
+                  <p className="mt-1 text-[11px] text-zinc-500">
+                    Year {currentYear}
+                  </p>
                 </div>
 
                 <div className="flex size-10 items-center justify-center rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400">
@@ -683,8 +1397,6 @@ export default function PlannerPage({
                 </div>
               </div>
             </div>
-
-            {/* Credits */}
 
             <div className="border-b border-zinc-100 p-5 dark:border-zinc-800">
               <div className="flex items-end justify-between">
@@ -726,8 +1438,6 @@ export default function PlannerPage({
               </div>
             </div>
 
-            {/* Counts */}
-
             <div className="grid grid-cols-3 border-b border-zinc-100 dark:border-zinc-800">
               <div className="p-4 text-center">
                 <p className="text-lg font-bold text-zinc-950 dark:text-white">
@@ -756,8 +1466,6 @@ export default function PlannerPage({
                 </p>
               </div>
             </div>
-
-            {/* Selected */}
 
             <div className="p-5">
               {selectedModules.length === 0 ? (
@@ -836,8 +1544,6 @@ export default function PlannerPage({
         </div>
       </motion.div>
 
-      {/* Analysis Result */}
-
       <AnimatePresence>
         {plan && (
           <motion.div
@@ -846,8 +1552,6 @@ export default function PlannerPage({
             exit={{ opacity: 0 }}
             className="grid gap-6 lg:grid-cols-2"
           >
-            {/* Validation */}
-
             <Card className="overflow-hidden">
               <div className="border-b border-zinc-100 p-5 dark:border-zinc-800">
                 <div className="flex items-center gap-3">
@@ -867,13 +1571,13 @@ export default function PlannerPage({
 
                   <div>
                     <h3 className="text-sm font-semibold text-zinc-950 dark:text-white">
-                      Plan analysis
+                      Planning insights
                     </h3>
 
                     <p className="text-xs text-zinc-500">
-                      {plan.is_valid
-                        ? "Your selected workload is within the recommended range."
-                        : "Your plan has some recommendations to review."}
+                      Review your workload,
+                      progression and module
+                      selection.
                     </p>
                   </div>
                 </div>
@@ -909,6 +1613,26 @@ export default function PlannerPage({
                   </div>
                 </div>
 
+                <div className="mt-4 rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
+                  <div className="flex items-center gap-2">
+                    <GraduationCap className="size-4 text-brand-500" />
+
+                    <p className="text-xs font-semibold text-zinc-900 dark:text-white">
+                      Academic position
+                    </p>
+                  </div>
+
+                  <p className="mt-2 text-xs leading-5 text-zinc-500">
+                    You are planning as a Year{" "}
+                    {currentYear} student. Modules
+                    from later curriculum years
+                    remain unavailable until you
+                    progress, while eligible
+                    outstanding modules from earlier
+                    years remain available.
+                  </p>
+                </div>
+
                 {plan.warnings?.length > 0 ? (
                   <div className="mt-5 space-y-2">
                     {plan.warnings.map(
@@ -931,14 +1655,13 @@ export default function PlannerPage({
                     <CheckCircle2 className="size-4 text-emerald-500" />
 
                     <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                      No planning warnings detected.
+                      No planning warnings
+                      detected.
                     </p>
                   </div>
                 )}
               </div>
             </Card>
-
-            {/* Recommendations */}
 
             <Card className="overflow-hidden">
               <div className="border-b border-zinc-100 p-5 dark:border-zinc-800">
@@ -953,70 +1676,22 @@ export default function PlannerPage({
                     </h3>
 
                     <p className="text-xs text-zinc-500">
-                      Compulsory modules worth
-                      considering.
+                      Recommendations grouped by
+                      academic year and semester.
                     </p>
                   </div>
                 </div>
               </div>
 
               <div className="p-5">
-                {plan.recommended_modules
-                  ?.length > 0 ? (
-                  <div className="space-y-2">
-                    {plan.recommended_modules.map(
-                      (module) => (
-                        <button
-                          key={module.code}
-                          type="button"
-                          onClick={() => {
-                            if (
-                              module.is_eligible &&
-                              !selectedCodes.includes(
-                                module.code,
-                              )
-                            ) {
-                              toggleModule(module);
-                            }
-                          }}
-                          className="flex w-full items-center gap-3 rounded-lg border border-zinc-200 p-3 text-left transition hover:border-brand-300 hover:bg-brand-50/40 dark:border-zinc-800 dark:hover:border-brand-500/30 dark:hover:bg-brand-500/[0.05]"
-                        >
-                          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400">
-                            <BookOpen className="size-3.5" />
-                          </div>
-
-                          <div className="min-w-0 flex-1">
-                            <p className="font-mono text-xs font-bold text-brand-600 dark:text-brand-400">
-                              {module.code}
-                            </p>
-
-                            <p className="mt-0.5 truncate text-xs text-zinc-500">
-                              {module.name}
-                            </p>
-                          </div>
-
-                          <span className="text-xs font-semibold text-zinc-500">
-                            {module.credits} cr
-                          </span>
-                        </button>
-                      ),
-                    )}
-                  </div>
-                ) : (
-                  <div className="py-7 text-center">
-                    <CheckCircle2 className="mx-auto size-6 text-emerald-500" />
-
-                    <p className="mt-3 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                      No additional recommendations
-                    </p>
-
-                    <p className="mt-1 text-xs text-zinc-500">
-                      Your current module selection
-                      covers the immediate
-                      recommendations.
-                    </p>
-                  </div>
-                )}
+                <RecommendationGroups
+                  recommendations={
+                    plan.recommended_modules
+                  }
+                  currentYear={currentYear}
+                  selectedCodes={selectedCodes}
+                  onToggle={toggleModule}
+                />
               </div>
             </Card>
           </motion.div>

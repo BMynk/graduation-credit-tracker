@@ -41,6 +41,10 @@ import {
   UserRound,
   Users,
   X,
+  ArrowLeft,
+  Eye,
+  EyeOff,
+  LockKeyhole,
 } from "lucide-react";
 
 // ---------- Shared UI Components ----------
@@ -87,13 +91,19 @@ function AdminLogin({ onLoggedIn, onBack }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
     setLoading(true);
+
     try {
-      await api.adminLogin({ username, password });
+      await api.adminLogin({
+        username: username.trim(),
+        password,
+      });
+
       onLoggedIn();
     } catch (err) {
       setError(err.message);
@@ -102,47 +112,428 @@ function AdminLogin({ onLoggedIn, onBack }) {
     }
   }
 
+  const adminFeatures = [
+    {
+      icon: Users,
+      title: "Student management",
+      description:
+        "Manage student profiles, programmes and academic records.",
+    },
+    {
+      icon: BarChart3,
+      title: "Academic oversight",
+      description:
+        "Monitor degree progress and identify students who need attention.",
+    },
+    {
+      icon: BookOpenCheck,
+      title: "Curriculum management",
+      description:
+        "Maintain modules, prerequisites and programme requirements.",
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        {onBack && (
-          <button onClick={onBack} className="text-sm text-slate-400 hover:text-slate-600 mb-4">
-            ← Back
-          </button>
-        )}
-        <h1 className="text-2xl font-bold text-slate-800 mb-1">Admin login</h1>
-        <p className="text-slate-500 text-sm mb-6">Manage student records and marks</p>
-        <Card>
-          <ErrorBanner message={error} onDismiss={() => setError("")} />
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-600 mb-1">Username</label>
-              <input
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-600 mb-1">Password</label>
-              <input
-                type="password"
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
+    <div className="min-h-screen bg-white dark:bg-zinc-950">
+      <div className="grid min-h-screen lg:grid-cols-[0.95fr_1.05fr]">
+
+        {/* =====================================================
+            LEFT ADMIN BRANDING
+        ====================================================== */}
+        <section className="relative hidden overflow-hidden bg-[#0b1220] lg:flex lg:flex-col">
+          {/* Background decoration */}
+          <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            <div className="absolute -left-32 -top-32 size-[430px] rounded-full bg-blue-600/20 blur-[110px]" />
+
+            <div className="absolute -bottom-40 right-[-100px] size-[520px] rounded-full bg-violet-500/10 blur-[130px]" />
+
+            <div
+              className="absolute inset-0 opacity-[0.035]"
+              style={{
+                backgroundImage:
+                  "linear-gradient(rgba(255,255,255,.7) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.7) 1px, transparent 1px)",
+                backgroundSize: "44px 44px",
+              }}
+            />
+
+            <div className="absolute left-[18%] top-[42%] size-2 rounded-full bg-blue-400/40" />
+            <div className="absolute right-[18%] top-[22%] size-1.5 rounded-full bg-violet-400/30" />
+            <div className="absolute bottom-[25%] right-[32%] size-1 rounded-full bg-blue-300/30" />
+          </div>
+
+          <div className="relative z-10 flex h-full flex-col px-12 py-10 xl:px-16 xl:py-12">
+
+            {/* Brand */}
             <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white font-medium rounded-lg py-2 text-sm transition"
+              type="button"
+              onClick={onBack}
+              className="group flex w-fit items-center gap-3 text-left"
             >
-              {loading ? "Logging in..." : "Log in"}
+              <div className="flex size-11 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-950/40">
+                <GraduationCap size={23} strokeWidth={2.2} />
+              </div>
+
+              <div>
+                <p className="text-[15px] font-semibold tracking-tight text-white">
+                  Graduation Credit Tracker
+                </p>
+
+                <p className="text-[11px] font-medium text-zinc-500">
+                  Administration platform
+                </p>
+              </div>
             </button>
-          </form>
-        </Card>
+
+            {/* Main content */}
+            <div className="my-auto max-w-xl py-10">
+              <motion.div
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.45 }}
+              >
+                <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1.5 text-xs font-medium text-blue-300">
+                  <ShieldCheck size={13} />
+                  Administrator access
+                </div>
+
+                <h1 className="max-w-lg text-4xl font-semibold leading-[1.1] tracking-[-0.04em] text-white xl:text-5xl">
+                  Manage academics.
+                  <br />
+                  Support students.
+                  <br />
+                  <span className="text-blue-400">
+                    Stay in control.
+                  </span>
+                </h1>
+
+                <p className="mt-6 max-w-lg text-[15px] leading-7 text-zinc-400">
+                  Access the administration workspace to manage
+                  student records, curriculum information and
+                  academic progress from one place.
+                </p>
+              </motion.div>
+
+              {/* Features */}
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: 0.45,
+                  delay: 0.14,
+                }}
+                className="mt-10 space-y-5"
+              >
+                {adminFeatures.map((feature) => {
+                  const Icon = feature.icon;
+
+                  return (
+                    <div
+                      key={feature.title}
+                      className="flex items-center gap-4"
+                    >
+                      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-blue-400">
+                        <Icon size={18} />
+                      </div>
+
+                      <div>
+                        <p className="text-sm font-medium text-zinc-200">
+                          {feature.title}
+                        </p>
+
+                        <p className="mt-0.5 text-xs leading-5 text-zinc-500">
+                          {feature.description}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </motion.div>
+
+              {/* Admin workspace card */}
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: 0.45,
+                  delay: 0.24,
+                }}
+                className="mt-10 max-w-lg rounded-2xl border border-white/10 bg-white/[0.045] p-5 backdrop-blur"
+              >
+                <div className="flex items-start justify-between gap-5">
+                  <div>
+                    <p className="text-xs font-medium text-zinc-500">
+                      Administration workspace
+                    </p>
+
+                    <p className="mt-1 text-sm font-medium text-zinc-200">
+                      Everything you need to manage academic data.
+                    </p>
+                  </div>
+
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+                    <ShieldCheck size={18} />
+                  </div>
+                </div>
+
+                <div className="mt-5 grid grid-cols-3 gap-3">
+                  <div>
+                    <p className="text-lg font-semibold text-white">
+                      Manage
+                    </p>
+                    <p className="text-[10px] text-zinc-500">
+                      student records
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-lg font-semibold text-white">
+                      Monitor
+                    </p>
+                    <p className="text-[10px] text-zinc-500">
+                      academic progress
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-lg font-semibold text-white">
+                      Maintain
+                    </p>
+                    <p className="text-[10px] text-zinc-500">
+                      curriculum data
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div className="h-full w-full rounded-full bg-gradient-to-r from-blue-600 to-blue-400" />
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-[11px] text-zinc-600">
+                Graduation Credit Tracker · Admin Portal
+              </p>
+
+              <div className="flex items-center gap-1.5 text-[11px] text-zinc-600">
+                <ShieldCheck size={13} />
+                Restricted access
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* =====================================================
+            RIGHT LOGIN PANEL
+        ====================================================== */}
+        <section className="relative flex min-h-screen items-center justify-center bg-[#f8f9fb] px-5 py-8 sm:px-8 dark:bg-zinc-950">
+
+          {/* Back */}
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="absolute left-5 top-5 inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-zinc-500 transition hover:bg-white hover:text-zinc-900 sm:left-8 sm:top-7 dark:hover:bg-zinc-900 dark:hover:text-white"
+            >
+              <ArrowLeft size={16} />
+              Back
+            </button>
+          )}
+
+          <div className="w-full max-w-[460px]">
+
+            {/* Mobile branding */}
+            <div className="mb-10 flex items-center gap-3 lg:hidden">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
+                <GraduationCap size={21} />
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold tracking-tight text-zinc-950 dark:text-white">
+                  Graduation Credit Tracker
+                </p>
+
+                <p className="text-[11px] text-zinc-500">
+                  Administrator Portal
+                </p>
+              </div>
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: 0.45,
+                delay: 0.06,
+              }}
+            >
+              {/* Heading */}
+              <div className="mb-8">
+                <div className="mb-5 flex size-11 items-center justify-center rounded-xl border border-zinc-200 bg-white text-blue-600 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                  <ShieldCheck size={21} />
+                </div>
+
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-blue-600 dark:text-blue-400">
+                  Administrator portal
+                </p>
+
+                <h2 className="text-3xl font-semibold tracking-[-0.03em] text-zinc-950 dark:text-white">
+                  Welcome back
+                </h2>
+
+                <p className="mt-2 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
+                  Sign in to access the administration workspace.
+                </p>
+              </div>
+
+              {/* Login card */}
+              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/70">
+
+                <ErrorBanner
+                  message={error}
+                  onDismiss={() => setError("")}
+                />
+
+                <form
+                  onSubmit={handleSubmit}
+                  className="space-y-5"
+                >
+                  {/* Username */}
+                  <div>
+                    <label
+                      htmlFor="admin-username"
+                      className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                    >
+                      Username
+                    </label>
+
+                    <div className="relative">
+                      <UserRound
+                        size={17}
+                        className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400"
+                      />
+
+                      <input
+                        id="admin-username"
+                        type="text"
+                        autoComplete="username"
+                        placeholder="Enter your username"
+                        value={username}
+                        onChange={(e) =>
+                          setUsername(e.target.value)
+                        }
+                        disabled={loading}
+                        className="h-12 w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-4 text-sm text-zinc-950 outline-none transition placeholder:text-zinc-400 hover:border-zinc-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white dark:hover:border-zinc-600 dark:disabled:bg-zinc-900"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* Password */}
+                  <div>
+                    <label
+                      htmlFor="admin-password"
+                      className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                    >
+                      Password
+                    </label>
+
+                    <div className="relative">
+                      <LockKeyhole
+                        size={17}
+                        className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400"
+                      />
+
+                      <input
+                        id="admin-password"
+                        type={showPassword ? "text" : "password"}
+                        autoComplete="current-password"
+                        placeholder="Enter your password"
+                        value={password}
+                        onChange={(e) =>
+                          setPassword(e.target.value)
+                        }
+                        disabled={loading}
+                        className="h-12 w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-12 text-sm text-zinc-950 outline-none transition placeholder:text-zinc-400 hover:border-zinc-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white dark:hover:border-zinc-600 dark:disabled:bg-zinc-900"
+                        required
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowPassword((current) => !current)
+                        }
+                        disabled={loading}
+                        aria-label={
+                          showPassword
+                            ? "Hide password"
+                            : "Show password"
+                        }
+                        className="absolute right-3 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700 disabled:cursor-not-allowed dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                      >
+                        {showPassword ? (
+                          <EyeOff size={17} />
+                        ) : (
+                          <Eye size={17} />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Login */}
+                  <button
+                    type="submit"
+                    disabled={
+                      loading ||
+                      !username.trim() ||
+                      !password
+                    }
+                    className="group flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#18243a] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#111b2d] hover:shadow-md focus:outline-none focus:ring-4 focus:ring-blue-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-600 dark:hover:bg-blue-700"
+                  >
+                    {loading ? (
+                      <>
+                        <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                        Signing in...
+                      </>
+                    ) : (
+                      <>
+                        Log in
+                        <ArrowRight
+                          size={16}
+                          className="transition-transform group-hover:translate-x-0.5"
+                        />
+                      </>
+                    )}
+                  </button>
+                </form>
+
+                {/* Security */}
+                <div className="mt-5 flex items-start gap-3 border-t border-zinc-100 pt-5 dark:border-zinc-800">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400">
+                    <ShieldCheck size={15} />
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                      Restricted administrator access
+                    </p>
+
+                    <p className="mt-0.5 text-[11px] leading-5 text-zinc-400">
+                      This area contains administrative and
+                      academic management tools. Access is
+                      limited to authorised administrators.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <p className="mt-6 text-center text-[11px] leading-5 text-zinc-400">
+                Graduation Credit Tracker · Administration System
+              </p>
+            </motion.div>
+          </div>
+        </section>
       </div>
     </div>
   );

@@ -1,8 +1,9 @@
 # app/routers/planning.py
+
 from typing import List, Optional
-from datetime import datetime
-from pydantic import BaseModel
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 
 from app import models, schemas
@@ -10,10 +11,16 @@ from app.database import get_db
 from app.dependencies import get_current_student
 from app.services import progress_service
 
-router = APIRouter(prefix="/planning", tags=["Planning"])
+
+router = APIRouter(
+    prefix="/planning",
+    tags=["Planning"],
+)
 
 
-# ---------- Schemas ----------
+# ============================================================
+# SCHEMAS
+# ============================================================
 
 class ModulePlanItem(BaseModel):
     code: str
@@ -21,9 +28,29 @@ class ModulePlanItem(BaseModel):
     credits: int
     level: int
     category: str
+
     is_compulsory: bool
+
+    # Curriculum position
+    curriculum_year: int
+    curriculum_semester: int
+
+    # Student progression information
+    student_current_year: int
+    is_previous_year: bool
+    is_current_year: bool
+    is_future_year: bool
+
+    # Student/module state
+    is_completed: bool
+    is_failed: bool
+    is_retake: bool
+    is_enrolled: bool
+
+    # Eligibility
     is_eligible: bool
     reason: Optional[str] = None
+
     prerequisites_met: bool
     missing_prerequisites: List[str] = []
 
@@ -35,205 +62,643 @@ class PlanRequest(BaseModel):
 
 class PlanResponse(BaseModel):
     selected_modules: List[ModulePlanItem]
+
     total_credits: int
     compulsory_count: int
     elective_count: int
+
     warnings: List[str]
     is_valid: bool
+
     recommended_modules: List[ModulePlanItem]
     missing_compulsory: List[ModulePlanItem]
 
 
-# ---------- Helper Function ----------
+# ============================================================
+# HELPERS
+# ============================================================
 
-def _passed_module_ids(db: Session, student: models.Student) -> set:
+def _passed_module_ids(
+    db: Session,
+    student: models.Student,
+) -> set:
+    """
+    Return IDs of modules that the student has completed.
+    """
+
     rows = (
         db.query(models.Enrolment.module_id)
         .filter(
             models.Enrolment.student_id == student.id,
-            models.Enrolment.status == "completed"
+            models.Enrolment.status == "completed",
         )
         .all()
     )
-    return {r[0] for r in rows}
+
+    return {row[0] for row in rows}
 
 
-# ---------- Existing Endpoints ----------
-
-@router.get("/eligible-modules", response_model=list[schemas.EligibleModuleOut])
-def eligible_modules(
-    current_student: models.Student = Depends(get_current_student),
-    db: Session = Depends(get_db),
+def _get_student_enrolment_state(
+    db: Session,
+    student: models.Student,
 ):
-    """Modules the student could enrol in *right now* - not yet passed, and
-    every prerequisite already completed."""
-    results = progress_service.get_eligible_modules(db, current_student)
-    return [
-        schemas.EligibleModuleOut(
-            **schemas.ModuleOut.model_validate(r["module"]).model_dump(),
-            reason=r["reason"]
+    """
+    Collect module state information for the current student.
+    """
+
+    enrolments = (
+        db.query(models.Enrolment)
+        .filter(
+            models.Enrolment.student_id == student.id
         )
-        for r in results
-    ]
+        .all()
+    )
+
+    completed_ids = {
+        enrolment.module_id
+        for enrolment in enrolments
+        if enrolment.status == "completed"
+    }
+
+    failed_ids = {
+        enrolment.module_id
+        for enrolment in enrolments
+        if enrolment.status == "failed"
+    }
+
+    enrolled_ids = {
+        enrolment.module_id
+        for enrolment in enrolments
+        if enrolment.status in {
+            "planned",
+            "in-progress",
+        }
+    }
+
+    return (
+        completed_ids,
+        failed_ids,
+        enrolled_ids,
+    )
 
 
-@router.get("/graduation-audit", response_model=schemas.GraduationAudit)
-def graduation_audit(
-    current_student: models.Student = Depends(get_current_student),
-    db: Session = Depends(get_db),
-):
+def _validate_semester_value(
+    semester: str,
+) -> str:
     """
-    Enhanced graduation audit with detailed breakdown including:
-    - Requirements breakdown (compulsory/elective with percentages)
-    - Credits by level and category
-    - Prerequisite warnings
-    - Urgent items list
-    - In-progress module count
+    Validate the semester identifier used for saved plans.
+
+    Existing enrolments use strings such as:
+        2026-S1
+        2026-S2
     """
-    return progress_service.build_graduation_audit(db, current_student)
+
+    semester = semester.strip()
+
+    if not semester:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Semester is required.",
+        )
+
+    return semester
 
 
-# ---------- Course Planner Endpoints ----------
+def _build_planning_modules(
+    db: Session,
+    student: models.Student,
+) -> List[ModulePlanItem]:
+    """
+    Build the authoritative planner module list.
 
-@router.get("/planning-modules", response_model=List[ModulePlanItem])
-def get_planning_modules(
-    current_student: models.Student = Depends(get_current_student),
-    db: Session = Depends(get_db),
-):
-    """Get all modules in the student's programme with eligibility status for planning."""
-    programme_modules = db.query(models.ProgrammeModule).filter(
-        models.ProgrammeModule.programme_id == current_student.programme_id
-    ).options(joinedload(models.ProgrammeModule.module)).all()
-    
-    completed_ids = set(e.module_id for e in db.query(models.Enrolment).filter(
-        models.Enrolment.student_id == current_student.id,
-        models.Enrolment.status == "completed"
-    ).all())
-    
-    failed_ids = set()
-    failed_enrolments = db.query(models.Enrolment).filter(
-        models.Enrolment.student_id == current_student.id,
-        models.Enrolment.status == "failed"
-    ).all()
-    for e in failed_enrolments:
-        failed_ids.add(e.module_id)
-    
-    enrolled_ids = set(e.module_id for e in db.query(models.Enrolment).filter(
-        models.Enrolment.student_id == current_student.id,
-        models.Enrolment.status.in_(["planned", "in-progress"])
-    ).all())
-    
-    passed_ids = _passed_module_ids(db, current_student)
-    result = []
-    
+    Rules
+    -----
+    1. Completed modules cannot be planned again.
+
+    2. Modules from a future curriculum year are locked.
+
+    3. Modules in the student's current curriculum year may
+       be planned when prerequisites are satisfied.
+
+    4. Outstanding modules from previous curriculum years
+       remain available.
+
+    5. Failed modules from previous years remain available
+       as retakes.
+
+    6. Prerequisites are always enforced.
+
+    7. Modules already planned/in-progress cannot be selected
+       again.
+    """
+
+    programme_modules = (
+        db.query(models.ProgrammeModule)
+        .options(
+            joinedload(
+                models.ProgrammeModule.module
+            ).joinedload(
+                models.Module.prerequisites
+            )
+        )
+        .filter(
+            models.ProgrammeModule.programme_id
+            == student.programme_id
+        )
+        .all()
+    )
+
+    (
+        completed_ids,
+        failed_ids,
+        enrolled_ids,
+    ) = _get_student_enrolment_state(
+        db,
+        student,
+    )
+
+    passed_ids = _passed_module_ids(
+        db,
+        student,
+    )
+
+    student_year = student.current_year
+
+    result: List[ModulePlanItem] = []
+
     for link in programme_modules:
         module = link.module
-        is_completed = module.id in completed_ids
-        is_failed = module.id in failed_ids
-        is_enrolled = module.id in enrolled_ids
-        is_compulsory = link.is_compulsory
-        
-        missing_prereqs = []
-        prerequisites_met = True
-        if module.prerequisites:
-            for prereq in module.prerequisites:
-                if prereq.id not in passed_ids:
-                    missing_prereqs.append(prereq.code)
-                    prerequisites_met = False
-        
+
+        if module is None:
+            continue
+
+        curriculum_year = link.year
+        curriculum_semester = link.semester
+
+        is_completed = (
+            module.id in completed_ids
+        )
+
+        is_failed = (
+            module.id in failed_ids
+        )
+
+        is_enrolled = (
+            module.id in enrolled_ids
+        )
+
+        is_previous_year = (
+            curriculum_year < student_year
+        )
+
+        is_current_year = (
+            curriculum_year == student_year
+        )
+
+        is_future_year = (
+            curriculum_year > student_year
+        )
+
+        # ----------------------------------------------------
+        # PREREQUISITES
+        # ----------------------------------------------------
+
+        missing_prerequisites = []
+
+        for prerequisite in module.prerequisites:
+            if prerequisite.id not in passed_ids:
+                missing_prerequisites.append(
+                    prerequisite.code
+                )
+
+        prerequisites_met = (
+            len(missing_prerequisites) == 0
+        )
+
+        # ----------------------------------------------------
+        # ELIGIBILITY
+        # ----------------------------------------------------
+
         is_eligible = False
         reason = None
-        
+
         if is_completed:
-            reason = "Already completed ✅"
-        elif is_failed:
-            reason = "Failed - needs retake ❌"
+            reason = "Already completed"
+
         elif is_enrolled:
-            reason = "Already enrolled 📋"
+            reason = (
+                "Already planned or currently in progress"
+            )
+
+        elif is_future_year:
+            reason = (
+                f"Available when you progress to "
+                f"Year {curriculum_year}"
+            )
+
         elif not prerequisites_met:
-            reason = f"Missing prerequisites: {', '.join(missing_prereqs)}"
-        else:
+            reason = (
+                "Missing prerequisites: "
+                + ", ".join(
+                    missing_prerequisites
+                )
+            )
+
+        elif is_failed:
             is_eligible = True
-            reason = "Eligible to take ✅"
-        
-        result.append(ModulePlanItem(
-            code=module.code,
-            name=module.name,
-            credits=module.credits,
-            level=module.level,
-            category=module.category,
-            is_compulsory=is_compulsory,
-            is_eligible=is_eligible,
-            reason=reason,
-            prerequisites_met=prerequisites_met,
-            missing_prerequisites=missing_prereqs,
-        ))
-    
-    result.sort(key=lambda x: (x.level, x.code))
+
+            if is_previous_year:
+                reason = (
+                    f"Retake from Year "
+                    f"{curriculum_year}"
+                )
+            else:
+                reason = "Eligible for retake"
+
+        elif is_previous_year:
+            is_eligible = True
+            reason = (
+                f"Outstanding Year "
+                f"{curriculum_year} module"
+            )
+
+        elif is_current_year:
+            is_eligible = True
+            reason = (
+                f"Year {curriculum_year} • "
+                f"Semester {curriculum_semester}"
+            )
+
+        else:
+            reason = "Not currently available"
+
+        result.append(
+            ModulePlanItem(
+                code=module.code,
+                name=module.name,
+                credits=module.credits,
+                level=module.level,
+                category=module.category,
+
+                is_compulsory=link.is_compulsory,
+
+                curriculum_year=curriculum_year,
+                curriculum_semester=(
+                    curriculum_semester
+                ),
+
+                student_current_year=student_year,
+
+                is_previous_year=(
+                    is_previous_year
+                ),
+
+                is_current_year=(
+                    is_current_year
+                ),
+
+                is_future_year=(
+                    is_future_year
+                ),
+
+                is_completed=is_completed,
+                is_failed=is_failed,
+
+                is_retake=(
+                    is_failed
+                    and not is_completed
+                ),
+
+                is_enrolled=is_enrolled,
+
+                is_eligible=is_eligible,
+                reason=reason,
+
+                prerequisites_met=(
+                    prerequisites_met
+                ),
+
+                missing_prerequisites=(
+                    missing_prerequisites
+                ),
+            )
+        )
+
+    # --------------------------------------------------------
+    # SORTING
+    # --------------------------------------------------------
+
+    result.sort(
+        key=lambda item: (
+            item.curriculum_year,
+            item.curriculum_semester,
+            not item.is_compulsory,
+            item.code,
+        )
+    )
+
     return result
 
 
-@router.post("/plan", response_model=PlanResponse)
-def generate_plan(
-    payload: PlanRequest,
-    current_student: models.Student = Depends(get_current_student),
+def _planning_module_map(
+    db: Session,
+    student: models.Student,
+):
+    modules = _build_planning_modules(
+        db,
+        student,
+    )
+
+    return {
+        module.code: module
+        for module in modules
+    }
+
+
+# ============================================================
+# EXISTING ELIGIBLE MODULE ENDPOINT
+# ============================================================
+
+@router.get(
+    "/eligible-modules",
+    response_model=list[
+        schemas.EligibleModuleOut
+    ],
+)
+def eligible_modules(
+    current_student: models.Student = Depends(
+        get_current_student
+    ),
     db: Session = Depends(get_db),
 ):
-    """Generate a semester plan based on selected modules."""
-    all_modules = get_planning_modules(current_student, db)
-    module_map = {m.code: m for m in all_modules}
-    
+    """
+    Existing eligibility endpoint retained for compatibility.
+    """
+
+    results = (
+        progress_service.get_eligible_modules(
+            db,
+            current_student,
+        )
+    )
+
+    return [
+        schemas.EligibleModuleOut(
+            **schemas.ModuleOut.model_validate(
+                result["module"]
+            ).model_dump(),
+            reason=result["reason"],
+        )
+        for result in results
+    ]
+
+
+# ============================================================
+# GRADUATION AUDIT
+# ============================================================
+
+@router.get(
+    "/graduation-audit",
+    response_model=schemas.GraduationAudit,
+)
+def graduation_audit(
+    current_student: models.Student = Depends(
+        get_current_student
+    ),
+    db: Session = Depends(get_db),
+):
+    return (
+        progress_service.build_graduation_audit(
+            db,
+            current_student,
+        )
+    )
+
+
+# ============================================================
+# PLANNER MODULES
+# ============================================================
+
+@router.get(
+    "/planning-modules",
+    response_model=List[ModulePlanItem],
+)
+def get_planning_modules(
+    current_student: models.Student = Depends(
+        get_current_student
+    ),
+    db: Session = Depends(get_db),
+):
+    """
+    Return the student's complete curriculum with authoritative
+    planning eligibility.
+
+    The frontend should use:
+        curriculum_year
+        curriculum_semester
+        is_eligible
+        is_previous_year
+        is_current_year
+        is_future_year
+        is_retake
+
+    to build the grouped Planner interface.
+    """
+
+    return _build_planning_modules(
+        db,
+        current_student,
+    )
+
+
+# ============================================================
+# GENERATE PLAN
+# ============================================================
+
+@router.post(
+    "/plan",
+    response_model=PlanResponse,
+)
+def generate_plan(
+    payload: PlanRequest,
+    current_student: models.Student = Depends(
+        get_current_student
+    ),
+    db: Session = Depends(get_db),
+):
+    """
+    Analyse a proposed semester plan.
+
+    The backend independently checks eligibility instead of
+    trusting the frontend.
+    """
+
+    _validate_semester_value(
+        payload.semester
+    )
+
+    all_modules = (
+        _build_planning_modules(
+            db,
+            current_student,
+        )
+    )
+
+    module_map = {
+        module.code: module
+        for module in all_modules
+    }
+
     selected_modules = []
     warnings = []
+
     total_credits = 0
     compulsory_count = 0
     elective_count = 0
-    
-    missing_compulsory = []
-    for m in all_modules:
-        if m.is_compulsory and m.reason != "Already completed ✅" and not m.is_eligible:
-            missing_compulsory.append(m)
-        elif m.is_compulsory and m.reason != "Already completed ✅" and m.is_eligible and m.code not in payload.module_codes:
-            missing_compulsory.append(m)
-    
-    for code in payload.module_codes:
-        if code not in module_map:
-            warnings.append(f"Module {code} not found in your programme")
+
+    # --------------------------------------------------------
+    # DUPLICATE MODULE CODES
+    # --------------------------------------------------------
+
+    requested_codes = list(
+        dict.fromkeys(
+            payload.module_codes
+        )
+    )
+
+    # --------------------------------------------------------
+    # VALIDATE SELECTED MODULES
+    # --------------------------------------------------------
+
+    for code in requested_codes:
+        module = module_map.get(code)
+
+        if module is None:
+            warnings.append(
+                f"{code}: module not found "
+                f"in your programme"
+            )
             continue
-        
-        module = module_map[code]
-        
+
         if not module.is_eligible:
-            warnings.append(f"{code}: {module.reason}")
+            warnings.append(
+                f"{code}: {module.reason}"
+            )
             continue
-        
-        selected_modules.append(module)
+
+        selected_modules.append(
+            module
+        )
+
         total_credits += module.credits
+
         if module.is_compulsory:
             compulsory_count += 1
         else:
             elective_count += 1
-    
+
+    # --------------------------------------------------------
+    # MISSING COMPULSORY MODULES
+    # --------------------------------------------------------
+
+    missing_compulsory = []
+
+    for module in all_modules:
+        if not module.is_compulsory:
+            continue
+
+        if module.is_completed:
+            continue
+
+        # Do not tell a student to take a future-year
+        # compulsory module yet.
+        if module.is_future_year:
+            continue
+
+        if module.code in requested_codes:
+            continue
+
+        missing_compulsory.append(
+            module
+        )
+
+    # --------------------------------------------------------
+    # GENERAL PLAN WARNINGS
+    # --------------------------------------------------------
+
     is_valid = True
-    
+
     if total_credits > 60:
-        warnings.append(f"Total credits ({total_credits}) exceeds recommended maximum (60)")
+        warnings.append(
+            f"Total credits ({total_credits}) "
+            f"exceeds the recommended maximum "
+            f"of 60."
+        )
         is_valid = False
-    
+
     if total_credits < 45:
-        warnings.append(f"Total credits ({total_credits}) is below recommended minimum (45)")
+        warnings.append(
+            f"Total credits ({total_credits}) "
+            f"is below the recommended minimum "
+            f"of 45."
+        )
         is_valid = False
-    
-    level_3_count = len([m for m in selected_modules if m.level == 3])
-    if level_3_count > 4:
-        warnings.append(f"Too many 3rd-year modules ({level_3_count}). Recommended maximum is 4.")
+
+    # Invalid selections should also make the plan invalid.
+    invalid_requested = [
+        code
+        for code in requested_codes
+        if (
+            code not in module_map
+            or not module_map[code].is_eligible
+        )
+    ]
+
+    if invalid_requested:
         is_valid = False
-    
-    recommended = []
-    for m in missing_compulsory[:5]:
-        if m.code not in payload.module_codes:
-            recommended.append(m)
-    
+
+    # --------------------------------------------------------
+    # RECOMMENDATIONS
+    # --------------------------------------------------------
+
+    recommended_modules = []
+
+    # Priority:
+    # 1. Previous-year retakes/outstanding compulsory modules
+    # 2. Current-year compulsory modules
+    # 3. Other eligible modules
+
+    recommendation_candidates = [
+        module
+        for module in all_modules
+        if (
+            module.is_eligible
+            and module.code
+            not in requested_codes
+        )
+    ]
+
+    recommendation_candidates.sort(
+        key=lambda module: (
+            # Retakes first
+            not module.is_retake,
+
+            # Previous-year work next
+            not module.is_previous_year,
+
+            # Compulsory before electives
+            not module.is_compulsory,
+
+            module.curriculum_year,
+            module.curriculum_semester,
+            module.code,
+        )
+    )
+
+    recommended_modules = (
+        recommendation_candidates[:5]
+    )
+
     return PlanResponse(
         selected_modules=selected_modules,
         total_credits=total_credits,
@@ -241,72 +706,199 @@ def generate_plan(
         elective_count=elective_count,
         warnings=warnings,
         is_valid=is_valid,
-        recommended_modules=recommended,
-        missing_compulsory=missing_compulsory,
+        recommended_modules=(
+            recommended_modules
+        ),
+        missing_compulsory=(
+            missing_compulsory
+        ),
     )
 
 
-@router.post("/save-plan", status_code=status.HTTP_201_CREATED)
+# ============================================================
+# SAVE PLAN
+# ============================================================
+
+@router.post(
+    "/save-plan",
+    status_code=status.HTTP_201_CREATED,
+)
 def save_plan(
     payload: PlanRequest,
-    current_student: models.Student = Depends(get_current_student),
+    current_student: models.Student = Depends(
+        get_current_student
+    ),
     db: Session = Depends(get_db),
 ):
-    """Save the student's planned modules for a semester."""
-    db.query(models.Enrolment).filter(
-        models.Enrolment.student_id == current_student.id,
-        models.Enrolment.semester == payload.semester,
-        models.Enrolment.status == "planned"
-    ).delete()
-    
-    programme_modules = db.query(models.ProgrammeModule).filter(
-        models.ProgrammeModule.programme_id == current_student.programme_id
-    ).options(joinedload(models.ProgrammeModule.module)).all()
-    module_codes_in_programme = {link.module.code for link in programme_modules}
-    
-    passed_ids = _passed_module_ids(db, current_student)
-    
+    """
+    Save a student's semester plan.
+
+    SECURITY / DATA-INTEGRITY RULE:
+    Never trust eligibility information from the frontend.
+
+    Every requested module is rebuilt and validated against
+    the current database state before anything is saved.
+    """
+
+    semester = _validate_semester_value(
+        payload.semester
+    )
+
+    module_map = _planning_module_map(
+        db,
+        current_student,
+    )
+
+    requested_codes = list(
+        dict.fromkeys(
+            payload.module_codes
+        )
+    )
+
+    # --------------------------------------------------------
+    # VALIDATE EVERYTHING BEFORE DELETING/SAVING
+    # --------------------------------------------------------
+
+    validation_errors = []
+
+    valid_modules = []
+
+    for code in requested_codes:
+        module = module_map.get(code)
+
+        if module is None:
+            validation_errors.append(
+                f"{code}: module is not part "
+                f"of your programme"
+            )
+            continue
+
+        if not module.is_eligible:
+            validation_errors.append(
+                f"{code}: {module.reason}"
+            )
+            continue
+
+        valid_modules.append(
+            module
+        )
+
+    if validation_errors:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "message": (
+                    "One or more modules cannot "
+                    "be added to this plan."
+                ),
+                "errors": validation_errors,
+            },
+        )
+
+    # --------------------------------------------------------
+    # CREDIT LIMIT
+    # --------------------------------------------------------
+
+    total_credits = sum(
+        module.credits
+        for module in valid_modules
+    )
+
+    if total_credits > 60:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "message": (
+                    f"Plan contains {total_credits} "
+                    f"credits. The maximum allowed "
+                    f"for this planner is 60."
+                ),
+            },
+        )
+
+    # --------------------------------------------------------
+    # REPLACE EXISTING PLAN FOR THIS SEMESTER
+    # --------------------------------------------------------
+
+    (
+        db.query(models.Enrolment)
+        .filter(
+            models.Enrolment.student_id
+            == current_student.id,
+
+            models.Enrolment.semester
+            == semester,
+
+            models.Enrolment.status
+            == "planned",
+        )
+        .delete(
+            synchronize_session=False
+        )
+    )
+
+    # Flush deletion before creating replacements.
+    db.flush()
+
     created = 0
-    for code in payload.module_codes:
-        if code not in module_codes_in_programme:
+
+    for planned_module in valid_modules:
+        module = (
+            db.query(models.Module)
+            .filter(
+                models.Module.code
+                == planned_module.code
+            )
+            .first()
+        )
+
+        if module is None:
             continue
-        
-        module = db.query(models.Module).filter(models.Module.code == code).first()
-        if not module:
-            continue
-        
-        if module.id in passed_ids:
-            continue
-        
-        existing = db.query(models.Enrolment).filter(
-            models.Enrolment.student_id == current_student.id,
-            models.Enrolment.module_id == module.id,
-            models.Enrolment.status == "completed"
-        ).first()
-        
-        if existing:
-            continue
-        
-        existing_planned = db.query(models.Enrolment).filter(
-            models.Enrolment.student_id == current_student.id,
-            models.Enrolment.module_id == module.id,
-            models.Enrolment.semester == payload.semester,
-            models.Enrolment.status == "planned"
-        ).first()
-        
-        if existing_planned:
-            continue
-        
-        db.add(models.Enrolment(
-            student_id=current_student.id,
-            module_id=module.id,
-            semester=payload.semester,
-            grade=None,
-            status="planned",
-            attempt=1,
-        ))
+
+        # Determine next attempt number.
+        previous_attempts = (
+            db.query(models.Enrolment)
+            .filter(
+                models.Enrolment.student_id
+                == current_student.id,
+
+                models.Enrolment.module_id
+                == module.id,
+            )
+            .all()
+        )
+
+        next_attempt = 1
+
+        if previous_attempts:
+            next_attempt = (
+                max(
+                    enrolment.attempt
+                    for enrolment
+                    in previous_attempts
+                )
+                + 1
+            )
+
+        db.add(
+            models.Enrolment(
+                student_id=current_student.id,
+                module_id=module.id,
+                semester=semester,
+                grade=None,
+                status="planned",
+                attempt=next_attempt,
+            )
+        )
+
         created += 1
-    
+
     db.commit()
-    
-    return {"message": f"Plan saved for {payload.semester}", "modules_saved": created}
+
+    return {
+        "message": (
+            f"Plan saved for {semester}"
+        ),
+        "modules_saved": created,
+        "total_credits": total_credits,
+    }
