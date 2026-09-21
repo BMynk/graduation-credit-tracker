@@ -220,6 +220,7 @@ def seed_production():
                         )
 
                         db.add(link)
+                        db.flush()  # Make this link visible before processing the next entry
                         created_links += 1
 
                     else:
