@@ -2,11 +2,9 @@
 
 import logging
 import re
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 from typing import List
 
+import resend
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from app.config import settings
@@ -38,6 +36,11 @@ def _send_html_email(
     html_content: str,
     text_content: str | None = None,
 ) -> None:
+    """
+    Send an HTML email through the Resend HTTPS API.
+
+    In development mode the email is logged instead of sent.
+    """
 
     if settings.email_dev_mode:
         logger.info(
@@ -48,91 +51,45 @@ def _send_html_email(
         )
         return
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = settings.smtp_from_email
-    msg["To"] = to_email
+    if not settings.resend_api_key:
+        logger.error("RESEND_API_KEY is not configured.")
+        raise RuntimeError("Email service is not configured.")
 
-    if text_content:
-        plain = text_content
-    else:
-        plain = re.sub(r"<[^>]+>", "", html_content)
+    if not settings.smtp_from_email:
+        logger.error("SMTP_FROM_EMAIL is not configured.")
+        raise RuntimeError("Sender email is not configured.")
 
-    msg.attach(MIMEText(plain, "plain", "utf-8"))
-    msg.attach(MIMEText(html_content, "html", "utf-8"))
+    plain = text_content or re.sub(r"<[^>]+>", "", html_content)
+
+    resend.api_key = settings.resend_api_key
+
+    params: resend.Emails.SendParams = {
+        "from": settings.smtp_from_email,
+        "to": [to_email],
+        "subject": subject,
+        "html": html_content,
+        "text": plain,
+    }
 
     try:
-        if settings.smtp_use_ssl:
-            with smtplib.SMTP_SSL(
-                settings.smtp_host,
-                settings.smtp_port,
-            ) as server:
-
-                if settings.smtp_username:
-                    server.login(
-                        settings.smtp_username,
-                        settings.smtp_password,
-                    )
-
-                server.sendmail(
-                    settings.smtp_from_email,
-                    [to_email],
-                    msg.as_string(),
-                )
-
-        else:
-            with smtplib.SMTP(
-                settings.smtp_host,
-                settings.smtp_port,
-            ) as server:
-
-                if settings.smtp_use_tls:
-                    server.starttls()
-
-                if settings.smtp_username:
-                    server.login(
-                        settings.smtp_username,
-                        settings.smtp_password,
-                    )
-
-                server.sendmail(
-                    settings.smtp_from_email,
-                    [to_email],
-                    msg.as_string(),
-                )
+        response = resend.Emails.send(params)
 
         logger.info(
-            "Sent HTML email to %s",
+            "Email accepted by Resend for %s. Response: %s",
             to_email,
+            response,
         )
 
-    except smtplib.SMTPAuthenticationError:
-        logger.error(
-            "SMTP authentication failed."
-        )
-        raise
-
-    except smtplib.SMTPRecipientsRefused:
-        logger.error(
-            "Recipient email refused: %s",
-            to_email,
-        )
-        raise
-
-    except smtplib.SMTPException as exc:
+    except Exception as exc:
         logger.exception(
-            "SMTP error sending email to %s: %s",
+            "Resend failed to send email to %s: %s",
             to_email,
             str(exc),
         )
-        raise
 
-    except Exception:
-        logger.exception(
-            "Failed to send HTML email to %s",
-            to_email,
-        )
-        raise
+        raise RuntimeError(
+            "The email could not be delivered."
+        ) from exc
 
 
 # ============================================================
@@ -266,6 +223,7 @@ def send_login_pin_email(
     - send_pin_reset_email
     - send_admin_pin_reset_email
     """
+
     send_pin_reset_email(
         to_email,
         name,
