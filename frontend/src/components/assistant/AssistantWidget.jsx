@@ -877,9 +877,9 @@ export default function AssistantWidget({ userRole = "guest" }) {
                         {isUser ? (
                           message.text
                         ) : (
-                          <SoraMarkdown>
+                          <MarcelMarkdown>
                             {message.text}
-                          </SoraMarkdown>
+                          </MarcelMarkdown>
                         )}
                       </div>
                     </motion.div>
@@ -1027,7 +1027,7 @@ export default function AssistantWidget({ userRole = "guest" }) {
                     className="flex justify-start"
                   >
                     <div className="mr-2 mt-1">
-                      <SoraLogo
+                      <MarcelLogo
                       size="sm"
                       animated
                       thinking
