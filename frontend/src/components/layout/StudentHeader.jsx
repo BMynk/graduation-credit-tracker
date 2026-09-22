@@ -3,20 +3,25 @@ import {
   Search,
   Menu,
   Command,
+  Moon,
+  Sun,
 } from "lucide-react";
 
 export default function StudentHeader({
   student,
   onOpenMobileMenu,
+  darkMode,
+  onToggleDarkMode,
 }) {
   return (
     <header className="sticky top-0 z-30 h-[72px] border-b border-zinc-200/80 bg-white/90 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/90">
       <div className="flex h-full items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        {/* Left */}
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={onOpenMobileMenu}
-            className="flex size-10 items-center justify-center rounded-lg text-zinc-600 hover:bg-zinc-100 lg:hidden dark:text-zinc-300 dark:hover:bg-zinc-900"
+            className="flex size-10 items-center justify-center rounded-lg text-zinc-600 transition hover:bg-zinc-100 lg:hidden dark:text-zinc-300 dark:hover:bg-zinc-900"
             aria-label="Open navigation"
           >
             <Menu size={20} />
@@ -27,7 +32,7 @@ export default function StudentHeader({
               Student Dashboard
             </p>
 
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
               Track your academic progress
             </p>
           </div>
@@ -36,7 +41,7 @@ export default function StudentHeader({
         {/* Search */}
         <button
           type="button"
-          className="hidden h-10 w-full max-w-sm items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-left text-sm text-zinc-400 transition hover:border-zinc-300 hover:bg-white md:flex dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-900"
+          className="hidden h-10 w-full max-w-sm items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-left text-sm text-zinc-400 transition hover:border-zinc-300 hover:bg-white md:flex dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
         >
           <Search size={16} />
 
@@ -49,7 +54,32 @@ export default function StudentHeader({
           </span>
         </button>
 
-        <div className="flex items-center gap-2">
+        {/* Right */}
+        <div className="flex items-center gap-1 sm:gap-2">
+          {/* Theme toggle */}
+          <button
+            type="button"
+            onClick={onToggleDarkMode}
+            className="flex size-10 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-white"
+            aria-label={
+              darkMode
+                ? "Switch to light mode"
+                : "Switch to dark mode"
+            }
+            title={
+              darkMode
+                ? "Switch to light mode"
+                : "Switch to dark mode"
+            }
+          >
+            {darkMode ? (
+              <Sun size={19} />
+            ) : (
+              <Moon size={19} />
+            )}
+          </button>
+
+          {/* Notifications */}
           <button
             type="button"
             className="relative flex size-10 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-white"
@@ -62,12 +92,13 @@ export default function StudentHeader({
 
           <div className="hidden h-8 w-px bg-zinc-200 sm:block dark:bg-zinc-800" />
 
+          {/* Student details */}
           <div className="hidden text-right sm:block">
             <p className="max-w-40 truncate text-xs font-semibold text-zinc-900 dark:text-white">
               {student?.name || "Student"}
             </p>
 
-            <p className="text-[11px] text-zinc-500">
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
               Year {student?.current_year || "—"}
             </p>
           </div>

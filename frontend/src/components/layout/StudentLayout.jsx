@@ -13,6 +13,55 @@ export default function StudentLayout({
   const [mobileMenuOpen, setMobileMenuOpen] =
     useState(false);
 
+  // ============================================================
+  // THEME
+  // ============================================================
+
+  const [darkMode, setDarkMode] = useState(() => {
+    try {
+      const savedTheme = localStorage.getItem(
+        "student-theme"
+      );
+
+      if (savedTheme === "dark") {
+        return true;
+      }
+
+      if (savedTheme === "light") {
+        return false;
+      }
+
+      return document.documentElement.classList.contains(
+        "dark"
+      );
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+
+    if (darkMode) {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+
+    try {
+      localStorage.setItem(
+        "student-theme",
+        darkMode ? "dark" : "light"
+      );
+    } catch {
+      // Ignore storage errors.
+    }
+  }, [darkMode]);
+
+  // ============================================================
+  // SIDEBAR
+  // ============================================================
+
   const [sidebarCollapsed, setSidebarCollapsed] =
     useState(() => {
       try {
@@ -37,8 +86,12 @@ export default function StudentLayout({
     }
   }, [sidebarCollapsed]);
 
+  // ============================================================
+  // RENDER
+  // ============================================================
+
   return (
-    <div className="min-h-screen bg-[#f7f8fa] dark:bg-zinc-950">
+    <div className="min-h-screen bg-[#f7f8fa] transition-colors duration-200 dark:bg-zinc-950">
       <StudentSidebar
         activeTab={activeTab}
         onTabChange={onTabChange}
@@ -46,13 +99,17 @@ export default function StudentLayout({
         onLogout={onLogout}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() =>
-          setSidebarCollapsed((current) => !current)
+          setSidebarCollapsed(
+            (current) => !current
+          )
         }
       />
 
       <MobileNavigation
         open={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
+        onClose={() =>
+          setMobileMenuOpen(false)
+        }
         activeTab={activeTab}
         onTabChange={onTabChange}
         onLogout={onLogout}
@@ -67,6 +124,12 @@ export default function StudentLayout({
       >
         <StudentHeader
           student={student}
+          darkMode={darkMode}
+          onToggleDarkMode={() =>
+            setDarkMode(
+              (current) => !current
+            )
+          }
           onOpenMobileMenu={() =>
             setMobileMenuOpen(true)
           }

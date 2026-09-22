@@ -18,15 +18,15 @@ import {
 import { api } from "../../api";
 
 /* ============================================================
-   SORA BRAND
+   MARCEL BRAND
 ============================================================ */
 
-const SORA_NAME = "Sora";
+const MARCEL_NAME = "Marcel";
 
 const WELCOME_MESSAGE = {
   role: "model",
   text:
-    "Hi! I'm **Sora**, your academic assistant. 👋\n\n" +
+    "Hi! I'm **Marcel**, your academic assistant. 👋\n\n" +
     "I can help you understand your academic progress, plan your modules, " +
     "check prerequisites, find facilitator information, and navigate university services.",
 };
@@ -53,7 +53,7 @@ const GUEST_SUGGESTIONS = [
   },
   {
     icon: Sparkles,
-    label: "What Sora can do",
+    label: "What Marcel can do",
     prompt: "What can you help me with?",
   },
 ];
@@ -99,16 +99,16 @@ const ADMIN_SUGGESTIONS = [
   },
   {
     icon: Sparkles,
-    label: "What Sora can do",
+    label: "What Marcel can do",
     prompt: "What can you help administrators with?",
   },
 ];
 
 /* ============================================================
-   SORA LOGO
+   MARCEL LOGO
 ============================================================ */
 
-function SoraLogo({
+function MarcelLogo({
   size = "md",
   animated = false,
   thinking = false,
@@ -218,7 +218,7 @@ function SoraLogo({
         />
       </motion.div>
 
-      {/* Small forehead spark gives Sora a recognizable mark */}
+      {/* Small forehead spark gives Marcel a recognizable mark */}
       <motion.span
         className="absolute left-1/2 top-[21%] z-20 h-[7%] w-[7%] -translate-x-1/2 rotate-45 rounded-[2px] bg-white shadow-[0_0_8px_rgba(255,255,255,0.95)]"
         animate={thinking ? { scale: [0.8, 1.35, 0.8], opacity: [0.65, 1, 0.65] } : { opacity: [0.65, 1, 0.65] }}
@@ -247,7 +247,7 @@ function SoraLogo({
    MARKDOWN
 ============================================================ */
 
-function SoraMarkdown({ children }) {
+function MarcelMarkdown({ children }) {
   return (
     <ReactMarkdown
       components={{
@@ -487,13 +487,13 @@ export default function AssistantWidget({ userRole = "guest" }) {
 
       if (!hasStartedStreaming) {
         setError(
-          "Sora didn't return a response. Please try again.",
+          "Marcel didn't return a response. Please try again.",
         );
       }
     } catch (err) {
       setError(
         err?.message ||
-          "Sora is temporarily unavailable. Please try again.",
+          "Marcel is temporarily unavailable. Please try again.",
       );
     } finally {
       setSending(false);
@@ -575,7 +575,7 @@ export default function AssistantWidget({ userRole = "guest" }) {
             "
           >
             {/* ==================================================
-                SORA HEADER
+                MARCEL HEADER
             ================================================== */}
 
             <header
@@ -607,7 +607,7 @@ export default function AssistantWidget({ userRole = "guest" }) {
 
               <div className="relative flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <SoraLogo size="md" animated />
+                  <MarcelLogo size="md" animated />
 
                   <div>
                     <div className="flex items-center gap-2">
@@ -619,7 +619,7 @@ export default function AssistantWidget({ userRole = "guest" }) {
                           dark:text-white
                         "
                       >
-                        {SORA_NAME}
+                        {MARCEL_NAME}
                       </h2>
 
                       <span
@@ -663,7 +663,16 @@ export default function AssistantWidget({ userRole = "guest" }) {
                         />
                       </span>
 
-                      {roleLabel}
+                      <span>{roleLabel}</span>
+
+<span className="text-zinc-300 dark:text-zinc-700">
+  •
+</span>
+
+<span className="inline-flex items-center gap-1 font-medium text-indigo-600 dark:text-indigo-400">
+  <Sparkles size={10} />
+  Powered by Gemini
+</span>
                     </div>
                   </div>
                 </div>
@@ -691,7 +700,7 @@ export default function AssistantWidget({ userRole = "guest" }) {
                   <button
                     type="button"
                     onClick={() => setIsOpen(false)}
-                    title="Close Sora"
+                    title="Close Marcel"
                     className="
                       flex h-9 w-9 items-center justify-center
                       rounded-xl text-zinc-400
@@ -739,7 +748,7 @@ export default function AssistantWidget({ userRole = "guest" }) {
                   if (isWelcome) {
                     return (
                       <motion.div
-                        key="sora-welcome"
+                        key="marcel-welcome"
                         initial={{
                           opacity: 0,
                           y: 10,
@@ -754,7 +763,7 @@ export default function AssistantWidget({ userRole = "guest" }) {
                         className="pt-2"
                       >
                         <div className="flex flex-col items-center text-center">
-                          <SoraLogo
+                          <MarcelLogo
                             size="xl"
                             animated
                           />
@@ -768,7 +777,7 @@ export default function AssistantWidget({ userRole = "guest" }) {
                                 dark:text-white
                               "
                             >
-                              Meet Sora
+                              Meet Marcel
                             </h3>
 
                             <p
@@ -780,6 +789,10 @@ export default function AssistantWidget({ userRole = "guest" }) {
                             >
                               Your academic assistant
                             </p>
+                            <div className="mt-2 flex items-center justify-center gap-1.5 text-[10px] font-medium text-zinc-400 dark:text-zinc-500">
+  <Sparkles size={11} />
+  <span>Powered by Gemini</span>
+</div>
                           </div>
 
                           <div
@@ -790,9 +803,9 @@ export default function AssistantWidget({ userRole = "guest" }) {
                               dark:text-zinc-400
                             "
                           >
-                            <SoraMarkdown>
+                            <MarcelMarkdown>
                               {message.text}
-                            </SoraMarkdown>
+                            </MarcelMarkdown>
                           </div>
                         </div>
                       </motion.div>
@@ -821,7 +834,7 @@ export default function AssistantWidget({ userRole = "guest" }) {
                     >
                       {!isUser && (
                         <div className="mr-2 mt-1">
-                          <SoraLogo size="sm" />
+                          <MarcelLogo size="sm" />
                         </div>
                       )}
 
@@ -905,7 +918,7 @@ export default function AssistantWidget({ userRole = "guest" }) {
                           text-zinc-400
                         "
                       >
-                        Try asking Sora
+                        Try asking Marcel
                       </p>
 
                       <span
@@ -1064,7 +1077,7 @@ export default function AssistantWidget({ userRole = "guest" }) {
                         ))}
                       </div>
 
-                      Sora is thinking...
+                      Marcel is thinking...
                     </div>
                   </motion.div>
                 )}
@@ -1169,7 +1182,7 @@ export default function AssistantWidget({ userRole = "guest" }) {
                   }}
                   rows={1}
                   maxLength={4000}
-                  placeholder="Ask Sora anything..."
+                  placeholder="Ask Marcel anything..."
                   className="
                     max-h-28
                     min-h-10
@@ -1221,7 +1234,7 @@ export default function AssistantWidget({ userRole = "guest" }) {
                     disabled:opacity-35
                     disabled:shadow-none
                   "
-                  aria-label="Send message to Sora"
+                  aria-label="Send message to Marcel"
                 >
                   {sending ? (
                     <LoaderCircle
@@ -1246,7 +1259,7 @@ export default function AssistantWidget({ userRole = "guest" }) {
                 <CheckCircle2 size={10} />
 
                 <span>
-                  Sora can make mistakes. Verify important
+                  Marcel can make mistakes. Verify important
                   academic information.
                 </span>
               </div>
@@ -1256,7 +1269,7 @@ export default function AssistantWidget({ userRole = "guest" }) {
       </AnimatePresence>
 
       {/* ========================================================
-          SORA FLOATING LAUNCHER
+          MARCEL FLOATING LAUNCHER
       ======================================================== */}
 
       <div
@@ -1308,7 +1321,7 @@ export default function AssistantWidget({ userRole = "guest" }) {
                 max-sm:hidden
               "
             >
-              Ask Sora
+              Ask Marcel anything
             </motion.div>
           )}
         </AnimatePresence>
@@ -1338,8 +1351,8 @@ export default function AssistantWidget({ userRole = "guest" }) {
           "
           aria-label={
             isOpen
-              ? "Close Sora"
-              : "Open Sora"
+              ? "Close Marcel"
+              : "Open Marcel"
           }
         >
           {!isOpen && (
@@ -1403,7 +1416,7 @@ export default function AssistantWidget({ userRole = "guest" }) {
               </motion.div>
             ) : (
               <motion.div
-                key="sora"
+                key="marcel"
                 initial={{
                   opacity: 0,
                   scale: 0.7,
@@ -1423,7 +1436,7 @@ export default function AssistantWidget({ userRole = "guest" }) {
                   duration: 0.18,
                 }}
               >
-                <SoraLogo
+                <MarcelLogo
               size="md"
               animated
               />
