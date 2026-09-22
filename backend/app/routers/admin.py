@@ -354,16 +354,12 @@ def create_student(
 )
 def regenerate_pin(
     student_id: int,
-    current_admin: models.Admin = Depends(
-        get_current_admin
-    ),
+    current_admin: models.Admin = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     student = (
         db.query(models.Student)
-        .filter(
-            models.Student.id == student_id
-        )
+        .filter(models.Student.id == student_id)
         .first()
     )
 
@@ -376,33 +372,47 @@ def regenerate_pin(
     if not student.is_active:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                "Cannot reset the PIN for an inactive "
-                "student account"
-            ),
+            detail="Cannot reset the PIN for an inactive student account",
         )
 
     # Generate a new permanent PIN.
     new_pin = generate_pin()
 
-    # Replacing the stored hash makes the old PIN invalid.
-    student.pin_hash = hash_password(
-        new_pin
-    )
+    try:
+        # Send the new PIN first.
+        #
+        # IMPORTANT:
+        # We do not change the PIN stored in the database until
+        # email delivery succeeds. This means that if Resend fails,
+        # the student's existing PIN remains valid.
+        send_admin_pin_reset_email(
+            student.email,
+            student.name,
+            new_pin,
+        )
 
-    db.commit()
-    db.refresh(student)
+        # Email succeeded, so it is now safe to replace the old PIN.
+        student.pin_hash = hash_password(new_pin)
 
-# Tell the student that an administrator reset their PIN.
-    send_admin_pin_reset_email(
-    student.email,
-    student.name,
-    new_pin,
-)
+        db.commit()
+        db.refresh(student)
 
+    except Exception as exc:
+        # Make sure no database changes from this request are saved.
+        db.rollback()
+
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "The new PIN could not be emailed to the student. "
+                "The student's existing PIN is still valid. "
+                "Please try again later."
+            ),
+        ) from exc
 
     # Never return the plaintext PIN.
     return student
+
 
 
 # ------------------------------------------------------------
