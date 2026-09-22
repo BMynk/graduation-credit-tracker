@@ -25,6 +25,9 @@ class Settings(BaseSettings):
 
 
     resend_api_key: str = ""
+
+
+    email_test_recipient: str = ""
     
 
     # CORS

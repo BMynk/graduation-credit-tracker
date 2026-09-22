@@ -1,15 +1,16 @@
 # app/routers/email.py
+
 import logging
-from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app import models, schemas
+from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_admin
 from app.email_service import send_bulk_email
-from app.config import settings  # 👈 Single import
+
 
 logger = logging.getLogger("credit_tracker.email")
 
@@ -23,25 +24,37 @@ def preview_bulk_email(
     db: Session = Depends(get_db),
 ):
     """
-    Preview how many students will receive the email and see sample recipients.
+    Preview how many students will receive the email
+    and return sample recipients.
+
     Only accessible by admins.
     """
+
     query = db.query(models.Student)
-    
+
     if payload.is_active:
-        query = query.filter(models.Student.is_active.is_(True))
-    
+        query = query.filter(
+            models.Student.is_active.is_(True)
+        )
+
     if payload.programme_code:
         query = query.join(models.Programme).filter(
             models.Programme.code == payload.programme_code
         )
-    
+
     if payload.current_year:
-        query = query.filter(models.Student.current_year == payload.current_year)
-    
+        query = query.filter(
+            models.Student.current_year == payload.current_year
+        )
+
     students = query.all()
-    emails = [s.email for s in students if s.email]
-    
+
+    emails = [
+        student.email
+        for student in students
+        if student.email
+    ]
+
     return schemas.BulkEmailPreview(
         recipient_count=len(emails),
         sample_recipients=emails[:5],
@@ -55,56 +68,82 @@ def send_bulk_email_endpoint(
     db: Session = Depends(get_db),
 ):
     """
-    Send a bulk email to students filtered by programme and/or year.
+    Send a bulk email to students filtered by programme
+    and/or academic year.
+
+    When send_test is enabled, the email is sent only to
+    EMAIL_TEST_RECIPIENT.
+
     Only accessible by admins.
     """
+
     query = db.query(models.Student)
-    
+
     if payload.is_active:
-        query = query.filter(models.Student.is_active.is_(True))
-    
+        query = query.filter(
+            models.Student.is_active.is_(True)
+        )
+
     if payload.programme_code:
         query = query.join(models.Programme).filter(
             models.Programme.code == payload.programme_code
         )
-    
+
     if payload.current_year:
-        query = query.filter(models.Student.current_year == payload.current_year)
-    
+        query = query.filter(
+            models.Student.current_year == payload.current_year
+        )
+
     students = query.all()
-    
+
     if not students:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No students found matching the filters"
+            detail="No students found matching the filters.",
         )
-    
-    recipients = [s.email for s in students if s.email]
-    
+
+    recipients = [
+        student.email
+        for student in students
+        if student.email
+    ]
+
     if not recipients:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No valid email addresses found"
+            detail="No valid email addresses found.",
         )
-    
-    # If test mode, only send to the admin's configured email
+
+    # --------------------------------------------------------
+    # TEST EMAIL MODE
+    # --------------------------------------------------------
+
     if payload.send_test:
-        # 👇 FIX: Use settings.smtp_from_email instead of current_admin.email
-        recipients = [settings.smtp_from_email]
-        if not recipients:
+        if not settings.email_test_recipient:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Sender email not configured in SMTP settings."
+                detail="Test email recipient is not configured.",
             )
-    
-    # Send the emails
+
+        recipients = [
+            settings.email_test_recipient
+        ]
+
+        logger.info(
+            "Bulk email test mode enabled. Sending test email only."
+        )
+
+    # --------------------------------------------------------
+    # SEND EMAIL
+    # --------------------------------------------------------
+
     results = send_bulk_email(
         to_emails=recipients,
         subject=payload.subject,
         body=payload.body,
         sender_email=settings.smtp_from_email,
     )
-    
+
     return schemas.BulkEmailResult(
         total_sent=results["sent"],
         failed=results["failed"],
