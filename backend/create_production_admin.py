@@ -1,26 +1,37 @@
+import os
+
 from app.database import SessionLocal
 from app import models
 from app.security import hash_password
 
 
 def create_production_admin():
+    username = os.getenv("PRODUCTION_ADMIN_USERNAME")
+    password = os.getenv("PRODUCTION_ADMIN_PASSWORD")
+
+    if not username or not password:
+        raise RuntimeError(
+            "PRODUCTION_ADMIN_USERNAME and "
+            "PRODUCTION_ADMIN_PASSWORD must be configured."
+        )
+
     db = SessionLocal()
 
     try:
         existing_admin = (
             db.query(models.Admin)
-            .filter(models.Admin.username == "admin")
+            .filter(models.Admin.username == username)
             .first()
         )
 
         if existing_admin:
-            print("Admin account already exists.")
+            print("Production admin account already exists.")
             return
 
         admin = models.Admin(
             name="System Administrator",
-            username="admin",
-            hashed_password=hash_password("AdminPass123!"),
+            username=username,
+            hashed_password=hash_password(password),
             is_active=True,
             is_super_admin=True,
             created_by_id=None,
