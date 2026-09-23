@@ -380,7 +380,7 @@ export default function PredictorPage({
         <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500 dark:text-zinc-400">
           Test different grade scenarios and see how
           future module results could affect your
-          weighted academic average.
+          overall academic average.
         </p>
       </motion.div>
 
@@ -400,7 +400,7 @@ export default function PredictorPage({
                 ).toFixed(1)}%`
               : "—"
           }
-          helper="Weighted average"
+          helper="Overall average"
         />
 
         <ResultStat
@@ -694,7 +694,7 @@ export default function PredictorPage({
 
                     <p className="mt-1 text-sm text-zinc-500">
                       How this scenario changes
-                      your weighted average.
+                      your overall average.
                     </p>
                   </div>
 
@@ -743,7 +743,7 @@ export default function PredictorPage({
                   value={`${
                     change > 0 ? "+" : ""
                   }${change.toFixed(1)}%`}
-                  helper="Weighted average"
+                  helper="Overall average"
                   tone={
                     change >= 0
                       ? "green"
