@@ -1,11 +1,13 @@
 # app/routers/community.py
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app import models, schemas
 from app.database import get_db
 from app.dependencies import get_current_student
+from app.rate_limit import limiter
 
 router = APIRouter(prefix="/community", tags=["Community"])
 
@@ -44,8 +46,24 @@ def _get_or_create_community(db: Session, student: models.Student) -> models.Com
                 )
             )
 
-        db.commit()
-        db.refresh(community)
+        try:
+            db.commit()
+            db.refresh(community)
+        except IntegrityError:
+            # Two first-time requests for the same programme/year can race.
+            # The database unique constraint decides the winner; the other
+            # request rolls back and safely loads the community that won.
+            db.rollback()
+            community = (
+                db.query(models.Community)
+                .filter(
+                    models.Community.programme_id == student.programme_id,
+                    models.Community.year_level == student.current_year,
+                )
+                .first()
+            )
+            if community is None:
+                raise
 
     return community
 
@@ -148,7 +166,9 @@ def list_messages(
     response_model=schemas.CommunityMessageOut,
     status_code=status.HTTP_201_CREATED,
 )
+@limiter.limit("15/minute")
 def create_message(
+    request: Request,
     channel_id: int,
     payload: schemas.CommunityMessageCreate,
     db: Session = Depends(get_db),
@@ -191,7 +211,9 @@ def create_message(
 
 
 @router.delete("/messages/{message_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("20/minute")
 def delete_own_message(
+    request: Request,
     message_id: int,
     db: Session = Depends(get_db),
     current_student: models.Student = Depends(get_current_student),
@@ -218,7 +240,9 @@ def delete_own_message(
 
 
 @router.post("/messages/{message_id}/reactions", response_model=schemas.CommunityMessageOut)
+@limiter.limit("60/minute")
 def toggle_reaction(
+    request: Request,
     message_id: int,
     payload: schemas.CommunityReactionCreate,
     db: Session = Depends(get_db),
