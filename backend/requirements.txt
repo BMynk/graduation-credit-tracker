@@ -17,4 +17,3 @@ openai
 google-genai
 tavily-python
 psycopg[binary]
-resend==2.47.0
