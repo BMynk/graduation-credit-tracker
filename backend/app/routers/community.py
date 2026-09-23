@@ -12,18 +12,25 @@ from app.rate_limit import limiter
 router = APIRouter(prefix="/community", tags=["Community"])
 
 DEFAULT_CHANNELS = (
-    ("general", "General", "Talk with students in your programme and year."),
+    ("general", "General", "Talk with students in your community."),
     ("study-help", "Study Help", "Ask questions, share study tips, and help classmates."),
     ("random", "Random", "Relax, chat, and have fun with your classmates."),
 )
 
+ALL_YEARS_LEVEL = 0
 
-def _get_or_create_community(db: Session, student: models.Student) -> models.Community:
+
+def _get_or_create_community(
+    db: Session,
+    student: models.Student,
+    year_level: int | None = None,
+) -> models.Community:
+    target_year = student.current_year if year_level is None else year_level
     community = (
         db.query(models.Community)
         .filter(
             models.Community.programme_id == student.programme_id,
-            models.Community.year_level == student.current_year,
+            models.Community.year_level == target_year,
         )
         .first()
     )
@@ -31,7 +38,7 @@ def _get_or_create_community(db: Session, student: models.Student) -> models.Com
     if community is None:
         community = models.Community(
             programme_id=student.programme_id,
-            year_level=student.current_year,
+            year_level=target_year,
         )
         db.add(community)
         db.flush()
@@ -58,7 +65,7 @@ def _get_or_create_community(db: Session, student: models.Student) -> models.Com
                 db.query(models.Community)
                 .filter(
                     models.Community.programme_id == student.programme_id,
-                    models.Community.year_level == student.current_year,
+                    models.Community.year_level == target_year,
                 )
                 .first()
             )
@@ -69,19 +76,20 @@ def _get_or_create_community(db: Session, student: models.Student) -> models.Com
 
 
 def _student_channel(db: Session, student: models.Student, channel_id: int):
-    community = _get_or_create_community(db, student)
     channel = (
         db.query(models.CommunityChannel)
+        .join(models.Community)
         .filter(
             models.CommunityChannel.id == channel_id,
-            models.CommunityChannel.community_id == community.id,
+            models.Community.programme_id == student.programme_id,
+            models.Community.year_level.in_([student.current_year, ALL_YEARS_LEVEL]),
             models.CommunityChannel.is_active.is_(True),
         )
         .first()
     )
     if channel is None:
         raise HTTPException(status_code=404, detail="Community channel not found")
-    return community, channel
+    return channel.community, channel
 
 
 def _message_out(message: models.CommunityMessage, current_student_id: int):
@@ -122,6 +130,26 @@ def get_my_community(
     current_student: models.Student = Depends(get_current_student),
 ):
     community = _get_or_create_community(db, current_student)
+    db.refresh(community)
+    return schemas.CommunityOut(
+        id=community.id,
+        year_level=community.year_level,
+        programme_code=current_student.programme.code,
+        programme_name=current_student.programme.name,
+        channels=[
+            schemas.CommunityChannelOut.model_validate(channel)
+            for channel in community.channels
+            if channel.is_active
+        ],
+    )
+
+
+@router.get("/all-years", response_model=schemas.CommunityOut)
+def get_programme_community(
+    db: Session = Depends(get_db),
+    current_student: models.Student = Depends(get_current_student),
+):
+    community = _get_or_create_community(db, current_student, ALL_YEARS_LEVEL)
     db.refresh(community)
     return schemas.CommunityOut(
         id=community.id,
@@ -226,7 +254,7 @@ def delete_own_message(
             models.CommunityMessage.id == message_id,
             models.CommunityMessage.student_id == current_student.id,
             models.Community.programme_id == current_student.programme_id,
-            models.Community.year_level == current_student.current_year,
+            models.Community.year_level.in_([current_student.current_year, ALL_YEARS_LEVEL]),
         )
         .first()
     )
@@ -255,7 +283,7 @@ def toggle_reaction(
         .filter(
             models.CommunityMessage.id == message_id,
             models.Community.programme_id == current_student.programme_id,
-            models.Community.year_level == current_student.current_year,
+            models.Community.year_level.in_([current_student.current_year, ALL_YEARS_LEVEL]),
             models.CommunityMessage.is_deleted.is_(False),
         )
         .first()

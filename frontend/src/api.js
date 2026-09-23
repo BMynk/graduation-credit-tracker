@@ -958,6 +958,9 @@ getModuleDetail: (
   getMyCommunity: () =>
     request("/community/me"),
 
+  getProgrammeCommunity: () =>
+    request("/community/all-years"),
+
   getCommunityMessages: (channelId, params = {}) => {
     const qs = new URLSearchParams(params).toString();
     return request(`/community/channels/${channelId}/messages${qs ? `?${qs}` : ""}`);
