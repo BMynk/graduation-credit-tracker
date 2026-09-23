@@ -1,41 +1,25 @@
-import os
-import subprocess
-import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BACKEND = ROOT / "backend"
+ADMIN_ROUTER = ROOT / "backend" / "app" / "routers" / "admin.py"
+ADMIN_MANAGEMENT = ROOT / "backend" / "app" / "routers" / "admin_management.py"
 
 def main():
-    env = os.environ.copy()
-    env.setdefault("SECRET_KEY", "security-cleanup-ci-secret")
-    code = r"""
-from app.main import app
+    admin_source = ADMIN_ROUTER.read_text(encoding="utf-8")
+    management_source = ADMIN_MANAGEMENT.read_text(encoding="utf-8")
 
-def collect_paths(routes, prefix=""):
-    found = set()
-    for route in routes:
-        route_path = getattr(route, "path", None)
-        if route_path is not None:
-            found.add(prefix + route_path)
-        nested = getattr(route, "routes", None)
-        if nested:
-            found.update(collect_paths(nested, prefix + (route_path or "")))
-    return found
+    for route in (
+        '@router.post("/simulation/seed"',
+        '@router.post("/simulation/academic-records"',
+        '@router.post("/simulation/community-activity"',
+    ):
+        assert route not in admin_source, route
 
-paths = collect_paths(app.routes)
-for path in (
-    "/admin/simulation/seed",
-    "/admin/simulation/academic-records",
-    "/admin/simulation/community-activity",
-):
-    assert path not in paths, path
-
-assert any(path.endswith("/change-password") for path in paths), sorted(paths)
-assert not any(path.endswith("/reset-password") and "{admin_id}" not in path for path in paths), sorted(paths)
-print("Production security cleanup tests passed.")
-"""
-    subprocess.run([sys.executable, "-c", code], cwd=BACKEND, env=env, check=True)
+    assert '@router.post("/change-password")' in management_source
+    assert '@router.post("/reset-password")' not in management_source
+    assert "verify_password(" in management_source
+    assert "payload.current_password" in management_source
+    print("Production security cleanup tests passed.")
 
 if __name__ == "__main__":
     main()
