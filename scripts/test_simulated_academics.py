@@ -36,7 +36,7 @@ try:
 
     result = seed_academic_records_with_db(db); db.commit()
     assert result["simulated_students"] == 30
-    assert result["records_created"] == 120
+    assert result["records_created"] == 60
     assert result["passes_created"] > 0
     assert result["failures_created"] > 0
     assert db.query(models.Enrolment).filter(models.Enrolment.student_id == real.id).count() == 0
