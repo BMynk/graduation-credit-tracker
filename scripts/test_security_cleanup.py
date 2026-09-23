@@ -22,7 +22,7 @@ for path in (
     assert path not in paths, path
 
 assert "/admin-management/change-password" in paths
-assert "/admin-management/reset-password" not in paths
+assert "/admin-management/reset-password" not in paths\nassert "/admin-management/{admin_id}/reset-password" in paths
 print("Production security cleanup tests passed.")
 """
     subprocess.run([sys.executable, "-c", code], cwd=BACKEND, env=env, check=True)
