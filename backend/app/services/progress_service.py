@@ -623,17 +623,18 @@ def build_graduation_audit(
     # ---------------------------------------------------------
     # REMAINING SEMESTERS
     # ---------------------------------------------------------
-
+    # Keep the historical average as an informational statistic,
+    # but do not use it to predict graduation time. A student may
+    # have completed only a small number of credits in an earlier
+    # semester, which can otherwise produce projections such as
+    # 23 semesters.
     avg_credits_per_semester = None
-    projected_semesters_remaining = None
 
     distinct_semesters = (
         db.query(models.Enrolment.semester)
         .filter(
-            models.Enrolment.student_id
-            == student.id,
-            models.Enrolment.status
-            == "completed",
+            models.Enrolment.student_id == student.id,
+            models.Enrolment.status == "completed",
         )
         .distinct()
         .count()
@@ -641,23 +642,32 @@ def build_graduation_audit(
 
     if distinct_semesters > 0:
         avg_credits_per_semester = round(
-            summary["credits_completed"]
-            / distinct_semesters,
+            summary["credits_completed"] / distinct_semesters,
             1,
         )
 
-        remaining_credits = (
-            summary["credits_remaining"]
-        )
+    # Project from the actual outstanding curriculum. GCT has two
+    # semesters per academic year and permits at most 80 credits in
+    # a semester. Each curriculum semester therefore contributes at
+    # least one future semester when it still contains requirements;
+    # overloaded curriculum semesters require additional semesters.
+    MAX_CREDITS_PER_SEMESTER = 80
+    outstanding_by_curriculum_semester = defaultdict(int)
 
-        if avg_credits_per_semester > 0:
-            projected_semesters_remaining = max(
-                0,
-                round(
-                    remaining_credits
-                    / avg_credits_per_semester
-                ),
-            )
+    for link in outstanding_links:
+        if link.module is None:
+            continue
+        key = (link.year, link.semester)
+        outstanding_by_curriculum_semester[key] += link.module.credits
+
+    projected_semesters_remaining = sum(
+        max(1, math.ceil(credits / MAX_CREDITS_PER_SEMESTER))
+        for credits in outstanding_by_curriculum_semester.values()
+        if credits > 0
+    )
+
+    if not outstanding_by_curriculum_semester:
+        projected_semesters_remaining = 0
 
     # ---------------------------------------------------------
     # FINAL RESPONSE
