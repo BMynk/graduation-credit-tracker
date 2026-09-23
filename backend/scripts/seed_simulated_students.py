@@ -37,55 +37,68 @@ def _email(programme_id: int, index: int) -> str:
     return f"sim-{programme_id:03d}-{index:03d}@{SIM_EMAIL_DOMAIN}"
 
 
+def seed_with_db(db, per_programme: int) -> dict:
+    """Seed simulated students using an existing transaction/session."""
+    if not 1 <= per_programme <= 50:
+        raise ValueError("per_programme must be between 1 and 50")
+
+    created = 0
+    programmes = db.query(models.Programme).order_by(models.Programme.id).all()
+    if not programmes:
+        return {"created": 0, "programmes": 0, "per_programme": per_programme}
+
+    for programme in programmes:
+        curriculum_years = [
+            row[0]
+            for row in db.query(models.ProgrammeModule.year)
+            .filter(models.ProgrammeModule.programme_id == programme.id)
+            .distinct()
+            .order_by(models.ProgrammeModule.year)
+            .all()
+            if row[0] and row[0] > 0
+        ]
+        years = curriculum_years or [1, 2, 3]
+
+        for index in range(1, per_programme + 1):
+            number = _student_number(programme.id, index)
+            if db.query(models.Student.id).filter(
+                models.Student.student_number == number
+            ).first():
+                continue
+
+            rng = random.Random(programme.id * 10000 + index)
+            name = f"{rng.choice(FIRST_NAMES)} {rng.choice(LAST_NAMES)}"
+            year = years[(index - 1) % len(years)]
+            db.add(models.Student(
+                name=name,
+                student_number=number,
+                email=_email(programme.id, index),
+                pin_hash=None,
+                programme_id=programme.id,
+                current_year=year,
+                target_average=60.0,
+                is_active=True,
+            ))
+            created += 1
+
+    db.flush()
+    return {
+        "created": created,
+        "programmes": len(programmes),
+        "per_programme": per_programme,
+    }
+
+
 def seed(per_programme: int) -> int:
     db = SessionLocal()
-    created = 0
     try:
-        programmes = db.query(models.Programme).order_by(models.Programme.id).all()
-        if not programmes:
-            print("No programmes found. Nothing was created.")
-            return 0
-
-        for programme in programmes:
-            # Use the programme curriculum to determine its available years.
-            curriculum_years = [
-                row[0]
-                for row in db.query(models.ProgrammeModule.year)
-                .filter(models.ProgrammeModule.programme_id == programme.id)
-                .distinct()
-                .order_by(models.ProgrammeModule.year)
-                .all()
-                if row[0] and row[0] > 0
-            ]
-            years = curriculum_years or [1, 2, 3]
-
-            for index in range(1, per_programme + 1):
-                number = _student_number(programme.id, index)
-                if db.query(models.Student.id).filter(
-                    models.Student.student_number == number
-                ).first():
-                    continue
-
-                rng = random.Random(programme.id * 10000 + index)
-                name = f"{rng.choice(FIRST_NAMES)} {rng.choice(LAST_NAMES)}"
-                year = years[(index - 1) % len(years)]
-
-                db.add(
-                    models.Student(
-                        name=name,
-                        student_number=number,
-                        email=_email(programme.id, index),
-                        pin_hash=None,
-                        programme_id=programme.id,
-                        current_year=year,
-                        target_average=60.0,
-                        is_active=True,
-                    )
-                )
-                created += 1
-
+        result = seed_with_db(db, per_programme)
         db.commit()
-        print(f"Created {created} simulated students across {len(programmes)} programmes.")
+        created = result["created"]
+        print(
+            f"Created {created} simulated students across "
+            f"{result['programmes']} programmes."
+        )
         print("Existing real students were not modified.")
         return created
     except Exception:

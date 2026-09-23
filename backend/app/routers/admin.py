@@ -42,6 +42,39 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 
 
 # ============================================================
+# SIMULATION DATA (ADMIN ONLY)
+# ============================================================
+
+@router.post("/simulation/seed")
+def seed_simulation_students(
+    per_programme: int = Query(default=30, ge=1, le=50),
+    current_admin: models.Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """Create clearly marked, non-login simulated students for demos."""
+    from scripts.seed_simulated_students import seed_with_db
+
+    try:
+        result = seed_with_db(db, per_programme)
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not create simulated students.",
+        ) from exc
+
+    return {
+        **result,
+        "message": (
+            f"Simulation ready: {result['created']} new simulated students created. "
+            "Existing real students were not modified."
+        ),
+    }
+
+
+
+# ============================================================
 # ADMIN AUTHENTICATION
 # ============================================================
 
