@@ -364,6 +364,46 @@ export default function AssistantWidget({ userRole = "guest" }) {
 
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
+  const launcherDraggedRef = useRef(false);
+  const [launcherPosition, setLauncherPosition] = useState(() => {
+    if (typeof window === "undefined") return { x: 0, y: 0 };
+
+    try {
+      const saved = window.sessionStorage.getItem("marcel-launcher-position");
+      return saved ? JSON.parse(saved) : { x: 0, y: 0 };
+    } catch {
+      return { x: 0, y: 0 };
+    }
+  });
+
+  function clampLauncherPosition(position) {
+    if (typeof window === "undefined") return position;
+
+    const viewport = window.visualViewport;
+    const width = viewport?.width || window.innerWidth;
+    const height = viewport?.height || window.innerHeight;
+    const margin = 16;
+    const launcherSize = 64;
+
+    return {
+      x: Math.min(0, Math.max(position.x, -(width - launcherSize - margin * 2))),
+      y: Math.min(0, Math.max(position.y, -(height - launcherSize - margin * 2))),
+    };
+  }
+
+  function saveLauncherPosition(position) {
+    const next = clampLauncherPosition(position);
+    setLauncherPosition(next);
+
+    try {
+      window.sessionStorage.setItem(
+        "marcel-launcher-position",
+        JSON.stringify(next),
+      );
+    } catch {
+      // Storage can be unavailable in private/restricted browser modes.
+    }
+  }
 
   const suggestions = useMemo(() => {
     if (userRole === "student") {
@@ -409,6 +449,35 @@ export default function AssistantWidget({ userRole = "guest" }) {
 
     return () => clearTimeout(timer);
   }, [isOpen]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const keepLauncherOnScreen = () => {
+      setLauncherPosition((current) => {
+        const next = clampLauncherPosition(current);
+
+        try {
+          window.sessionStorage.setItem(
+            "marcel-launcher-position",
+            JSON.stringify(next),
+          );
+        } catch {
+          // Ignore storage failures.
+        }
+
+        return next;
+      });
+    };
+
+    window.addEventListener("resize", keepLauncherOnScreen);
+    window.visualViewport?.addEventListener("resize", keepLauncherOnScreen);
+
+    return () => {
+      window.removeEventListener("resize", keepLauncherOnScreen);
+      window.visualViewport?.removeEventListener("resize", keepLauncherOnScreen);
+    };
+  }, []);
 
   /* ============================================================
      SEND MESSAGE - STREAMING
@@ -1328,14 +1397,48 @@ export default function AssistantWidget({ userRole = "guest" }) {
 
         <motion.button
           type="button"
-          onClick={() =>
-            setIsOpen((current) => !current)
-          }
+          drag={!isOpen}
+          dragMomentum={false}
+          dragElastic={0.08}
+          style={{
+            x: launcherPosition.x,
+            y: launcherPosition.y,
+            touchAction: "none",
+          }}
+          onDragStart={() => {
+            launcherDraggedRef.current = false;
+          }}
+          onDrag={(_, info) => {
+            if (
+              Math.abs(info.offset.x) > 6 ||
+              Math.abs(info.offset.y) > 6
+            ) {
+              launcherDraggedRef.current = true;
+            }
+          }}
+          onDragEnd={(_, info) => {
+            saveLauncherPosition({
+              x: launcherPosition.x + info.offset.x,
+              y: launcherPosition.y + info.offset.y,
+            });
+          }}
+          onClick={() => {
+            if (launcherDraggedRef.current) {
+              launcherDraggedRef.current = false;
+              return;
+            }
+
+            setIsOpen((current) => !current);
+          }}
           whileHover={{
             scale: 1.06,
           }}
           whileTap={{
             scale: 0.94,
+          }}
+          whileDrag={{
+            scale: 1.06,
+            cursor: "grabbing",
           }}
           className="
             relative
@@ -1348,6 +1451,8 @@ export default function AssistantWidget({ userRole = "guest" }) {
             text-white
             shadow-[0_16px_40px_-10px_rgba(37,99,235,0.7)]
             backdrop-blur-xl
+            cursor-grab
+            select-none
           "
           aria-label={
             isOpen
