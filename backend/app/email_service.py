@@ -2,9 +2,10 @@
 
 import logging
 import re
+import smtplib
+import ssl
+from email.message import EmailMessage
 from typing import List
-
-import resend
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from app.config import settings
@@ -36,11 +37,7 @@ def _send_html_email(
     html_content: str,
     text_content: str | None = None,
 ) -> None:
-    """
-    Send an HTML email through the Resend HTTPS API.
-
-    In development mode the email is logged instead of sent.
-    """
+    """Send a multipart email through the configured SMTP server."""
 
     if settings.email_dev_mode:
         logger.info(
@@ -51,45 +48,50 @@ def _send_html_email(
         )
         return
 
-    if not settings.resend_api_key:
-        logger.error("RESEND_API_KEY is not configured.")
+    if not settings.smtp_host or not settings.smtp_username or not settings.smtp_password:
+        logger.error("SMTP email credentials are not configured.")
         raise RuntimeError("Email service is not configured.")
 
-    if not settings.smtp_from_email:
-        logger.error("SMTP_FROM_EMAIL is not configured.")
-        raise RuntimeError("Sender email is not configured.")
-
+    sender = settings.smtp_from_email or settings.smtp_username
     plain = text_content or re.sub(r"<[^>]+>", "", html_content)
 
-    resend.api_key = settings.resend_api_key
-
-    params: resend.Emails.SendParams = {
-        "from": settings.smtp_from_email,
-        "to": [to_email],
-        "subject": subject,
-        "html": html_content,
-        "text": plain,
-    }
+    message = EmailMessage()
+    message["From"] = sender
+    message["To"] = to_email
+    message["Subject"] = subject
+    message.set_content(plain)
+    message.add_alternative(html_content, subtype="html")
 
     try:
-        response = resend.Emails.send(params)
+        if settings.smtp_use_ssl:
+            context = ssl.create_default_context()
+            with smtplib.SMTP_SSL(
+                settings.smtp_host,
+                settings.smtp_port,
+                timeout=20,
+                context=context,
+            ) as server:
+                server.login(settings.smtp_username, settings.smtp_password)
+                server.send_message(message)
+        else:
+            with smtplib.SMTP(
+                settings.smtp_host,
+                settings.smtp_port,
+                timeout=20,
+            ) as server:
+                server.ehlo()
+                if settings.smtp_use_tls:
+                    context = ssl.create_default_context()
+                    server.starttls(context=context)
+                    server.ehlo()
+                server.login(settings.smtp_username, settings.smtp_password)
+                server.send_message(message)
 
-        logger.info(
-            "Email accepted by Resend for %s. Response: %s",
-            to_email,
-            response,
-        )
+        logger.info("Email accepted by SMTP server for %s.", to_email)
 
-    except Exception as exc:
-        logger.exception(
-            "Resend failed to send email to %s: %s",
-            to_email,
-            str(exc),
-        )
-
-        raise RuntimeError(
-            "The email could not be delivered."
-        ) from exc
+    except (smtplib.SMTPException, OSError) as exc:
+        logger.exception("SMTP failed to send email to %s: %s", to_email, str(exc))
+        raise RuntimeError("The email could not be delivered.") from exc
 
 
 # ============================================================
