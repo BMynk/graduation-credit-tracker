@@ -47,21 +47,16 @@ required_paths = {
 missing_paths = required_paths.difference(router_paths)
 assert not missing_paths, f"Missing community router paths: {sorted(missing_paths)}"
 
-app_route_names = {
-    getattr(route, "name", None)
-    for route in app.routes
-}
-required_route_names = {
-    "get_my_community",
-    "list_messages",
-    "create_message",
-    "delete_own_message",
-    "toggle_reaction",
-}
-missing_route_names = required_route_names.difference(app_route_names)
-assert not missing_route_names, (
-    "Community endpoints are not included in the FastAPI application: "
-    f"{sorted(missing_route_names)}"
+from fastapi.testclient import TestClient
+
+client = TestClient(app)
+response = client.get("/community/me")
+assert response.status_code != 404, (
+    "Community router is not reachable through the FastAPI application"
+)
+assert response.status_code in {401, 403}, (
+    "Unauthenticated Community endpoint should be protected; "
+    f"got HTTP {response.status_code}"
 )
 print("Backend community smoke test passed.")
 """
