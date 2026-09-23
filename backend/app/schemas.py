@@ -788,6 +788,7 @@ class CommunityAuthorOut(BaseModel):
     id: int
     name: str
     current_year: int
+    is_simulated: bool = False
 
 
 class CommunityReactionSummary(BaseModel):
