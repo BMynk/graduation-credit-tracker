@@ -36,27 +36,21 @@ required = {
 missing = required.difference(Base.metadata.tables)
 assert not missing, f"Missing community tables: {sorted(missing)}"
 
-def collect_paths(routes):
-    found = set()
-    for route in routes:
-        path = getattr(route, "path", None)
-        if path:
-            found.add(path)
-        nested = getattr(route, "routes", None)
-        if nested:
-            found.update(collect_paths(nested))
-    return found
-
-paths = collect_paths(app.routes)
-print("Registered paths:", sorted(path for path in paths if "community" in path))
+router_paths = {route.path for route in community_router.routes}
 required_paths = {
     "/community/me",
     "/community/channels/{channel_id}/messages",
     "/community/messages/{message_id}",
     "/community/messages/{message_id}/reactions",
 }
-missing_paths = required_paths.difference(paths)
-assert not missing_paths, f"Missing community routes: {sorted(missing_paths)}"
+missing_paths = required_paths.difference(router_paths)
+assert not missing_paths, f"Missing community router paths: {sorted(missing_paths)}"
+
+included = any(
+    getattr(route, "router", None) is community_router
+    for route in app.routes
+)
+assert included, "Community router is not included in the FastAPI application"
 print("Backend community smoke test passed.")
 """
     print("\n$ backend community smoke test")
