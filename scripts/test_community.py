@@ -46,11 +46,22 @@ required_paths = {
 missing_paths = required_paths.difference(router_paths)
 assert not missing_paths, f"Missing community router paths: {sorted(missing_paths)}"
 
-included = any(
-    getattr(route, "router", None) is community_router
+app_route_names = {
+    getattr(route, "name", None)
     for route in app.routes
+}
+required_route_names = {
+    "get_my_community",
+    "list_messages",
+    "create_message",
+    "delete_own_message",
+    "toggle_reaction",
+}
+missing_route_names = required_route_names.difference(app_route_names)
+assert not missing_route_names, (
+    "Community endpoints are not included in the FastAPI application: "
+    f"{sorted(missing_route_names)}"
 )
-assert included, "Community router is not included in the FastAPI application"
 print("Backend community smoke test passed.")
 """
     print("\n$ backend community smoke test")
