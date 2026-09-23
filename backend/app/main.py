@@ -12,6 +12,7 @@ from slowapi.errors import RateLimitExceeded
 from app.config import settings
 from app.database import Base, engine
 from app.rate_limit import limiter
+from app.routers.community import router as community_router
 from app.routers import (
     admin,
     admin_management,
@@ -127,6 +128,7 @@ async def unhandled_exception_handler(
 # ---------------------------------------------------------
 
 app.include_router(auth.router)
+app.include_router(community_router)
 app.include_router(admin.router)
 app.include_router(admin_management.router)
 app.include_router(students.router)

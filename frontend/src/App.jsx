@@ -10,6 +10,7 @@ import HistoryPage from "./pages/student/HistoryPage";
 import PlanningPage from "./pages/student/PlanningPage";
 import TimelinePage from "./pages/student/TimelinePage";
 import AchievementsPage from "./pages/student/AchievementsPage";
+import CommunityPage from "./pages/student/CommunityPage";
 import AssistantWidget from "./components/assistant/AssistantWidget";
 
 // Import student components
@@ -1287,6 +1288,7 @@ function StudentDashboard({ onLogout }) {
         <YearlyBreakdown onModuleClick={handleModuleClick} />
       )}
       {!loading && tab === "peers" && <PeerComparison />}
+      {!loading && tab === "community" && <CommunityPage student={me} />}
       {!loading && tab === "history" && (
   <HistoryPage
 

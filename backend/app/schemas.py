@@ -764,3 +764,70 @@ class FacilitatorOut(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+# ---------- Community ----------
+
+class CommunityChannelOut(BaseModel):
+    id: int
+    slug: str
+    name: str
+    description: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class CommunityOut(BaseModel):
+    id: int
+    year_level: int
+    programme_code: str
+    programme_name: str
+    channels: List[CommunityChannelOut]
+
+
+class CommunityAuthorOut(BaseModel):
+    id: int
+    name: str
+    current_year: int
+
+
+class CommunityReactionSummary(BaseModel):
+    emoji: str
+    count: int
+    reacted_by_me: bool = False
+
+
+class CommunityMessageCreate(BaseModel):
+    content: str = Field(min_length=1, max_length=2000)
+    parent_message_id: Optional[int] = None
+
+    @field_validator("content")
+    @classmethod
+    def validate_content(cls, value: str):
+        value = value.strip()
+        if not value:
+            raise ValueError("Message cannot be empty")
+        return value
+
+
+class CommunityReactionCreate(BaseModel):
+    emoji: str = Field(min_length=1, max_length=16)
+
+    @field_validator("emoji")
+    @classmethod
+    def validate_emoji(cls, value: str):
+        allowed = {"👍", "❤️", "😂", "🔥", "🎉", "👏"}
+        if value not in allowed:
+            raise ValueError("Unsupported reaction")
+        return value
+
+
+class CommunityMessageOut(BaseModel):
+    id: int
+    channel_id: int
+    content: Optional[str] = None
+    is_deleted: bool
+    created_at: datetime
+    edited_at: Optional[datetime] = None
+    parent_message_id: Optional[int] = None
+    author: CommunityAuthorOut
+    reactions: List[CommunityReactionSummary] = []

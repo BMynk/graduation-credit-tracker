@@ -952,6 +952,36 @@ getModuleDetail: (
 
   
       // ==========================================================
+  // Student Community
+  // ==========================================================
+
+  getMyCommunity: () =>
+    request("/community/me"),
+
+  getCommunityMessages: (channelId, params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/community/channels/${channelId}/messages${qs ? `?${qs}` : ""}`);
+  },
+
+  sendCommunityMessage: (channelId, payload) =>
+    request(`/community/channels/${channelId}/messages`, {
+      method: "POST",
+      body: payload,
+    }),
+
+  deleteCommunityMessage: (messageId) =>
+    request(`/community/messages/${messageId}`, {
+      method: "DELETE",
+    }),
+
+  toggleCommunityReaction: (messageId, emoji) =>
+    request(`/community/messages/${messageId}/reactions`, {
+      method: "POST",
+      body: { emoji },
+    }),
+
+
+  // ==========================================================
   // AI Assistant
   // ==========================================================
 
