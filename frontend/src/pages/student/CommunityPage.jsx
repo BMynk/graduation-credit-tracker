@@ -241,6 +241,11 @@ export default function CommunityPage({ student }) {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-baseline gap-2">
                         <span className="text-sm font-semibold text-zinc-900 dark:text-white">{message.author.name}</span>
+                        {message.author.is_simulated && (
+                          <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-600 dark:bg-violet-500/10 dark:text-violet-300">
+                            Simulated
+                          </span>
+                        )}
                         <span className="text-[11px] text-zinc-400">Year {message.author.current_year} · {timeLabel(message.created_at)}</span>
                       </div>
                       {message.parent_message_id && (() => {
