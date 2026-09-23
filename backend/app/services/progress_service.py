@@ -131,9 +131,18 @@ def build_progress_summary(db: Session, student: models.Student) -> dict:
     credits_remaining = max(credits_required - credits_completed, 0)
     percentage = round((credits_completed / credits_required) * 100, 1) if credits_required else 0.0
 
-    graded = [e for e in completed_enrolments if e.grade is not None]
+    # Academic average: every recorded module mark counts equally.
+    # Credits affect degree progress only; they never weight a mark.
+    graded = (
+        db.query(models.Enrolment)
+        .filter(
+            models.Enrolment.student_id == student.id,
+            models.Enrolment.grade.isnot(None),
+        )
+        .all()
+    )
     weighted_average = (
-        round(sum(e.grade * e.module.credits for e in graded) / sum(e.module.credits for e in graded), 2)
+        round(sum(e.grade for e in graded) / len(graded), 2)
         if graded else None
     )
 
@@ -460,7 +469,7 @@ def build_graduation_audit(
         on_track = False
 
         reasons.append(
-            f"Current weighted average "
+            f"Current overall average "
             f"({summary['weighted_average']}) "
             f"below target "
             f"({student.target_average})"
@@ -1441,7 +1450,7 @@ ACHIEVEMENT_DEFINITIONS = {
     "gpa_65": {
         "id": "gpa_65",
         "title": "Rising Star",
-        "description": "Achieve a weighted average of 65% or higher",
+        "description": "Achieve a overall average of 65% or higher",
         "icon": "✨",
         "category": "excellence",
         "rarity": "common",
@@ -1450,7 +1459,7 @@ ACHIEVEMENT_DEFINITIONS = {
     "gpa_70": {
         "id": "gpa_70",
         "title": "Academic Excellence",
-        "description": "Achieve a weighted average of 70% or higher",
+        "description": "Achieve a overall average of 70% or higher",
         "icon": "⭐",
         "category": "excellence",
         "rarity": "uncommon",
@@ -1459,7 +1468,7 @@ ACHIEVEMENT_DEFINITIONS = {
     "gpa_75": {
         "id": "gpa_75",
         "title": "Top Achiever",
-        "description": "Achieve a weighted average of 75% or higher",
+        "description": "Achieve a overall average of 75% or higher",
         "icon": "🌟",
         "category": "excellence",
         "rarity": "rare",
@@ -1468,7 +1477,7 @@ ACHIEVEMENT_DEFINITIONS = {
     "gpa_80": {
         "id": "gpa_80",
         "title": "Academic Elite",
-        "description": "Achieve a weighted average of 80% or higher",
+        "description": "Achieve a overall average of 80% or higher",
         "icon": "🏅",
         "category": "excellence",
         "rarity": "epic",
@@ -1477,7 +1486,7 @@ ACHIEVEMENT_DEFINITIONS = {
     "gpa_85": {
         "id": "gpa_85",
         "title": "Elite Scholar",
-        "description": "Achieve a weighted average of 85% or higher",
+        "description": "Achieve a overall average of 85% or higher",
         "icon": "💎",
         "category": "excellence",
         "rarity": "legendary",
@@ -1997,7 +2006,7 @@ def calculate_achievements(
             )
 
     # ---------------------------------------------------------
-    # Weighted-average achievements
+    # Overall-average achievements
     # ---------------------------------------------------------
 
     if weighted_average is not None:
