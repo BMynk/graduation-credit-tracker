@@ -15,6 +15,7 @@ function timeLabel(value) {
 
 export default function CommunityPage({ student }) {
   const [community, setCommunity] = useState(null);
+  const [scope, setScope] = useState("year");
   const [activeChannelId, setActiveChannelId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState("");
@@ -31,7 +32,17 @@ export default function CommunityPage({ student }) {
 
   useEffect(() => {
     let alive = true;
-    api.getMyCommunity()
+    setLoading(true);
+    setError("");
+    setCommunity(null);
+    setActiveChannelId(null);
+    setMessages([]);
+    setReplyTo(null);
+
+    const communityRequest =
+      scope === "all" ? api.getProgrammeCommunity() : api.getMyCommunity();
+
+    communityRequest
       .then((data) => {
         if (!alive) return;
         setCommunity(data);
@@ -39,8 +50,9 @@ export default function CommunityPage({ student }) {
       })
       .catch((err) => alive && setError(err.message))
       .finally(() => alive && setLoading(false));
+
     return () => { alive = false; };
-  }, []);
+  }, [scope]);
 
   useEffect(() => {
     if (!activeChannelId) return;
@@ -128,7 +140,8 @@ export default function CommunityPage({ student }) {
 
   return (
     <div className="space-y-5">
-      <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
         <div className="flex items-center gap-2 text-brand-600 dark:text-brand-400">
           <Users size={17} />
           <span className="text-xs font-semibold uppercase tracking-[0.12em]">Programme Community</span>
@@ -137,8 +150,36 @@ export default function CommunityPage({ student }) {
           {community?.programme_name || "Community"}
         </h1>
         <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Year {community?.year_level} · A space for classmates to study, chat and have fun.
+          {scope === "all"
+            ? "All years · Connect with every registered student in your programme."
+            : `Year ${community?.year_level} · A space for classmates to study, chat and have fun.`}
         </p>
+        </div>
+
+        <div className="inline-flex self-start rounded-xl border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-800 dark:bg-zinc-900">
+          <button
+            type="button"
+            onClick={() => setScope("year")}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+              scope === "year"
+                ? "bg-white text-brand-700 shadow-sm dark:bg-zinc-800 dark:text-brand-300"
+                : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+            }`}
+          >
+            My Year
+          </button>
+          <button
+            type="button"
+            onClick={() => setScope("all")}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+              scope === "all"
+                ? "bg-white text-brand-700 shadow-sm dark:bg-zinc-800 dark:text-brand-300"
+                : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+            }`}
+          >
+            All Years
+          </button>
+        </div>
       </div>
 
       {error && (
