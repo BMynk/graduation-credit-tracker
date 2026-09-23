@@ -17,6 +17,10 @@ def run(command, cwd):
 def main():
     run([sys.executable, "-m", "compileall", "-q", "app"], BACKEND)
 
+    test_db = BACKEND / "community_ci.db"
+    if test_db.exists():
+        test_db.unlink()
+
     env = os.environ.copy()
     env["DATABASE_URL"] = "sqlite:///./community_ci.db"
     env.setdefault("SECRET_KEY", "community-ci-secret-key")
@@ -40,6 +44,7 @@ assert not missing, f"Missing community tables: {sorted(missing)}"
 router_paths = {route.path for route in community_router.routes}
 required_paths = {
     "/community/me",
+    "/community/all-years",
     "/community/channels/{channel_id}/messages",
     "/community/messages/{message_id}",
     "/community/messages/{message_id}/reactions",
@@ -80,9 +85,13 @@ try:
         name="Student C", student_number="CI0003", email="c@example.test",
         programme_id=programme_b.id, current_year=2, target_average=60.0,
     )
-    db.add_all([student_a, student_b, student_c])
+    student_d = models.Student(
+        name="Student D", student_number="CI0004", email="d@example.test",
+        programme_id=programme_a.id, current_year=1, target_average=60.0,
+    )
+    db.add_all([student_a, student_b, student_c, student_d])
     db.commit()
-    for student in (student_a, student_b, student_c):
+    for student in (student_a, student_b, student_c, student_d):
         db.refresh(student)
 
     current = {"student": student_a}
@@ -114,6 +123,44 @@ try:
     current["student"] = student_c
     c_data = client.get("/community/me").json()
     assert c_data["id"] != a_data["id"], "Different programme must have a separate community"
+
+    current["student"] = student_a
+
+    all_years_a = client.get("/community/all-years")
+    assert all_years_a.status_code == 200, all_years_a.text
+    all_years_data = all_years_a.json()
+    assert all_years_data["year_level"] == 0
+    all_years_general_id = next(
+        ch["id"] for ch in all_years_data["channels"] if ch["slug"] == "general"
+    )
+
+    all_years_message = client.post(
+        f"/community/channels/{all_years_general_id}/messages",
+        json={"content": "Hello students from every year"},
+    )
+    assert all_years_message.status_code == 201, all_years_message.text
+    all_years_message_id = all_years_message.json()["id"]
+
+    current["student"] = student_d
+    d_year_data = client.get("/community/me").json()
+    assert d_year_data["id"] != a_data["id"], "Different years must keep separate year communities"
+    d_all_years = client.get("/community/all-years").json()
+    assert d_all_years["id"] == all_years_data["id"], (
+        "Students in the same programme across years must share the all-years community"
+    )
+    all_years_visible = client.get(
+        f"/community/channels/{all_years_general_id}/messages"
+    )
+    assert all_years_visible.status_code == 200
+    assert any(m["id"] == all_years_message_id for m in all_years_visible.json())
+
+    current["student"] = student_c
+    blocked_all_years = client.get(
+        f"/community/channels/{all_years_general_id}/messages"
+    )
+    assert blocked_all_years.status_code == 404, (
+        "Students from another programme must not access the all-years community"
+    )
 
     current["student"] = student_a
     created = client.post(
