@@ -25,6 +25,7 @@ def main():
 from app.database import Base, engine
 from app.main import app
 from app import models
+from app.routers.community import router as community_router
 
 Base.metadata.create_all(bind=engine)
 required = {
