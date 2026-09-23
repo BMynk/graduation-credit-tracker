@@ -2,9 +2,7 @@
 
 import logging
 import re
-import smtplib
-import ssl
-from email.message import EmailMessage
+import httpx
 from typing import List
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -37,7 +35,7 @@ def _send_html_email(
     html_content: str,
     text_content: str | None = None,
 ) -> None:
-    """Send a multipart email through the configured SMTP server."""
+    """Send a transactional email through Mailjet Send API v3.1."""
 
     if settings.email_dev_mode:
         logger.info(
@@ -48,49 +46,49 @@ def _send_html_email(
         )
         return
 
-    if not settings.smtp_host or not settings.smtp_username or not settings.smtp_password:
-        logger.error("SMTP email credentials are not configured.")
+    if not settings.mailjet_api_key or not settings.mailjet_secret_key:
+        logger.error("Mailjet API credentials are not configured.")
         raise RuntimeError("Email service is not configured.")
 
-    sender = settings.smtp_from_email or settings.smtp_username
-    plain = text_content or re.sub(r"<[^>]+>", "", html_content)
+    sender = settings.mailjet_from_email
+    if not sender:
+        logger.error("Mailjet sender email is not configured.")
+        raise RuntimeError("Email sender is not configured.")
 
-    message = EmailMessage()
-    message["From"] = sender
-    message["To"] = to_email
-    message["Subject"] = subject
-    message.set_content(plain)
-    message.add_alternative(html_content, subtype="html")
+    plain = text_content or re.sub(r"<[^>]+>", "", html_content)
+    payload = {
+        "Messages": [
+            {
+                "From": {
+                    "Email": sender,
+                    "Name": settings.mailjet_from_name,
+                },
+                "To": [{"Email": to_email}],
+                "Subject": subject,
+                "TextPart": plain,
+                "HTMLPart": html_content,
+            }
+        ]
+    }
 
     try:
-        if settings.smtp_use_ssl:
-            context = ssl.create_default_context()
-            with smtplib.SMTP_SSL(
-                settings.smtp_host,
-                settings.smtp_port,
-                timeout=20,
-                context=context,
-            ) as server:
-                server.login(settings.smtp_username, settings.smtp_password)
-                server.send_message(message)
-        else:
-            with smtplib.SMTP(
-                settings.smtp_host,
-                settings.smtp_port,
-                timeout=20,
-            ) as server:
-                server.ehlo()
-                if settings.smtp_use_tls:
-                    context = ssl.create_default_context()
-                    server.starttls(context=context)
-                    server.ehlo()
-                server.login(settings.smtp_username, settings.smtp_password)
-                server.send_message(message)
+        response = httpx.post(
+            "https://api.mailjet.com/v3.1/send",
+            auth=(settings.mailjet_api_key, settings.mailjet_secret_key),
+            json=payload,
+            timeout=20.0,
+        )
+        response.raise_for_status()
+        data = response.json()
+        messages = data.get("Messages", [])
+        if not messages or messages[0].get("Status") != "success":
+            logger.error("Mailjet rejected email to %s: %s", to_email, data)
+            raise RuntimeError("The email could not be delivered.")
 
-        logger.info("Email accepted by SMTP server for %s.", to_email)
+        logger.info("Email accepted by Mailjet for %s.", to_email)
 
-    except (smtplib.SMTPException, OSError) as exc:
-        logger.exception("SMTP failed to send email to %s: %s", to_email, str(exc))
+    except (httpx.HTTPError, ValueError) as exc:
+        logger.exception("Mailjet failed to send email to %s: %s", to_email, str(exc))
         raise RuntimeError("The email could not be delivered.") from exc
 
 
