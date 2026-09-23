@@ -26,6 +26,12 @@ class Settings(BaseSettings):
 
     resend_api_key: str = ""
 
+    # Mailjet transactional email API
+    mailjet_api_key: str = ""
+    mailjet_secret_key: str = ""
+    mailjet_from_email: str = ""
+    mailjet_from_name: str = "Graduation Credit Tracker"
+
 
     email_test_recipient: str = ""
     
