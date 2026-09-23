@@ -19,7 +19,7 @@ def main():
     code = """
 from app.database import Base, SessionLocal, engine
 from app import models
-from scripts.seed_simulated_students import seed, remove
+from scripts.seed_simulated_students import seed, seed_with_db, remove
 
 Base.metadata.create_all(bind=engine)
 db = SessionLocal()
@@ -36,7 +36,17 @@ try:
 finally:
     db.close()
 
-assert seed(6) == 6
+# Existing-session helper is what the production admin endpoint uses.
+db = SessionLocal()
+try:
+    result = seed_with_db(db, 6)
+    assert result["created"] == 6
+    assert result["programmes"] == 1
+    db.commit()
+finally:
+    db.close()
+
+assert seed(6) == 0
 assert seed(6) == 0, "Seeder must be idempotent"
 
 db = SessionLocal()
