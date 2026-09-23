@@ -36,7 +36,7 @@ required = {
 missing = required.difference(Base.metadata.tables)
 assert not missing, f"Missing community tables: {sorted(missing)}"
 
-paths = {route.path for route in app.routes}
+paths = {route.path for route in app.routes if hasattr(route, "path")}
 required_paths = {
     "/community/me",
     "/community/channels/{channel_id}/messages",
