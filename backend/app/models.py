@@ -684,3 +684,86 @@ class Facilitator(Base):
         onupdate=datetime.utcnow,
         nullable=False,
     )
+
+# ============================================================
+# COMMUNITY
+# ============================================================
+
+class Community(Base):
+    __tablename__ = "communities"
+
+    id = Column(Integer, primary_key=True, index=True)
+    programme_id = Column(Integer, ForeignKey("programmes.id"), nullable=False, index=True)
+    year_level = Column(Integer, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    programme = relationship("Programme")
+    channels = relationship(
+        "CommunityChannel", back_populates="community",
+        cascade="all, delete-orphan", order_by="CommunityChannel.id",
+    )
+
+    __table_args__ = (
+        UniqueConstraint("programme_id", "year_level", name="uq_community_programme_year"),
+    )
+
+
+class CommunityChannel(Base):
+    __tablename__ = "community_channels"
+
+    id = Column(Integer, primary_key=True, index=True)
+    community_id = Column(Integer, ForeignKey("communities.id"), nullable=False, index=True)
+    slug = Column(String(50), nullable=False)
+    name = Column(String(80), nullable=False)
+    description = Column(String(240), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    community = relationship("Community", back_populates="channels")
+    messages = relationship(
+        "CommunityMessage", back_populates="channel", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        UniqueConstraint("community_id", "slug", name="uq_community_channel_slug"),
+    )
+
+
+class CommunityMessage(Base):
+    __tablename__ = "community_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    channel_id = Column(Integer, ForeignKey("community_channels.id"), nullable=False, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
+    parent_message_id = Column(Integer, ForeignKey("community_messages.id"), nullable=True, index=True)
+    content = Column(Text, nullable=False)
+    is_deleted = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    edited_at = Column(DateTime, nullable=True)
+
+    channel = relationship("CommunityChannel", back_populates="messages")
+    student = relationship("Student")
+    parent = relationship("CommunityMessage", remote_side=[id], backref="replies")
+    reactions = relationship(
+        "CommunityReaction", back_populates="message", cascade="all, delete-orphan"
+    )
+
+
+class CommunityReaction(Base):
+    __tablename__ = "community_reactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    message_id = Column(Integer, ForeignKey("community_messages.id"), nullable=False, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
+    emoji = Column(String(16), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    message = relationship("CommunityMessage", back_populates="reactions")
+    student = relationship("Student")
+
+    __table_args__ = (
+        UniqueConstraint(
+            "message_id", "student_id", "emoji",
+            name="uq_community_reaction_student_emoji",
+        ),
+    )
