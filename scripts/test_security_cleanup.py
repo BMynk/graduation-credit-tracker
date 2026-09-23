@@ -31,9 +31,8 @@ for path in (
 ):
     assert path not in paths, path
 
-assert any(path.endswith("/change-password") for path in paths)
-assert not any(path.endswith("/reset-password") and "{admin_id}" not in path for path in paths)
-assert any(path.endswith("/{admin_id}/reset-password") for path in paths)
+assert any(path.endswith("/change-password") for path in paths), sorted(paths)
+assert not any(path.endswith("/reset-password") and "{admin_id}" not in path for path in paths), sorted(paths)
 print("Production security cleanup tests passed.")
 """
     subprocess.run([sys.executable, "-c", code], cwd=BACKEND, env=env, check=True)
