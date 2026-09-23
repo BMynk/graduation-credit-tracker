@@ -9,6 +9,7 @@ on:
       - "frontend/**"
       - "scripts/test_community.py"
       - "scripts/test_simulated_students.py"
+      - "scripts/test_simulated_community.py"
       - ".github/workflows/community-checks.yml"
 
 permissions:
@@ -44,4 +45,4 @@ jobs:
         env:
           SECRET_KEY: community-ci-secret-key
           DATABASE_URL: sqlite:///./community_ci.db
-        run: python scripts/test_community.py && python scripts/test_simulated_students.py
+        run: python scripts/test_community.py && python scripts/test_simulated_students.py && python scripts/test_simulated_community.py
