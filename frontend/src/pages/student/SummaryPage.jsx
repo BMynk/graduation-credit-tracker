@@ -294,7 +294,7 @@ export default function SummaryPage({
         />
 
         <StatCard
-          label="Weighted average"
+          label="Overall average"
           value={`${average.toFixed(1)}%`}
           helper="current academic average"
           icon={TrendingUp}
