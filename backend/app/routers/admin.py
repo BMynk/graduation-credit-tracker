@@ -73,6 +73,34 @@ def seed_simulation_students(
     }
 
 
+@router.post("/simulation/community-activity")
+def seed_simulation_community_activity(
+    messages_per_channel: int = Query(default=5, ge=1, le=10),
+    current_admin: models.Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """Populate empty Community channels with clearly marked simulated activity."""
+    from scripts.seed_simulated_community import seed_activity_with_db
+
+    try:
+        result = seed_activity_with_db(db, messages_per_channel)
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not create simulated Community activity.",
+        ) from exc
+
+    return {
+        **result,
+        "message": (
+            f"Simulation activity ready: {result['messages_created']} messages, "
+            f"{result['replies_created']} replies and {result['reactions_created']} reactions created."
+        ),
+    }
+
+
 
 # ============================================================
 # ADMIN AUTHENTICATION
