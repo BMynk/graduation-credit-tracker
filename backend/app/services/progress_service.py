@@ -460,7 +460,7 @@ def build_graduation_audit(
         on_track = False
 
         reasons.append(
-            f"Current weighted average "
+            f"Current overall average "
             f"({summary['weighted_average']}) "
             f"below target "
             f"({student.target_average})"
@@ -1441,7 +1441,7 @@ ACHIEVEMENT_DEFINITIONS = {
     "gpa_65": {
         "id": "gpa_65",
         "title": "Rising Star",
-        "description": "Achieve a weighted average of 65% or higher",
+        "description": "Achieve a overall average of 65% or higher",
         "icon": "✨",
         "category": "excellence",
         "rarity": "common",
@@ -1450,7 +1450,7 @@ ACHIEVEMENT_DEFINITIONS = {
     "gpa_70": {
         "id": "gpa_70",
         "title": "Academic Excellence",
-        "description": "Achieve a weighted average of 70% or higher",
+        "description": "Achieve a overall average of 70% or higher",
         "icon": "⭐",
         "category": "excellence",
         "rarity": "uncommon",
@@ -1459,7 +1459,7 @@ ACHIEVEMENT_DEFINITIONS = {
     "gpa_75": {
         "id": "gpa_75",
         "title": "Top Achiever",
-        "description": "Achieve a weighted average of 75% or higher",
+        "description": "Achieve a overall average of 75% or higher",
         "icon": "🌟",
         "category": "excellence",
         "rarity": "rare",
@@ -1468,7 +1468,7 @@ ACHIEVEMENT_DEFINITIONS = {
     "gpa_80": {
         "id": "gpa_80",
         "title": "Academic Elite",
-        "description": "Achieve a weighted average of 80% or higher",
+        "description": "Achieve a overall average of 80% or higher",
         "icon": "🏅",
         "category": "excellence",
         "rarity": "epic",
@@ -1477,7 +1477,7 @@ ACHIEVEMENT_DEFINITIONS = {
     "gpa_85": {
         "id": "gpa_85",
         "title": "Elite Scholar",
-        "description": "Achieve a weighted average of 85% or higher",
+        "description": "Achieve a overall average of 85% or higher",
         "icon": "💎",
         "category": "excellence",
         "rarity": "legendary",
@@ -1997,7 +1997,7 @@ def calculate_achievements(
             )
 
     # ---------------------------------------------------------
-    # Weighted-average achievements
+    # Overall-average achievements
     # ---------------------------------------------------------
 
     if weighted_average is not None:
