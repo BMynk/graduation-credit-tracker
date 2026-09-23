@@ -36,7 +36,19 @@ required = {
 missing = required.difference(Base.metadata.tables)
 assert not missing, f"Missing community tables: {sorted(missing)}"
 
-paths = {route.path for route in app.routes if hasattr(route, "path")}\nprint("Registered paths:", sorted(path for path in paths if "community" in path))
+def collect_paths(routes):
+    found = set()
+    for route in routes:
+        path = getattr(route, "path", None)
+        if path:
+            found.add(path)
+        nested = getattr(route, "routes", None)
+        if nested:
+            found.update(collect_paths(nested))
+    return found
+
+paths = collect_paths(app.routes)
+print("Registered paths:", sorted(path for path in paths if "community" in path))
 required_paths = {
     "/community/me",
     "/community/channels/{channel_id}/messages",
