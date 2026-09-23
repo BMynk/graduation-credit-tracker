@@ -105,6 +105,7 @@ def _message_out(message: models.CommunityMessage, current_student_id: int):
             id=message.student.id,
             name=message.student.name,
             current_year=message.student.current_year,
+            is_simulated=message.student.student_number.startswith("SIM-"),
         ),
         reactions=[
             schemas.CommunityReactionSummary(
