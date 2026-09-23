@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Hash, MessageCircle, Reply, Send, Trash2, Users } from "lucide-react";
 import { api } from "../../api";
 
@@ -22,6 +22,7 @@ export default function CommunityPage({ student }) {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const messagesEndRef = useRef(null);
 
   const activeChannel = useMemo(
     () => community?.channels?.find((channel) => channel.id === activeChannelId),
@@ -43,13 +44,42 @@ export default function CommunityPage({ student }) {
 
   useEffect(() => {
     if (!activeChannelId) return;
+
+    let alive = true;
+    let firstLoad = true;
+
+    const loadMessages = async () => {
+      try {
+        const data = await api.getCommunityMessages(activeChannelId);
+        if (!alive) return;
+        setMessages(data);
+        if (firstLoad) {
+          setError("");
+          firstLoad = false;
+        }
+      } catch (err) {
+        if (alive) setError(err.message);
+      }
+    };
+
     setError("");
     setMessages([]);
     setReplyTo(null);
-    api.getCommunityMessages(activeChannelId)
-      .then(setMessages)
-      .catch((err) => setError(err.message));
+    loadMessages();
+
+    // Lightweight polling keeps classmates' messages and reactions fresh
+    // without requiring a persistent WebSocket connection.
+    const intervalId = window.setInterval(loadMessages, 5000);
+
+    return () => {
+      alive = false;
+      window.clearInterval(intervalId);
+    };
   }, [activeChannelId]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages.length]);
 
   async function sendMessage(event) {
     event.preventDefault();
@@ -172,6 +202,16 @@ export default function CommunityPage({ student }) {
                         <span className="text-sm font-semibold text-zinc-900 dark:text-white">{message.author.name}</span>
                         <span className="text-[11px] text-zinc-400">Year {message.author.current_year} · {timeLabel(message.created_at)}</span>
                       </div>
+                      {message.parent_message_id && (() => {
+                        const parent = messages.find((item) => item.id === message.parent_message_id);
+                        if (!parent) return null;
+                        return (
+                          <div className="mt-2 rounded-lg border-l-2 border-brand-300 bg-zinc-50 px-3 py-2 text-xs text-zinc-500 dark:border-brand-700 dark:bg-zinc-800/70 dark:text-zinc-400">
+                            <span className="font-semibold text-zinc-700 dark:text-zinc-300">{parent.author.name}</span>
+                            <span className="ml-1">{parent.is_deleted ? "Message deleted" : parent.content}</span>
+                          </div>
+                        );
+                      })()}
                       {message.is_deleted ? (
                         <p className="mt-1 text-sm italic text-zinc-400">Message deleted</p>
                       ) : (
@@ -214,6 +254,7 @@ export default function CommunityPage({ student }) {
                 </article>
               );
             })}
+            <div ref={messagesEndRef} />
           </div>
 
           <div className="border-t border-zinc-200 p-3 sm:p-4 dark:border-zinc-800">
