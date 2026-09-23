@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 from app.database import get_db
 from app.dependencies import get_current_admin
-from app.security import hash_password
+from app.security import hash_password, verify_password
 
 router = APIRouter(prefix="/admin-management", tags=["Admin Management"])
 
@@ -279,16 +279,36 @@ def reactivate_admin(
     )
 
 
-@router.post("/reset-password")
-def reset_password(
-    payload: schemas.AdminPasswordReset,
+@router.post("/change-password")
+def change_password(
+    payload: schemas.AdminPasswordChange,
     current_admin: models.Admin = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
-    """Allow any admin to reset their own password."""
+    """Change the logged-in admin's password after verifying the current one."""
+    if not verify_password(
+        payload.current_password,
+        current_admin.hashed_password,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Current password is incorrect",
+        )
+
+    if verify_password(
+        payload.new_password,
+        current_admin.hashed_password,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be different from the current password",
+        )
+
     current_admin.hashed_password = hash_password(payload.new_password)
     db.commit()
-    return {"message": "Password updated successfully"}
+    return {
+        "message": "Password updated successfully. Sign in again on your other devices."
+    }
 
 
 @router.post("/{admin_id}/reset-password")

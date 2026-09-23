@@ -926,11 +926,11 @@ getModuleDetail: (
     ),
 
 
-  adminResetOwnPassword: (
+  adminChangeOwnPassword: (
     payload
   ) =>
     request(
-      "/admin-management/reset-password",
+      "/admin-management/change-password",
       {
         method: "POST",
         body: payload,
