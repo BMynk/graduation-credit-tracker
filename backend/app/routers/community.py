@@ -283,7 +283,7 @@ def toggle_reaction(
         .filter(
             models.CommunityMessage.id == message_id,
             models.Community.programme_id == current_student.programme_id,
-            models.Community.year_level == current_student.current_year,
+            models.Community.year_level.in_([current_student.current_year, ALL_YEARS_LEVEL]),
             models.CommunityMessage.is_deleted.is_(False),
         )
         .first()
