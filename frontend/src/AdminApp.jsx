@@ -42,6 +42,8 @@ import {
   Eye,
   EyeOff,
   LockKeyhole,
+  Moon,
+  Sun,
 } from "lucide-react";
 
 // ---------- Shared UI Components ----------
@@ -2464,6 +2466,26 @@ function AdminDashboard({ onLogout }) {
   const [mobileMenuOpen, setMobileMenuOpen] =
     useState(false);
 
+  const [darkMode, setDarkMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem("admin-theme");
+      if (saved === "dark") return true;
+      if (saved === "light") return false;
+      return document.documentElement.classList.contains("dark");
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", darkMode);
+    try {
+      localStorage.setItem("admin-theme", darkMode ? "dark" : "light");
+    } catch {
+      // Ignore storage errors.
+    }
+  }, [darkMode]);
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try {
       return localStorage.getItem("admin-sidebar-collapsed") === "true";
@@ -2777,6 +2799,15 @@ function AdminDashboard({ onLogout }) {
             </div>
 
             <div className="ml-auto flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setDarkMode((current) => !current)}
+                title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+                aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+                className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 shadow-sm transition hover:bg-zinc-50 hover:text-blue-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-blue-400"
+              >
+                {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+              </button>
               <div className="hidden text-right sm:block">
                 <p className="max-w-[180px] truncate text-xs font-semibold text-zinc-800 dark:text-zinc-200">
                   {admin?.name ||
