@@ -73,6 +73,33 @@ def seed_simulation_students(
     }
 
 
+@router.post("/simulation/academic-records")
+def seed_simulation_academic_records(
+    current_admin: models.Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """Add varied marks to simulated students without touching real students."""
+    from scripts.seed_simulated_academics import seed_academic_records_with_db
+
+    try:
+        result = seed_academic_records_with_db(db)
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not create simulated academic records.",
+        ) from exc
+
+    return {
+        **result,
+        "message": (
+            f"Simulation academics ready: {result['records_created']} records created "
+            f"({result['passes_created']} passes, {result['failures_created']} failures)."
+        ),
+    }
+
+
 @router.post("/simulation/community-activity")
 def seed_simulation_community_activity(
     messages_per_channel: int = Query(default=5, ge=1, le=10),
