@@ -13,7 +13,7 @@ def main():
 from fastapi.testclient import TestClient
 from app.main import app
 
-paths = {route.path for route in app.routes}
+paths = {route.path for route in app.routes if hasattr(route, "path")}
 for path in (
     "/admin/simulation/seed",
     "/admin/simulation/academic-records",
