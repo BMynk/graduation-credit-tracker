@@ -4,9 +4,6 @@ import { api } from "./api";
 import ProgrammeBreakdownView from "./components/ProgrammeBreakdown";
 import AdminStudentListEnhanced from "./components/Admin/AdminStudentListEnhanced";
 import AdminViewAsStudent from "./components/Admin/AdminViewAsStudent";
-import AdminModuleList from "./components/Admin/AdminModuleList";
-import AdminPrerequisiteManager from "./components/Admin/AdminPrerequisiteManager";
-import AdminProgrammeModules from "./components/Admin/AdminProgrammeModules";
 import AdminBulkEmail from "./components/Admin/AdminBulkEmail";
 import AdminAccountManagement from "./components/Admin/AdminAccountManagement";
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
@@ -18,7 +15,6 @@ import {
   AlertTriangle,
   ArrowRight,
   BarChart3,
-  BookOpen,
   BookOpenCheck,
   Boxes,
   CheckCircle2,
@@ -2385,173 +2381,6 @@ function AtRiskStudents({ onSelectStudent }) {
 }
 
 // ---------- Curriculum Management ----------
-function CurriculumManagement() {
-  const [subTab, setSubTab] = useState("modules");
-
-  const sections = [
-    {
-      id: "modules",
-      label: "Modules",
-      description: "Create and manage module records",
-      icon: BookOpenCheck,
-    },
-    {
-      id: "prerequisites",
-      label: "Prerequisites",
-      description: "Configure module requirements",
-      icon: GitBranch,
-    },
-    {
-      id: "programme-modules",
-      label: "Programme Modules",
-      description: "Structure programme curricula",
-      icon: Layers3,
-    },
-  ];
-
-  const activeSection = sections.find(
-    (section) => section.id === subTab
-  );
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-6 pb-8"
-    >
-      {/* Hero */}
-      <section className="relative overflow-hidden rounded-2xl border border-blue-200/70 bg-gradient-to-br from-blue-50 via-white to-violet-50 p-6 dark:border-blue-950 dark:from-blue-950/20 dark:via-zinc-950 dark:to-violet-950/20 sm:p-7">
-        <div className="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-blue-500/10 blur-3xl" />
-
-        <div className="relative">
-          <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white/70 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-300">
-            <Boxes size={14} />
-            Academic Structure
-          </div>
-
-          <h1 className="mt-4 text-2xl font-semibold tracking-tight text-zinc-950 dark:text-white sm:text-3xl">
-            Curriculum management
-          </h1>
-
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-400">
-            Manage modules, prerequisite relationships and
-            the modules assigned to each academic programme.
-          </p>
-        </div>
-      </section>
-
-      {/* Workspace navigation */}
-      <section className="rounded-2xl border border-zinc-200 bg-white p-2 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="grid gap-2 md:grid-cols-3">
-          {sections.map((section) => {
-            const Icon = section.icon;
-            const active = subTab === section.id;
-
-            return (
-              <button
-                key={section.id}
-                type="button"
-                onClick={() => setSubTab(section.id)}
-                className={`group relative flex items-center gap-3 rounded-xl p-4 text-left transition ${
-                  active
-                    ? "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300"
-                    : "text-zinc-600 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-900"
-                }`}
-              >
-                <div
-                  className={`flex size-10 shrink-0 items-center justify-center rounded-xl transition ${
-                    active
-                      ? "bg-blue-600 text-white shadow-sm"
-                      : "bg-zinc-100 text-zinc-500 group-hover:text-zinc-700 dark:bg-zinc-900 dark:text-zinc-400"
-                  }`}
-                >
-                  <Icon size={18} />
-                </div>
-
-                <div className="min-w-0">
-                  <p
-                    className={`text-sm font-semibold ${
-                      active
-                        ? "text-blue-800 dark:text-blue-200"
-                        : "text-zinc-800 dark:text-zinc-200"
-                    }`}
-                  >
-                    {section.label}
-                  </p>
-
-                  <p
-                    className={`mt-0.5 text-xs ${
-                      active
-                        ? "text-blue-600/70 dark:text-blue-300/60"
-                        : "text-zinc-400"
-                    }`}
-                  >
-                    {section.description}
-                  </p>
-                </div>
-
-                {active && (
-                  <motion.div
-                    layoutId="curriculum-active"
-                    className="absolute inset-x-4 bottom-0 h-0.5 rounded-full bg-blue-600"
-                  />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Active section heading */}
-      <section className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex size-9 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
-            {activeSection &&
-              (() => {
-                const Icon = activeSection.icon;
-                return <Icon size={17} />;
-              })()}
-          </div>
-
-          <div>
-            <h2 className="text-lg font-semibold tracking-tight text-zinc-950 dark:text-white">
-              {activeSection?.label}
-            </h2>
-
-            <p className="text-xs text-zinc-500">
-              {activeSection?.description}
-            </p>
-          </div>
-        </div>
-
-        <div className="inline-flex w-fit items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950">
-          <span className="size-1.5 rounded-full bg-emerald-500" />
-          Curriculum workspace
-        </div>
-      </section>
-
-      {/* Existing functionality */}
-      <motion.div
-        key={subTab}
-        initial={{ opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.2 }}
-      >
-        {subTab === "modules" && (
-          <AdminModuleList />
-        )}
-
-        {subTab === "prerequisites" && (
-          <AdminPrerequisiteManager />
-        )}
-
-        {subTab === "programme-modules" && (
-          <AdminProgrammeModules />
-        )}
-      </motion.div>
-    </motion.div>
-  );
-}
 
 // ---------- Admin Dashboard Shell ----------
 
@@ -2593,16 +2422,6 @@ const ADMIN_NAV_GROUPS = [
         id: "bulk",
         label: "Bulk upload",
         icon: UploadCloud,
-      },
-    ],
-  },
-  {
-    label: "Academic",
-    items: [
-      {
-        id: "curriculum",
-        label: "Curriculum",
-        icon: BookOpen,
       },
     ],
   },
@@ -3036,10 +2855,6 @@ function AdminDashboard({ onLogout }) {
               )}
 
              {tab === "bulk" && <AdminBulkUpload />}
-
-              {tab === "curriculum" && (
-                <CurriculumManagement />
-              )}
 
               {tab ===
                 "admin-management" && (
