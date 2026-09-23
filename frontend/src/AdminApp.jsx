@@ -16,6 +16,7 @@ import {
   ArrowRight,
   BarChart3,
   BookOpenCheck,
+  BookOpen,
   Boxes,
   CheckCircle2,
   ChevronRight,
