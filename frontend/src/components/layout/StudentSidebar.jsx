@@ -14,6 +14,7 @@ import {
   Sparkles,
   PanelLeftClose,
   PanelLeftOpen,
+  MessagesSquare,
 } from "lucide-react";
 
 import { motion } from "framer-motion";
@@ -62,6 +63,16 @@ const navigation = [
         id: "planner",
         label: "Planner",
         icon: BookOpenCheck,
+      },
+    ],
+  },
+  {
+    label: "Community",
+    items: [
+      {
+        id: "community",
+        label: "Community",
+        icon: MessagesSquare,
       },
     ],
   },
