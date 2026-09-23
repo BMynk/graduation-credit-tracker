@@ -8,6 +8,7 @@ const tabs = [
   ["timeline", "Timeline"],
   ["predictor", "Predictor"],
   ["planner", "Planner"],
+  ["community", "Community"],
   ["achievements", "Achievements"],
   ["peers", "Peers"],
   ["yearly", "Yearly"],
