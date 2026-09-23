@@ -3,7 +3,7 @@
 import jwt
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app import models
@@ -15,9 +15,10 @@ from app.security import decode_token
 # Bearer token
 # ============================================================
 
-oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/auth/verify-pin",
+bearer_scheme = HTTPBearer(
     auto_error=False,
+    scheme_name="BearerAuth",
+    description="Paste an access token returned by /auth/login or /admin/login.",
 )
 
 
@@ -69,9 +70,10 @@ def _decode_access_token(
 # ============================================================
 
 def get_current_student(
-    token: str = Depends(oauth2_scheme),
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> models.Student:
+    token = credentials.credentials if credentials else ""
     student_id = _decode_access_token(
         token,
         "student",
@@ -99,9 +101,10 @@ def get_current_student(
 # ============================================================
 
 def get_current_admin(
-    token: str = Depends(oauth2_scheme),
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> models.Admin:
+    token = credentials.credentials if credentials else ""
     admin_id = _decode_access_token(
         token,
         "admin",
@@ -164,9 +167,10 @@ def get_current_super_admin(
 # ============================================================
 
 def get_optional_current_user(
-    token: str = Depends(oauth2_scheme),
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ):
+    token = credentials.credentials if credentials else ""
     if not token:
         return None
 
