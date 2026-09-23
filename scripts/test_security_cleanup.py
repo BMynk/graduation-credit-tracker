@@ -10,7 +10,6 @@ def main():
     env = os.environ.copy()
     env.setdefault("SECRET_KEY", "security-cleanup-ci-secret")
     code = r"""
-from fastapi.testclient import TestClient
 from app.main import app
 
 paths = {route.path for route in app.routes if hasattr(route, "path")}
@@ -22,7 +21,8 @@ for path in (
     assert path not in paths, path
 
 assert "/admin-management/change-password" in paths
-assert "/admin-management/reset-password" not in paths\nassert "/admin-management/{admin_id}/reset-password" in paths
+assert "/admin-management/reset-password" not in paths
+assert "/admin-management/{admin_id}/reset-password" in paths
 print("Production security cleanup tests passed.")
 """
     subprocess.run([sys.executable, "-c", code], cwd=BACKEND, env=env, check=True)
