@@ -131,9 +131,18 @@ def build_progress_summary(db: Session, student: models.Student) -> dict:
     credits_remaining = max(credits_required - credits_completed, 0)
     percentage = round((credits_completed / credits_required) * 100, 1) if credits_required else 0.0
 
-    graded = [e for e in completed_enrolments if e.grade is not None]
+    # Academic average: every recorded module mark counts equally.
+    # Credits affect degree progress only; they never weight a mark.
+    graded = (
+        db.query(models.Enrolment)
+        .filter(
+            models.Enrolment.student_id == student.id,
+            models.Enrolment.grade.isnot(None),
+        )
+        .all()
+    )
     weighted_average = (
-        round(sum(e.grade * e.module.credits for e in graded) / sum(e.module.credits for e in graded), 2)
+        round(sum(e.grade for e in graded) / len(graded), 2)
         if graded else None
     )
 
