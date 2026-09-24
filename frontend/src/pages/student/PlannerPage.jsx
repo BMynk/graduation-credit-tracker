@@ -134,6 +134,11 @@ function isRetakeModule(module, currentYear) {
   );
 }
 
+function targetSemesterNumber(value) {
+  const match = String(value || "").toUpperCase().match(/-S([12])$/);
+  return match ? Number(match[1]) : null;
+}
+
 function semesterLabel(semester) {
   return Number(semester) === 2
     ? "Semester 2"
@@ -879,6 +884,11 @@ export default function PlannerPage({
     };
   }, [totalCredits]);
 
+  const targetSemester = useMemo(
+    () => targetSemesterNumber(semester),
+    [semester],
+  );
+
   const filteredModules = useMemo(() => {
     const query = search
       .trim()
@@ -899,6 +909,8 @@ export default function PlannerPage({
 
       const future =
         normaliseYear(module) > currentYear;
+      const matchesSemester =
+        !targetSemester || normaliseSemester(module) === targetSemester;
 
       let matchesFilter = true;
 
@@ -926,13 +938,14 @@ export default function PlannerPage({
           !module.is_eligible || future;
       }
 
-      return matchesSearch && matchesFilter;
+      return matchesSearch && matchesFilter && matchesSemester;
     });
   }, [
     modules,
     search,
     filter,
     currentYear,
+    targetSemester,
   ]);
 
   const outstandingModules = useMemo(
@@ -995,6 +1008,11 @@ export default function PlannerPage({
       normaliseYear(module) > currentYear;
 
     if (!module.is_eligible || future) {
+      return;
+    }
+
+    if (targetSemester && normaliseSemester(module) !== targetSemester) {
+      setError(`${module.code} is offered in Semester ${normaliseSemester(module)}, not Semester ${targetSemester}.`);
       return;
     }
 
@@ -1221,8 +1239,13 @@ export default function PlannerPage({
                       event.target.value,
                     );
                     setPlan(null);
+                    setSelectedCodes([]);
+                    setSuccess("");
+                    setError("");
                   }}
                   placeholder="2026-S2"
+                  pattern="[0-9]{4}-S[12]"
+                  title="Use YYYY-S1 or YYYY-S2, for example 2026-S2"
                   className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
                 />
               </div>
@@ -1632,6 +1655,17 @@ export default function PlannerPage({
                     years remain available.
                   </p>
                 </div>
+
+                {plan.errors?.length > 0 && (
+                  <div className="mt-5 space-y-2">
+                    {plan.errors.map((item, index) => (
+                      <div key={`error-${index}`} className="flex items-start gap-2 rounded-lg bg-red-500/[0.07] px-3 py-2.5">
+                        <CircleAlert className="mt-0.5 size-3.5 shrink-0 text-red-500" />
+                        <p className="text-xs leading-5 text-red-700 dark:text-red-400">{item}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {plan.warnings?.length > 0 ? (
                   <div className="mt-5 space-y-2">

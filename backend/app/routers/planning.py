@@ -1,6 +1,7 @@
 # app/routers/planning.py
 
 from typing import List, Optional
+import re
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -68,6 +69,7 @@ class PlanResponse(BaseModel):
     elective_count: int
 
     warnings: List[str]
+    errors: List[str] = []
     is_valid: bool
 
     recommended_modules: List[ModulePlanItem]
@@ -153,15 +155,23 @@ def _validate_semester_value(
         2026-S2
     """
 
-    semester = semester.strip()
+    semester = semester.strip().upper()
 
-    if not semester:
+    if not re.fullmatch(r"\\d{4}-S[12]", semester):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Semester is required.",
+            detail=(
+                "Semester must use the format YYYY-S1 or YYYY-S2 "
+                "(for example, 2026-S2)."
+            ),
         )
 
     return semester
+
+
+def _semester_number(semester: str) -> int:
+    """Return 1 or 2 from a validated YYYY-S1/YYYY-S2 value."""
+    return int(semester[-1])
 
 
 def _build_planning_modules(
@@ -533,9 +543,10 @@ def generate_plan(
     trusting the frontend.
     """
 
-    _validate_semester_value(
+    semester = _validate_semester_value(
         payload.semester
     )
+    target_semester = _semester_number(semester)
 
     all_modules = (
         _build_planning_modules(
@@ -551,6 +562,7 @@ def generate_plan(
 
     selected_modules = []
     warnings = []
+    errors = []
 
     total_credits = 0
     compulsory_count = 0
@@ -581,8 +593,16 @@ def generate_plan(
             continue
 
         if not module.is_eligible:
-            warnings.append(
+            errors.append(
                 f"{code}: {module.reason}"
+            )
+            continue
+
+        if module.curriculum_semester != target_semester:
+            errors.append(
+                f"{code}: offered in Semester "
+                f"{module.curriculum_semester}, not Semester "
+                f"{target_semester}."
             )
             continue
 
@@ -618,6 +638,9 @@ def generate_plan(
         if module.code in requested_codes:
             continue
 
+        if module.curriculum_semester != target_semester:
+            continue
+
         missing_compulsory.append(
             module
         )
@@ -638,11 +661,10 @@ def generate_plan(
 
     if total_credits < 45:
         warnings.append(
-            f"Total credits ({total_credits}) "
-            f"is below the recommended minimum "
-            f"of 45."
+            f"Total credits ({total_credits}) are below the typical "
+            f"45-credit planning guide. A lighter valid semester may "
+            f"still be appropriate depending on your curriculum."
         )
-        is_valid = False
 
     # Invalid selections should also make the plan invalid.
     invalid_requested = [
@@ -655,6 +677,9 @@ def generate_plan(
     ]
 
     if invalid_requested:
+        is_valid = False
+
+    if errors:
         is_valid = False
 
     # --------------------------------------------------------
@@ -673,6 +698,7 @@ def generate_plan(
         for module in all_modules
         if (
             module.is_eligible
+            and module.curriculum_semester == target_semester
             and module.code
             not in requested_codes
         )
@@ -705,6 +731,7 @@ def generate_plan(
         compulsory_count=compulsory_count,
         elective_count=elective_count,
         warnings=warnings,
+        errors=errors,
         is_valid=is_valid,
         recommended_modules=(
             recommended_modules
@@ -743,6 +770,7 @@ def save_plan(
     semester = _validate_semester_value(
         payload.semester
     )
+    target_semester = _semester_number(semester)
 
     module_map = _planning_module_map(
         db,
@@ -776,6 +804,14 @@ def save_plan(
         if not module.is_eligible:
             validation_errors.append(
                 f"{code}: {module.reason}"
+            )
+            continue
+
+        if module.curriculum_semester != target_semester:
+            validation_errors.append(
+                f"{code}: offered in Semester "
+                f"{module.curriculum_semester}, not Semester "
+                f"{target_semester}."
             )
             continue
 
