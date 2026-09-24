@@ -121,6 +121,9 @@ def get_verified_role(
 
     role = current_user.get("role")
 
+    if current_user.get("is_impersonation") or current_user.get("impersonated_by") is not None:
+        return "admin"
+
     if role == "student":
         return "student"
 
