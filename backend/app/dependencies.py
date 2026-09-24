@@ -238,6 +238,8 @@ def get_optional_current_user(
             return {
                 "role": "student",
                 "user": student,
+                "is_impersonation": bool(payload.get("is_impersonation")),
+                "impersonated_by": payload.get("impersonated_by"),
             }
 
         # ----------------------------------------------------
