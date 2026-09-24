@@ -336,9 +336,15 @@ export default function CommunityPage({ student }) {
               return (
                 <article key={message.id} className="group rounded-xl px-3 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
                   <div className="flex gap-3">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-xs font-bold text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
+                    <button
+                      type="button"
+                      onClick={() => openProfile(message.author.id)}
+                      disabled={mine}
+                      aria-label={mine ? "Your profile" : `View ${message.author.name}'s profile`}
+                      className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-xs font-bold text-brand-700 transition hover:ring-2 hover:ring-brand-300 disabled:cursor-default disabled:hover:ring-0 dark:bg-brand-500/15 dark:text-brand-300"
+                    >
                       {initials(message.author.name)}
-                    </div>
+                    </button>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-baseline gap-2">
                         <button
@@ -446,6 +452,12 @@ export default function CommunityPage({ student }) {
           </div>
         </section>
       </div>
+      {profileLoading && !profile && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40">
+          <div className="rounded-2xl bg-white px-5 py-4 text-sm font-medium text-zinc-700 shadow-xl dark:bg-zinc-900 dark:text-zinc-200">Loading student profile…</div>
+        </div>
+      )}
+
       {profile && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setProfile(null)}>
           <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900" onClick={(e) => e.stopPropagation()}>
