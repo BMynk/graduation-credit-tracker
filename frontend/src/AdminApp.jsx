@@ -169,8 +169,8 @@ function AdminLogin({ onLoggedIn, onBack }) {
               onClick={onBack}
               className="group flex w-fit items-center gap-3 text-left"
             >
-              <div className="flex h-14 w-[92px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 shadow-lg shadow-blue-950/30">
-                <UfhLogo className="h-full w-full object-contain" />
+              <div className="w-[220px] shrink-0 rounded-2xl bg-white px-4 py-3 shadow-lg shadow-blue-950/30">
+                <UfhLogo className="h-auto w-full object-contain" />
               </div>
 
               <div>
@@ -345,8 +345,8 @@ function AdminLogin({ onLoggedIn, onBack }) {
 
             {/* Mobile branding */}
             <div className="mb-10 flex items-center gap-3 lg:hidden">
-              <div className="flex h-12 w-20 items-center justify-center overflow-hidden rounded-xl bg-white p-1 shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-700">
-                <UfhLogo className="h-full w-full object-contain" />
+              <div className="w-36 rounded-xl bg-white px-2 py-1.5 shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-700">
+                <UfhLogo className="h-auto w-full object-contain" />
               </div>
 
               <div>
@@ -2557,9 +2557,10 @@ function AdminDashboard({ onLogout }) {
               collapsed ? "justify-center" : "gap-3 text-left"
             }`}
           >
-            <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1 shadow-lg shadow-blue-950/30">
-              <UfhLogo className="h-full w-full object-contain" compact />
-            </div>
+            <UfhLogo
+              variant="crest"
+              className="size-11 shrink-0 rounded-xl shadow-lg shadow-blue-950/30 ring-1 ring-white/10"
+            />
 
             {!collapsed && (
               <div className="min-w-0">
