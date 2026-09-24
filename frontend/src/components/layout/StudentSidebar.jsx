@@ -105,6 +105,7 @@ export default function StudentSidebar({
   onLogout,
   collapsed = false,
   onToggleCollapse,
+  communityLocked = false,
 }) {
   const { theme, toggleTheme } = useTheme();
 
@@ -189,7 +190,9 @@ export default function StudentSidebar({
             collapsed ? "space-y-4" : "space-y-6"
           }
         >
-          {navigation.map((group) => (
+          {navigation
+            .filter((group) => !(communityLocked && group.label === "Community"))
+            .map((group) => (
             <div key={group.label}>
               {!collapsed && (
                 <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-500">
