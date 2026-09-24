@@ -899,7 +899,26 @@ class StudentNotificationOut(BaseModel):
     message: str
     created_at: datetime
     unread: bool = True
-    target: Optional[str] = None\n    conversation_id: Optional[int] = None
+    target: Optional[str] = None
+    conversation_id: Optional[int] = None
+
+
+# ---------- Past paper contribution achievements ----------
+
+class PastPaperAchievementOut(BaseModel):
+    key: str
+    name: str
+    description: str
+    threshold: int
+    unlocked: bool
+
+
+class PastPaperAchievementProgressOut(BaseModel):
+    upload_count: int
+    highest_achievement: Optional[PastPaperAchievementOut] = None
+    next_achievement: Optional[PastPaperAchievementOut] = None
+    remaining_to_next: int = 0
+    achievements: List[PastPaperAchievementOut] = []
 
 
 # ---------- Community past papers ----------
