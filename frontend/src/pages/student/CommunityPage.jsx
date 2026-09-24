@@ -157,6 +157,37 @@ export default function CommunityPage({ student }) {
 
   useEffect(() => { refreshPrivateArea(); }, []);
 
+  useEffect(() => {
+    let target = null;
+    try {
+      const raw = sessionStorage.getItem("community-notification-target");
+      if (raw) {
+        target = JSON.parse(raw);
+        sessionStorage.removeItem("community-notification-target");
+      }
+    } catch {
+      target = null;
+    }
+    if (!target) return;
+
+    const openTarget = async () => {
+      try {
+        if (target.kind === "private_message" && target.conversation_id) {
+          const conversationData = await api.getPrivateConversations();
+          setConversations(conversationData);
+          const conversation = conversationData.find((item) => item.id === target.conversation_id);
+          if (conversation) await openConversation(conversation);
+        } else if (target.kind === "chat_request") {
+          await refreshPrivateArea();
+          document.getElementById("community-chat-requests")?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      } catch (err) {
+        setError(err.message);
+      }
+    };
+    openTarget();
+  }, []);
+
   async function openProfile(studentId) {
     if (studentId === student?.id) return;
     setProfileLoading(true);

@@ -59,7 +59,7 @@ export default function StudentHeader({ student, onOpenMobileMenu, darkMode, onT
                 <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3 dark:border-zinc-800"><div><p className="text-sm font-semibold text-zinc-900 dark:text-white">Notifications</p><p className="text-[11px] text-zinc-500">{notifications.length} unread</p></div>{notifications.length > 0 && <button onClick={markRead} className="text-xs font-semibold text-brand-600 dark:text-brand-400">Mark messages read</button>}</div>
                 <div className="max-h-80 overflow-y-auto p-2">
                   {notifications.length === 0 ? <p className="px-3 py-8 text-center text-sm text-zinc-500">You're all caught up.</p> : notifications.map((item) => (
-                    <button key={item.id} onClick={() => { setOpen(false); onOpenCommunity?.(); }} className="w-full rounded-xl px-3 py-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800">
+                    <button key={item.id} onClick={() => { setOpen(false); onOpenCommunity?.(item); }} className="w-full rounded-xl px-3 py-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800">
                       <p className="text-sm font-semibold text-zinc-900 dark:text-white">{item.title}</p><p className="mt-0.5 text-xs leading-5 text-zinc-500">{item.message}</p>
                     </button>
                   ))}

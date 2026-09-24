@@ -130,7 +130,7 @@ export default function StudentLayout({
               (current) => !current
             )
           }
-          onOpenCommunity={() => onTabChange("community")}
+          onOpenCommunity={(notification) => {\n            if (notification) {\n              sessionStorage.setItem("community-notification-target", JSON.stringify(notification));\n            }\n            onTabChange("community");\n          }}
           onOpenMobileMenu={() =>
             setMobileMenuOpen(true)
           }
