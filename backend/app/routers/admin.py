@@ -1110,6 +1110,164 @@ def get_dashboard(
     )
 
 
+
+# ============================================================
+# ADMIN ANALYTICS
+# ============================================================
+
+@router.get(
+    "/analytics",
+    response_model=schemas.AdminAnalyticsOut,
+)
+def get_admin_analytics(
+    programme_code: Optional[str] = Query(default=None),
+    current_year: Optional[int] = Query(default=None, ge=1, le=6),
+    current_admin: models.Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """Descriptive cohort analytics based on verified academic records."""
+
+    query = (
+        db.query(models.Student)
+        .filter(models.Student.is_active.is_(True))
+    )
+
+    if programme_code:
+        query = query.join(models.Programme).filter(
+            models.Programme.code == programme_code
+        )
+
+    if current_year:
+        query = query.filter(
+            models.Student.current_year == current_year
+        )
+
+    students = query.all()
+
+    progress_bands = {
+        "0–25%": 0,
+        "26–50%": 0,
+        "51–75%": 0,
+        "76–100%": 0,
+    }
+    year_counts = {}
+    programme_stats = {}
+    fail_counts = {}
+    graduation_ready_count = 0
+    failed_prerequisite_count = 0
+    below_target_count = 0
+
+    for student in students:
+        summary = progress_service.build_progress_summary(db, student)
+        percentage = float(summary["percentage_complete"] or 0)
+
+        if percentage <= 25:
+            progress_bands["0–25%"] += 1
+        elif percentage <= 50:
+            progress_bands["26–50%"] += 1
+        elif percentage <= 75:
+            progress_bands["51–75%"] += 1
+        else:
+            progress_bands["76–100%"] += 1
+
+        year_counts[student.current_year] = (
+            year_counts.get(student.current_year, 0) + 1
+        )
+
+        stats = programme_stats.setdefault(
+            student.programme.code,
+            {
+                "name": student.programme.name,
+                "count": 0,
+                "progress": [],
+                "averages": [],
+            },
+        )
+        stats["count"] += 1
+        stats["progress"].append(percentage)
+
+        weighted_average = summary["weighted_average"]
+        if weighted_average is not None:
+            stats["averages"].append(float(weighted_average))
+            if weighted_average < student.target_average:
+                below_target_count += 1
+
+        blocking_for_student = False
+        for failed in summary["failed_modules"]:
+            module = failed["module"]
+            module_id = module.id
+            fail_counts[module_id] = fail_counts.get(module_id, 0) + 1
+            if failed["is_prerequisite_for_major"]:
+                blocking_for_student = True
+
+        if blocking_for_student:
+            failed_prerequisite_count += 1
+
+        if (
+            summary["credits_remaining"] == 0
+            and not summary["missing_compulsory_modules"]
+            and not summary["failed_modules"]
+        ):
+            graduation_ready_count += 1
+
+    bottleneck_modules = []
+    for module_id, count in sorted(
+        fail_counts.items(),
+        key=lambda item: (-item[1], item[0]),
+    )[:8]:
+        module = db.query(models.Module).filter(
+            models.Module.id == module_id
+        ).first()
+        if module:
+            bottleneck_modules.append(
+                schemas.BottleneckModuleOut(
+                    code=module.code,
+                    name=module.name,
+                    fail_count=count,
+                )
+            )
+
+    programme_performance = []
+    for code, values in sorted(programme_stats.items()):
+        averages = values["averages"]
+        percentages = values["progress"]
+        programme_performance.append(
+            schemas.AnalyticsProgrammeOut(
+                programme_code=code,
+                programme_name=values["name"],
+                student_count=values["count"],
+                avg_percentage_complete=(
+                    round(sum(percentages) / len(percentages), 1)
+                    if percentages else None
+                ),
+                avg_weighted_average=(
+                    round(sum(averages) / len(averages), 2)
+                    if averages else None
+                ),
+            )
+        )
+
+    return schemas.AdminAnalyticsOut(
+        active_students=len(students),
+        graduation_ready_count=graduation_ready_count,
+        requirements_remaining_count=max(
+            len(students) - graduation_ready_count, 0
+        ),
+        failed_prerequisite_count=failed_prerequisite_count,
+        below_target_count=below_target_count,
+        progress_distribution=[
+            schemas.ProgressBandOut(label=label, student_count=count)
+            for label, count in progress_bands.items()
+        ],
+        students_by_year=[
+            schemas.AcademicYearCountOut(year=year, student_count=count)
+            for year, count in sorted(year_counts.items())
+        ],
+        programme_performance=programme_performance,
+        bottleneck_modules=bottleneck_modules,
+    )
+
+
 # ============================================================
 # PROGRAMME BREAKDOWN
 # ============================================================
