@@ -717,6 +717,29 @@ def student_notifications(
     return items[:30]
 
 
+@router.post("/conversations/{conversation_id}/read", status_code=204)
+def mark_private_conversation_read(
+    conversation_id: int,
+    db: Session = Depends(get_db),
+    current_student: models.Student = Depends(get_current_student),
+):
+    _allowed_conversation(db, conversation_id, current_student.id)
+    now = datetime.utcnow()
+    rows = (
+        db.query(models.PrivateMessage)
+        .filter(
+            models.PrivateMessage.conversation_id == conversation_id,
+            models.PrivateMessage.sender_id != current_student.id,
+            models.PrivateMessage.read_at.is_(None),
+        )
+        .all()
+    )
+    for row in rows:
+        row.read_at = now
+    db.commit()
+    return None
+
+
 @router.post("/notifications/read-all", status_code=204)
 def mark_notifications_read(
     db: Session = Depends(get_db),
