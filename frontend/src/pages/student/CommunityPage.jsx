@@ -505,7 +505,8 @@ export default function CommunityPage({ student }) {
             <div className="mt-5 rounded-xl bg-zinc-50 p-4 dark:bg-zinc-800/70">
               <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Programme</p>
               <p className="mt-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">{profile.programme_name}</p>
-              <p className="mt-3 text-xs text-zinc-500">Only basic community profile information is shared. Academic marks and contact details stay private.</p>
+              {profile.contributor_achievement && <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">🏆 {profile.contributor_achievement} · {profile.past_paper_upload_count} papers shared</div>}
+              <p className="mt-3 text-xs text-zinc-500">Only basic community profile information and contribution achievements are shared. Academic marks and contact details stay private.</p>
             </div>
             <div className="mt-5">
               {!profile.chat_status && <button onClick={requestChat} className="w-full rounded-xl bg-brand-500 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-600">Request to chat privately</button>}
