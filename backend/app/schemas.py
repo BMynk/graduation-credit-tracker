@@ -899,7 +899,7 @@ class StudentNotificationOut(BaseModel):
     message: str
     created_at: datetime
     unread: bool = True
-    target: Optional[str] = None
+    target: Optional[str] = None\n    conversation_id: Optional[int] = None
 
 
 # ---------- Community past papers ----------
