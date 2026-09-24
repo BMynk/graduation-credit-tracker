@@ -1029,7 +1029,10 @@ getModuleDetail: (
 
 
   getStudentNotifications: () => request("/community/notifications"),
-  markStudentNotificationsRead: () => request("/community/notifications/read-all", { method: "POST" }),\n  markPrivateConversationRead: (conversationId) => request(`/community/conversations/${conversationId}/read`, { method: "POST" }),
+  markStudentNotificationsRead: () => request("/community/notifications/read-all", { method: "POST" }),
+  markPrivateConversationRead: (conversationId) => request(`/community/conversations/${conversationId}/read`, { method: "POST" }),
+
+  getPastPaperAchievements: () => request("/community/past-paper-achievements"),
 
   getPastPapers: (params = {}) => {
     const qs = new URLSearchParams(Object.entries(params).filter(([, value]) => value !== "" && value != null)).toString();
