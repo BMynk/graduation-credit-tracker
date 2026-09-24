@@ -9,6 +9,7 @@ import AdminAccountManagement from "./components/Admin/AdminAccountManagement";
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
 import AtRiskPage from "./pages/admin/AtRiskPage";
 import AdminBulkUpload from "./components/Admin/AdminBulkUpload";
+import UfhLogo from "./components/branding/UfhLogo";
 
 import { motion } from "framer-motion";
 import {
@@ -168,8 +169,8 @@ function AdminLogin({ onLoggedIn, onBack }) {
               onClick={onBack}
               className="group flex w-fit items-center gap-3 text-left"
             >
-              <div className="flex size-11 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-950/40">
-                <GraduationCap size={23} strokeWidth={2.2} />
+              <div className="flex h-14 w-[92px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 shadow-lg shadow-blue-950/30">
+                <UfhLogo className="h-full w-full object-contain" />
               </div>
 
               <div>
@@ -344,8 +345,8 @@ function AdminLogin({ onLoggedIn, onBack }) {
 
             {/* Mobile branding */}
             <div className="mb-10 flex items-center gap-3 lg:hidden">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
-                <GraduationCap size={21} />
+              <div className="flex h-12 w-20 items-center justify-center overflow-hidden rounded-xl bg-white p-1 shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-700">
+                <UfhLogo className="h-full w-full object-contain" />
               </div>
 
               <div>
@@ -2556,8 +2557,8 @@ function AdminDashboard({ onLogout }) {
               collapsed ? "justify-center" : "gap-3 text-left"
             }`}
           >
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-950/30">
-              <GraduationCap size={21} />
+            <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1 shadow-lg shadow-blue-950/30">
+              <UfhLogo className="h-full w-full object-contain" compact />
             </div>
 
             {!collapsed && (
