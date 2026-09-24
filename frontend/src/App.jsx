@@ -720,7 +720,7 @@ function StudentLogin({ onLoggedIn, onBack }) {
             {/* Mobile brand */}
             <div className="mb-10 flex flex-col items-start gap-3 lg:hidden">
               <div className="flex w-full justify-center">
-                <UfhLogo className="w-[245px] max-w-full" />
+                <UfhLogo className="w-[280px] max-w-full" />
               </div>
 
               <div>
