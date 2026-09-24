@@ -345,8 +345,8 @@ function AdminLogin({ onLoggedIn, onBack }) {
 
             {/* Mobile branding */}
             <div className="mb-10 flex flex-col items-start gap-3 lg:hidden">
-              <div className="w-[235px] rounded-2xl bg-white px-4 py-3 shadow-sm ring-1 ring-zinc-200">
-                <UfhLogo className="w-full" />
+              <div className="flex w-full justify-center">
+                <UfhLogo className="w-[245px] max-w-full" />
               </div>
 
               <div>
