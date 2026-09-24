@@ -766,6 +766,60 @@ def mark_notifications_read(
 
 
 # ============================================================
+# PAST PAPER CONTRIBUTION ACHIEVEMENTS
+# ============================================================
+
+PAST_PAPER_ACHIEVEMENTS = (
+    ("first-contribution", "First Contribution", "Shared the first past paper.", 1),
+    ("study-helper", "Study Helper", "Shared 5 past papers with the community.", 5),
+    ("knowledge-sharer", "Knowledge Sharer", "Shared 10 past papers with the community.", 10),
+    ("community-champion", "Community Champion", "Shared 25 past papers with the community.", 25),
+    ("past-paper-legend", "Past Paper Legend", "Shared 50 past papers with the community.", 50),
+)
+
+
+def _past_paper_achievement_progress(db: Session, student_id: int):
+    upload_count = (
+        db.query(models.PastPaper)
+        .filter(
+            models.PastPaper.uploader_id == student_id,
+            models.PastPaper.is_active.is_(True),
+        )
+        .count()
+    )
+    achievements = [
+        schemas.PastPaperAchievementOut(
+            key=key,
+            name=name,
+            description=description,
+            threshold=threshold,
+            unlocked=upload_count >= threshold,
+        )
+        for key, name, description, threshold in PAST_PAPER_ACHIEVEMENTS
+    ]
+    unlocked = [item for item in achievements if item.unlocked]
+    upcoming = [item for item in achievements if not item.unlocked]
+    highest = unlocked[-1] if unlocked else None
+    next_achievement = upcoming[0] if upcoming else None
+    remaining = max((next_achievement.threshold - upload_count), 0) if next_achievement else 0
+    return schemas.PastPaperAchievementProgressOut(
+        upload_count=upload_count,
+        highest_achievement=highest,
+        next_achievement=next_achievement,
+        remaining_to_next=remaining,
+        achievements=achievements,
+    )
+
+
+@router.get("/past-paper-achievements", response_model=schemas.PastPaperAchievementProgressOut)
+def my_past_paper_achievements(
+    db: Session = Depends(get_db),
+    current_student: models.Student = Depends(get_current_student),
+):
+    return _past_paper_achievement_progress(db, current_student.id)
+
+
+# ============================================================
 # COMMUNITY PAST PAPER LIBRARY
 # ============================================================
 
