@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Hash, MessageCircle, Reply, Send, Trash2, Users } from "lucide-react";
+import { Check, Hash, MessageCircle, Reply, Send, Trash2, UserRound, Users, X } from "lucide-react";
 import { api } from "../../api";
 
 const REACTIONS = ["👍", "❤️", "😂", "🔥", "🎉", "👏"];
@@ -23,6 +23,13 @@ export default function CommunityPage({ student }) {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [profile, setProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [requests, setRequests] = useState([]);
+  const [conversations, setConversations] = useState([]);
+  const [activeConversation, setActiveConversation] = useState(null);
+  const [privateMessages, setPrivateMessages] = useState([]);
+  const [privateDraft, setPrivateDraft] = useState("");
   const messagesEndRef = useRef(null);
 
   const activeChannel = useMemo(
@@ -134,6 +141,71 @@ export default function CommunityPage({ student }) {
     }
   }
 
+  async function refreshPrivateArea() {
+    try {
+      const [requestData, conversationData] = await Promise.all([
+        api.getPrivateChatRequests(),
+        api.getPrivateConversations(),
+      ]);
+      setRequests(requestData);
+      setConversations(conversationData);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  useEffect(() => { refreshPrivateArea(); }, []);
+
+  async function openProfile(studentId) {
+    if (studentId === student?.id) return;
+    setProfileLoading(true);
+    setError("");
+    try {
+      setProfile(await api.getCommunityStudentProfile(studentId));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setProfileLoading(false);
+    }
+  }
+
+  async function requestChat() {
+    try {
+      await api.requestPrivateChat(profile.id);
+      setProfile((current) => ({ ...current, chat_status: "outgoing_pending" }));
+      await refreshPrivateArea();
+    } catch (err) { setError(err.message); }
+  }
+
+  async function respondToRequest(requestId, accept) {
+    try {
+      const conversation = accept
+        ? await api.acceptPrivateChatRequest(requestId)
+        : await api.declinePrivateChatRequest(requestId);
+      await refreshPrivateArea();
+      if (accept) await openConversation(conversation);
+    } catch (err) { setError(err.message); }
+  }
+
+  async function openConversation(conversation) {
+    setActiveConversation(conversation);
+    setProfile(null);
+    try {
+      setPrivateMessages(await api.getPrivateMessages(conversation.id));
+    } catch (err) { setError(err.message); }
+  }
+
+  async function sendPrivate(event) {
+    event.preventDefault();
+    const content = privateDraft.trim();
+    if (!content || !activeConversation) return;
+    try {
+      const message = await api.sendPrivateMessage(activeConversation.id, content);
+      setPrivateMessages((items) => [...items, message]);
+      setPrivateDraft("");
+    } catch (err) { setError(err.message); }
+  }
+
   if (loading) {
     return <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900">Loading your community…</div>;
   }
@@ -188,6 +260,35 @@ export default function CommunityPage({ student }) {
         </div>
       )}
 
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="flex items-center gap-2"><UserRound size={16} /><h2 className="font-semibold text-zinc-900 dark:text-white">Chat requests</h2></div>
+          <div className="mt-3 space-y-2">
+            {requests.filter((r) => r.receiver.id === student?.id && r.status === "pending").length === 0 && <p className="text-xs text-zinc-500">No pending requests.</p>}
+            {requests.filter((r) => r.receiver.id === student?.id && r.status === "pending").map((r) => (
+              <div key={r.id} className="flex items-center justify-between gap-2 rounded-xl bg-zinc-50 p-3 dark:bg-zinc-800">
+                <button onClick={() => openProfile(r.sender.id)} className="text-left text-sm font-semibold text-zinc-800 hover:text-brand-600 dark:text-zinc-200">{r.sender.name}<span className="block text-xs font-normal text-zinc-500">Year {r.sender.current_year}</span></button>
+                <div className="flex gap-1">
+                  <button onClick={() => respondToRequest(r.id, true)} className="rounded-lg bg-emerald-500 p-2 text-white" title="Accept"><Check size={15}/></button>
+                  <button onClick={() => respondToRequest(r.id, false)} className="rounded-lg bg-zinc-200 p-2 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200" title="Decline"><X size={15}/></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="flex items-center gap-2"><MessageCircle size={16} /><h2 className="font-semibold text-zinc-900 dark:text-white">Private conversations</h2></div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {conversations.length === 0 && <p className="text-xs text-zinc-500">Accepted conversations will appear here.</p>}
+            {conversations.map((conversation) => (
+              <button key={conversation.id} onClick={() => openConversation(conversation)} className="rounded-xl border border-zinc-200 px-3 py-2 text-left text-sm font-medium text-zinc-700 hover:border-brand-300 hover:bg-brand-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-brand-500/10">
+                {conversation.other_student.name}<span className="block text-[11px] font-normal text-zinc-400">Year {conversation.other_student.current_year}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       <div className="grid min-h-[650px] overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm md:grid-cols-[220px_1fr] dark:border-zinc-800 dark:bg-zinc-900">
         <aside className="border-b border-zinc-200 bg-zinc-50/70 p-3 md:border-b-0 md:border-r dark:border-zinc-800 dark:bg-zinc-950/50">
           <p className="px-2 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400">Channels</p>
@@ -240,7 +341,14 @@ export default function CommunityPage({ student }) {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-baseline gap-2">
-                        <span className="text-sm font-semibold text-zinc-900 dark:text-white">{message.author.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => openProfile(message.author.id)}
+                          disabled={mine}
+                          className="text-sm font-semibold text-zinc-900 hover:text-brand-600 disabled:cursor-default disabled:hover:text-zinc-900 dark:text-white dark:hover:text-brand-300 dark:disabled:hover:text-white"
+                        >
+                          {message.author.name}
+                        </button>
                         {message.author.is_simulated && (
                           <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-600 dark:bg-violet-500/10 dark:text-violet-300">
                             Simulated
@@ -338,6 +446,53 @@ export default function CommunityPage({ student }) {
           </div>
         </section>
       </div>
+      {profile && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setProfile(null)}>
+          <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex size-12 items-center justify-center rounded-2xl bg-brand-100 font-bold text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">{initials(profile.name)}</div>
+                <div><h2 className="font-bold text-zinc-950 dark:text-white">{profile.name}</h2><p className="text-xs text-zinc-500">{profile.programme_code} · Year {profile.current_year}</p></div>
+              </div>
+              <button onClick={() => setProfile(null)} className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"><X size={18}/></button>
+            </div>
+            <div className="mt-5 rounded-xl bg-zinc-50 p-4 dark:bg-zinc-800/70">
+              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Programme</p>
+              <p className="mt-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">{profile.programme_name}</p>
+              <p className="mt-3 text-xs text-zinc-500">Only basic community profile information is shared. Academic marks and contact details stay private.</p>
+            </div>
+            <div className="mt-5">
+              {!profile.chat_status && <button onClick={requestChat} className="w-full rounded-xl bg-brand-500 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-600">Request to chat privately</button>}
+              {profile.chat_status === "outgoing_pending" && <div className="rounded-xl bg-amber-50 px-4 py-3 text-center text-sm font-medium text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">Chat request pending</div>}
+              {profile.chat_status === "incoming_pending" && <div className="rounded-xl bg-brand-50 px-4 py-3 text-center text-sm text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">This student has sent you a request. Accept it from Chat requests.</div>}
+              {profile.chat_status === "accepted" && <div className="rounded-xl bg-emerald-50 px-4 py-3 text-center text-sm font-medium text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">Private chat enabled</div>}
+              {profile.chat_status === "declined" && <button onClick={requestChat} className="w-full rounded-xl border border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 dark:border-zinc-700 dark:text-zinc-200">Send a new chat request</button>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeConversation && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setActiveConversation(null)}>
+          <div className="flex h-[70vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900" onClick={(e) => e.stopPropagation()}>
+            <header className="flex items-center justify-between border-b border-zinc-200 p-4 dark:border-zinc-800">
+              <div><h2 className="font-bold text-zinc-950 dark:text-white">{activeConversation.other_student.name}</h2><p className="text-xs text-zinc-500">Private conversation · accepted connection</p></div>
+              <button onClick={() => setActiveConversation(null)} className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"><X size={18}/></button>
+            </header>
+            <div className="flex-1 space-y-3 overflow-y-auto p-4">
+              {privateMessages.length === 0 && <p className="mt-10 text-center text-sm text-zinc-400">You are connected. Start your private conversation.</p>}
+              {privateMessages.map((message) => {
+                const mine = message.sender.id === student?.id;
+                return <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}><div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${mine ? "bg-brand-500 text-white" : "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"}`}><p className="whitespace-pre-wrap break-words">{message.content}</p><p className={`mt-1 text-[10px] ${mine ? "text-white/70" : "text-zinc-400"}`}>{timeLabel(message.created_at)}</p></div></div>;
+              })}
+            </div>
+            <form onSubmit={sendPrivate} className="flex gap-2 border-t border-zinc-200 p-4 dark:border-zinc-800">
+              <input value={privateDraft} onChange={(e) => setPrivateDraft(e.target.value)} maxLength={2000} placeholder="Write a private message…" className="h-11 flex-1 rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm outline-none focus:border-brand-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"/>
+              <button disabled={!privateDraft.trim()} className="flex size-11 items-center justify-center rounded-xl bg-brand-500 text-white disabled:opacity-40"><Send size={17}/></button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
