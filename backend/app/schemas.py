@@ -888,3 +888,32 @@ class PrivateMessageOut(BaseModel):
     content: str
     created_at: datetime
     read_at: Optional[datetime] = None
+
+
+# ---------- Student notifications ----------
+
+class StudentNotificationOut(BaseModel):
+    id: str
+    kind: str
+    title: str
+    message: str
+    created_at: datetime
+    unread: bool = True
+    target: Optional[str] = None
+
+
+# ---------- Community past papers ----------
+
+class PastPaperOut(BaseModel):
+    id: int
+    module_code: str
+    module_name: Optional[str] = None
+    paper_year: int
+    semester: Optional[int] = None
+    level: int
+    description: Optional[str] = None
+    file_name: str
+    file_url: str
+    file_size: int
+    created_at: datetime
+    uploader: CommunityAuthorOut
