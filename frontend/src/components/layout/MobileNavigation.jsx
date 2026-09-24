@@ -20,6 +20,7 @@ export default function MobileNavigation({
   activeTab,
   onTabChange,
   onLogout,
+  communityLocked = false,
 }) {
   function selectTab(id) {
     onTabChange(id);
@@ -73,7 +74,9 @@ export default function MobileNavigation({
             </div>
 
             <nav className="flex-1 overflow-y-auto p-3">
-              {tabs.map(([id, label]) => (
+              {tabs
+                .filter(([id]) => !(communityLocked && id === "community"))
+                .map(([id, label]) => (
                 <button
                   key={id}
                   type="button"
