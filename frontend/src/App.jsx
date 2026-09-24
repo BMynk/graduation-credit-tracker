@@ -139,8 +139,8 @@ function RolePicker({ onPick }) {
           <div className="relative z-10 flex h-full flex-col px-12 py-10 xl:px-16 xl:py-12">
             {/* Brand */}
             <div className="flex items-center gap-3">
-              <div className="w-[220px] shrink-0 rounded-2xl bg-white px-4 py-3 shadow-lg shadow-blue-950/30">
-                <UfhLogo className="h-auto w-full object-contain" />
+              <div className="w-[250px] shrink-0 rounded-2xl bg-white px-5 py-4 shadow-lg shadow-blue-950/30">
+                <UfhLogo className="w-full" />
               </div>
 
               <div>
@@ -718,9 +718,9 @@ function StudentLogin({ onLoggedIn, onBack }) {
           <div className="w-full max-w-[460px]">
 
             {/* Mobile brand */}
-            <div className="mb-10 flex items-center gap-3 lg:hidden">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
-                <GraduationCap size={21} />
+            <div className="mb-10 flex flex-col items-start gap-3 lg:hidden">
+              <div className="w-[235px] rounded-2xl bg-white px-4 py-3 shadow-sm ring-1 ring-zinc-200">
+                <UfhLogo className="w-full" />
               </div>
 
               <div>
