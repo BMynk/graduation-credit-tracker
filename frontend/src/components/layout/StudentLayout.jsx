@@ -3,6 +3,17 @@ import StudentSidebar from "./StudentSidebar";
 import StudentHeader from "./StudentHeader";
 import MobileNavigation from "./MobileNavigation";
 
+function isAdminStudentView() {
+  try {
+    const token = localStorage.getItem("access_token");
+    if (!token) return false;
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return payload?.is_impersonation === true || payload?.impersonated_by != null;
+  } catch {
+    return false;
+  }
+}
+
 export default function StudentLayout({
   activeTab,
   onTabChange,
@@ -12,6 +23,7 @@ export default function StudentLayout({
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] =
     useState(false);
+  const adminStudentView = isAdminStudentView();
 
   // ============================================================
   // THEME
@@ -98,6 +110,7 @@ export default function StudentLayout({
         student={student}
         onLogout={onLogout}
         collapsed={sidebarCollapsed}
+        communityLocked={adminStudentView}
         onToggleCollapse={() =>
           setSidebarCollapsed(
             (current) => !current
@@ -113,6 +126,7 @@ export default function StudentLayout({
         activeTab={activeTab}
         onTabChange={onTabChange}
         onLogout={onLogout}
+        communityLocked={adminStudentView}
       />
 
       <div
@@ -131,6 +145,7 @@ export default function StudentLayout({
             )
           }
           onOpenCommunity={(notification) => {
+            if (adminStudentView) return;
             if (notification) {
               sessionStorage.setItem(
                 "community-notification-target",
