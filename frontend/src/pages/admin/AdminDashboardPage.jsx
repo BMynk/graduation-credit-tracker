@@ -15,11 +15,27 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
+
+const PROGRAMME_COLOURS = [
+  "#2563eb",
+  "#7c3aed",
+  "#059669",
+  "#ea580c",
+  "#db2777",
+  "#0891b2",
+  "#ca8a04",
+  "#4f46e5",
+  "#16a34a",
+  "#dc2626",
+  "#9333ea",
+  "#0d9488",
+];
 
 const fadeUp = {
   hidden: { opacity: 0, y: 12 },
@@ -369,11 +385,16 @@ export default function AdminDashboardPage({
 
                   <Bar
                     dataKey="student_count"
-                    fill="currentColor"
-                    className="text-blue-600"
                     radius={[7, 7, 0, 0]}
                     maxBarSize={58}
-                  />
+                  >
+                    {programmes.map((programme, index) => (
+                      <Cell
+                        key={programme.programme_code}
+                        fill={PROGRAMME_COLOURS[index % PROGRAMME_COLOURS.length]}
+                      />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
