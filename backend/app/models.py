@@ -767,3 +767,59 @@ class CommunityReaction(Base):
             name="uq_community_reaction_student_emoji",
         ),
     )
+
+
+# ============================================================
+# PRIVATE STUDENT MESSAGING
+# ============================================================
+
+class PrivateChatRequest(Base):
+    __tablename__ = "private_chat_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    sender_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
+    receiver_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
+    status = Column(String(20), default="pending", nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    responded_at = Column(DateTime, nullable=True)
+
+    sender = relationship("Student", foreign_keys=[sender_id])
+    receiver = relationship("Student", foreign_keys=[receiver_id])
+
+    __table_args__ = (
+        UniqueConstraint("sender_id", "receiver_id", name="uq_private_chat_request_pair"),
+    )
+
+
+class PrivateConversation(Base):
+    __tablename__ = "private_conversations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_one_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
+    student_two_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+
+    student_one = relationship("Student", foreign_keys=[student_one_id])
+    student_two = relationship("Student", foreign_keys=[student_two_id])
+    messages = relationship(
+        "PrivateMessage", back_populates="conversation", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        UniqueConstraint("student_one_id", "student_two_id", name="uq_private_conversation_pair"),
+    )
+
+
+class PrivateMessage(Base):
+    __tablename__ = "private_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    conversation_id = Column(Integer, ForeignKey("private_conversations.id"), nullable=False, index=True)
+    sender_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    read_at = Column(DateTime, nullable=True)
+
+    conversation = relationship("PrivateConversation", back_populates="messages")
+    sender = relationship("Student")
