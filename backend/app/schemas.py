@@ -259,6 +259,36 @@ class DashboardStats(BaseModel):
     at_risk_students: List[AtRiskStudentOut]
 
 
+class ProgressBandOut(BaseModel):
+    label: str
+    student_count: int
+
+
+class AcademicYearCountOut(BaseModel):
+    year: int
+    student_count: int
+
+
+class AnalyticsProgrammeOut(BaseModel):
+    programme_code: str
+    programme_name: str
+    student_count: int
+    avg_percentage_complete: Optional[float]
+    avg_weighted_average: Optional[float]
+
+
+class AdminAnalyticsOut(BaseModel):
+    active_students: int
+    graduation_ready_count: int
+    requirements_remaining_count: int
+    failed_prerequisite_count: int
+    below_target_count: int
+    progress_distribution: List[ProgressBandOut]
+    students_by_year: List[AcademicYearCountOut]
+    programme_performance: List[AnalyticsProgrammeOut]
+    bottleneck_modules: List["BottleneckModuleOut"]
+
+
 class BottleneckModuleOut(BaseModel):
     code: str
     name: str

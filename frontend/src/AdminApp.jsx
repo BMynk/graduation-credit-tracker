@@ -2236,12 +2236,19 @@ useEffect(() => {
 // ---------- Dashboard Home ----------
 function DashboardHome({ onSelectStudent, onNavigate }) {
   const [stats, setStats] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.adminGetDashboard()
-      .then(setStats)
+    Promise.all([
+      api.adminGetDashboard(),
+      api.adminGetAnalytics(),
+    ])
+      .then(([dashboardData, analyticsData]) => {
+        setStats(dashboardData);
+        setAnalytics(analyticsData);
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
@@ -2280,6 +2287,7 @@ function DashboardHome({ onSelectStudent, onNavigate }) {
   return (
     <AdminDashboardPage
       dashboard={stats}
+      analytics={analytics}
       onNavigate={onNavigate}
       onStudentClick={(student) => {
         onSelectStudent(student.id);
