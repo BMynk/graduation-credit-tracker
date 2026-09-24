@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Download, FileText, Search, Trash2, Upload } from "lucide-react";
+import { Award, Download, FileText, Lock, Search, Trash2, Trophy, Upload } from "lucide-react";
 import { api } from "../../api";
 
 export default function PastPapersPanel({ student }) {
@@ -9,10 +9,18 @@ export default function PastPapersPanel({ student }) {
   const [showUpload, setShowUpload] = useState(false);
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [achievementProgress, setAchievementProgress] = useState(null);
 
   async function load() {
-    try { setPapers(await api.getPastPapers({ module: moduleFilter, level: levelFilter })); setError(""); }
-    catch (err) { setError(err.message); }
+    try {
+      const [paperData, achievementData] = await Promise.all([
+        api.getPastPapers({ module: moduleFilter, level: levelFilter }),
+        api.getPastPaperAchievements(),
+      ]);
+      setPapers(paperData);
+      setAchievementProgress(achievementData);
+      setError("");
+    } catch (err) { setError(err.message); }
   }
   useEffect(() => { load(); }, []);
 
@@ -38,7 +46,7 @@ export default function PastPapersPanel({ student }) {
   }
 
   async function remove(id) {
-    try { await api.deletePastPaper(id); setPapers((items) => items.filter((item) => item.id !== id)); }
+    try { await api.deletePastPaper(id); await load(); }
     catch (err) { setError(err.message); }
   }
 
@@ -50,6 +58,36 @@ export default function PastPapersPanel({ student }) {
       </div>
 
       {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">{error}</div>}
+
+      {achievementProgress && (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50/60 p-5 dark:border-amber-900/40 dark:bg-amber-500/5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex size-11 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"><Trophy size={21}/></div>
+              <div>
+                <h3 className="font-bold text-zinc-950 dark:text-white">Past Paper Contributor</h3>
+                <p className="text-sm text-zinc-500">{achievementProgress.upload_count} active {achievementProgress.upload_count === 1 ? "paper" : "papers"} shared</p>
+              </div>
+            </div>
+            {achievementProgress.highest_achievement && <span className="self-start rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300"><Award size={13} className="mr-1 inline"/> {achievementProgress.highest_achievement.name}</span>}
+          </div>
+          {achievementProgress.next_achievement ? (
+            <div className="mt-4">
+              <div className="mb-1.5 flex justify-between text-xs text-zinc-500"><span>Next: {achievementProgress.next_achievement.name}</span><span>{achievementProgress.upload_count} / {achievementProgress.next_achievement.threshold}</span></div>
+              <div className="h-2 overflow-hidden rounded-full bg-amber-100 dark:bg-zinc-800"><div className="h-full rounded-full bg-amber-500 transition-all" style={{ width: `${Math.min(100, (achievementProgress.upload_count / achievementProgress.next_achievement.threshold) * 100)}%` }}/></div>
+              <p className="mt-1.5 text-[11px] text-zinc-500">{achievementProgress.remaining_to_next} more {achievementProgress.remaining_to_next === 1 ? "upload" : "uploads"} to unlock it.</p>
+            </div>
+          ) : <p className="mt-4 text-sm font-semibold text-amber-700 dark:text-amber-300">All contributor achievements unlocked!</p>}
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+            {achievementProgress.achievements.map((item) => (
+              <div key={item.key} className={`rounded-xl border p-3 ${item.unlocked ? "border-amber-200 bg-white dark:border-amber-800/50 dark:bg-zinc-900" : "border-zinc-200 bg-white/50 opacity-60 dark:border-zinc-800 dark:bg-zinc-900/50"}`}>
+                <div className="flex items-center gap-2">{item.unlocked ? <Award size={16} className="text-amber-600"/> : <Lock size={14} className="text-zinc-400"/>}<span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">{item.name}</span></div>
+                <p className="mt-1 text-[10px] leading-4 text-zinc-500">{item.threshold} {item.threshold === 1 ? "paper" : "papers"}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {showUpload && (
         <form onSubmit={submit} className="grid gap-4 rounded-2xl border border-zinc-200 bg-white p-5 md:grid-cols-2 dark:border-zinc-800 dark:bg-zinc-900">
