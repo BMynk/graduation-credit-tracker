@@ -1,13 +1,18 @@
 # app/routers/community.py
 
 from datetime import datetime
+import hashlib
+import time
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+import httpx
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app import models, schemas
 from app.database import get_db
+from app.config import settings
 from app.dependencies import get_current_student
 from app.rate_limit import limiter
 
@@ -657,3 +662,198 @@ def send_private_message(
         sender=_author(current_student), content=message.content,
         created_at=message.created_at, read_at=message.read_at,
     )
+
+
+# ============================================================
+# STUDENT NOTIFICATIONS
+# ============================================================
+
+@router.get("/notifications", response_model=list[schemas.StudentNotificationOut])
+def student_notifications(
+    db: Session = Depends(get_db),
+    current_student: models.Student = Depends(get_current_student),
+):
+    items = []
+    pending = (
+        db.query(models.PrivateChatRequest)
+        .options(joinedload(models.PrivateChatRequest.sender))
+        .filter(
+            models.PrivateChatRequest.receiver_id == current_student.id,
+            models.PrivateChatRequest.status == "pending",
+        )
+        .all()
+    )
+    for row in pending:
+        items.append(schemas.StudentNotificationOut(
+            id=f"request-{row.id}", kind="chat_request", title="New chat request",
+            message=f"{row.sender.name} wants to chat privately.",
+            created_at=row.created_at, unread=True, target="community",
+        ))
+
+    unread_messages = (
+        db.query(models.PrivateMessage)
+        .options(joinedload(models.PrivateMessage.sender))
+        .join(models.PrivateConversation)
+        .filter(
+            models.PrivateMessage.sender_id != current_student.id,
+            models.PrivateMessage.read_at.is_(None),
+            (
+                (models.PrivateConversation.student_one_id == current_student.id)
+                | (models.PrivateConversation.student_two_id == current_student.id)
+            ),
+            models.PrivateConversation.is_active.is_(True),
+        )
+        .order_by(models.PrivateMessage.created_at.desc())
+        .limit(30)
+        .all()
+    )
+    for row in unread_messages:
+        items.append(schemas.StudentNotificationOut(
+            id=f"message-{row.id}", kind="private_message", title="New private message",
+            message=f"{row.sender.name} sent you a private message.",
+            created_at=row.created_at, unread=True, target="community",
+        ))
+    items.sort(key=lambda item: item.created_at, reverse=True)
+    return items[:30]
+
+
+@router.post("/notifications/read-all", status_code=204)
+def mark_notifications_read(
+    db: Session = Depends(get_db),
+    current_student: models.Student = Depends(get_current_student),
+):
+    now = datetime.utcnow()
+    rows = (
+        db.query(models.PrivateMessage)
+        .join(models.PrivateConversation)
+        .filter(
+            models.PrivateMessage.sender_id != current_student.id,
+            models.PrivateMessage.read_at.is_(None),
+            (
+                (models.PrivateConversation.student_one_id == current_student.id)
+                | (models.PrivateConversation.student_two_id == current_student.id)
+            ),
+        )
+        .all()
+    )
+    for row in rows:
+        row.read_at = now
+    db.commit()
+    return None
+
+
+# ============================================================
+# COMMUNITY PAST PAPER LIBRARY
+# ============================================================
+
+def _paper_out(row: models.PastPaper):
+    return schemas.PastPaperOut(
+        id=row.id, module_code=row.module_code, module_name=row.module_name,
+        paper_year=row.paper_year, semester=row.semester, level=row.level,
+        description=row.description, file_name=row.file_name, file_url=row.file_url,
+        file_size=row.file_size, created_at=row.created_at, uploader=_author(row.uploader),
+    )
+
+
+@router.get("/past-papers", response_model=list[schemas.PastPaperOut])
+def list_past_papers(
+    module: str | None = Query(default=None, max_length=30),
+    level: int | None = Query(default=None, ge=1, le=10),
+    year: int | None = Query(default=None, ge=1990, le=2100),
+    db: Session = Depends(get_db),
+    current_student: models.Student = Depends(get_current_student),
+):
+    query = (
+        db.query(models.PastPaper)
+        .options(joinedload(models.PastPaper.uploader))
+        .filter(
+            models.PastPaper.programme_id == current_student.programme_id,
+            models.PastPaper.is_active.is_(True),
+        )
+    )
+    if module:
+        query = query.filter(models.PastPaper.module_code.ilike(f"%{module.strip()}%"))
+    if level:
+        query = query.filter(models.PastPaper.level == level)
+    if year:
+        query = query.filter(models.PastPaper.paper_year == year)
+    return [_paper_out(row) for row in query.order_by(models.PastPaper.created_at.desc()).limit(200).all()]
+
+
+@router.post("/past-papers", response_model=schemas.PastPaperOut, status_code=201)
+@limiter.limit("10/hour")
+async def upload_past_paper(
+    request: Request,
+    file: UploadFile = File(...),
+    module_code: str = Form(...),
+    module_name: str = Form(""),
+    paper_year: int = Form(...),
+    semester: int | None = Form(None),
+    level: int = Form(...),
+    description: str = Form(""),
+    sharing_confirmed: bool = Form(...),
+    db: Session = Depends(get_db),
+    current_student: models.Student = Depends(get_current_student),
+):
+    if not sharing_confirmed:
+        raise HTTPException(status_code=400, detail="Confirm that you are allowed to share this paper")
+    if file.content_type != "application/pdf" or not (file.filename or "").lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF past papers are supported")
+    if not (1990 <= paper_year <= 2100) or not (1 <= level <= 10):
+        raise HTTPException(status_code=400, detail="Invalid paper year or academic level")
+    if semester not in (None, 1, 2):
+        raise HTTPException(status_code=400, detail="Semester must be 1 or 2")
+
+    data = await file.read(8 * 1024 * 1024 + 1)
+    if len(data) > 8 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="PDF must be 8 MB or smaller")
+    if not data.startswith(b"%PDF"):
+        raise HTTPException(status_code=400, detail="The uploaded file is not a valid PDF")
+    if not settings.cloudinary_cloud_name or not settings.cloudinary_api_key or not settings.cloudinary_api_secret:
+        raise HTTPException(status_code=503, detail="Past paper storage is not configured yet")
+
+    timestamp = int(time.time())
+    public_id = f"gct/past-papers/{current_student.programme.code}/{module_code.strip().upper()}-{timestamp}-{current_student.id}"
+    to_sign = f"public_id={public_id}&timestamp={timestamp}{settings.cloudinary_api_secret}"
+    signature = hashlib.sha1(to_sign.encode("utf-8")).hexdigest()
+    upload_url = f"https://api.cloudinary.com/v1_1/{settings.cloudinary_cloud_name}/raw/upload"
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        response = await client.post(
+            upload_url,
+            data={"api_key": settings.cloudinary_api_key, "timestamp": str(timestamp), "public_id": public_id, "signature": signature},
+            files={"file": (file.filename, data, "application/pdf")},
+        )
+    if response.status_code >= 400:
+        raise HTTPException(status_code=502, detail="Could not store the past paper")
+    stored = response.json()
+
+    row = models.PastPaper(
+        uploader_id=current_student.id, programme_id=current_student.programme_id,
+        module_code=module_code.strip().upper()[:30], module_name=module_name.strip()[:180] or None,
+        paper_year=paper_year, semester=semester, level=level,
+        description=description.strip()[:500] or None, file_name=(file.filename or "past-paper.pdf")[:255],
+        file_url=stored["secure_url"], storage_key=stored.get("public_id"), file_size=len(data),
+    )
+    db.add(row)
+    db.commit()
+    row = db.query(models.PastPaper).options(joinedload(models.PastPaper.uploader)).filter(models.PastPaper.id == row.id).first()
+    return _paper_out(row)
+
+
+@router.delete("/past-papers/{paper_id}", status_code=204)
+def delete_own_past_paper(
+    paper_id: int,
+    db: Session = Depends(get_db),
+    current_student: models.Student = Depends(get_current_student),
+):
+    row = db.query(models.PastPaper).filter(
+        models.PastPaper.id == paper_id,
+        models.PastPaper.uploader_id == current_student.id,
+        models.PastPaper.is_active.is_(True),
+    ).first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Past paper not found")
+    row.is_active = False
+    db.commit()
+    return None

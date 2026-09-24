@@ -130,6 +130,7 @@ export default function StudentLayout({
               (current) => !current
             )
           }
+          onOpenCommunity={() => onTabChange("community")}
           onOpenMobileMenu={() =>
             setMobileMenuOpen(true)
           }

@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     # Web search
     tavily_api_key: str = ""
 
+    # Cloudinary raw-file storage for community past papers
+    cloudinary_cloud_name: str = ""
+    cloudinary_api_key: str = ""
+    cloudinary_api_secret: str = ""
+
 
     resend_api_key: str = ""
 

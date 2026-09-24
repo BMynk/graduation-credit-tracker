@@ -823,3 +823,30 @@ class PrivateMessage(Base):
 
     conversation = relationship("PrivateConversation", back_populates="messages")
     sender = relationship("Student")
+
+
+# ============================================================
+# COMMUNITY PAST PAPER LIBRARY
+# ============================================================
+
+class PastPaper(Base):
+    __tablename__ = "past_papers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    uploader_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
+    programme_id = Column(Integer, ForeignKey("programmes.id"), nullable=False, index=True)
+    module_code = Column(String(30), nullable=False, index=True)
+    module_name = Column(String(180), nullable=True)
+    paper_year = Column(Integer, nullable=False, index=True)
+    semester = Column(Integer, nullable=True, index=True)
+    level = Column(Integer, nullable=False, index=True)
+    description = Column(String(500), nullable=True)
+    file_name = Column(String(255), nullable=False)
+    file_url = Column(String(1000), nullable=False)
+    storage_key = Column(String(500), nullable=True)
+    file_size = Column(Integer, nullable=False, default=0)
+    is_active = Column(Boolean, nullable=False, default=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    uploader = relationship("Student")
+    programme = relationship("Programme")

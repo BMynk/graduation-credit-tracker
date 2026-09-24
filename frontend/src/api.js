@@ -280,6 +280,22 @@ async function uploadFile(
 }
 
 
+async function uploadForm(path, formData, retry = true) {
+  const { accessToken } = getSession();
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+    body: formData,
+  });
+  if (res.status === 401 && retry) {
+    await refreshAccessToken();
+    return uploadForm(path, formData, false);
+  }
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.status === 204 ? null : res.json();
+}
+
+
 // ============================================================
 // API
 // ============================================================
@@ -1010,6 +1026,24 @@ getModuleDetail: (
       method: "POST",
       body: { content },
     }),
+
+
+  getStudentNotifications: () => request("/community/notifications"),
+  markStudentNotificationsRead: () => request("/community/notifications/read-all", { method: "POST" }),
+
+  getPastPapers: (params = {}) => {
+    const qs = new URLSearchParams(Object.entries(params).filter(([, value]) => value !== "" && value != null)).toString();
+    return request(`/community/past-papers${qs ? `?${qs}` : ""}`);
+  },
+
+  uploadPastPaper: (file, fields) => {
+    const form = new FormData();
+    form.append("file", file);
+    Object.entries(fields).forEach(([key, value]) => form.append(key, String(value ?? "")));
+    return uploadForm("/community/past-papers", form);
+  },
+
+  deletePastPaper: (paperId) => request(`/community/past-papers/${paperId}`, { method: "DELETE" }),
 
 
   // ==========================================================

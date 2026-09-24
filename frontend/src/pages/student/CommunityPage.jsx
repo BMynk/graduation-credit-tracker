@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Hash, MessageCircle, Reply, Send, Trash2, UserRound, Users, X } from "lucide-react";
 import { api } from "../../api";
+import PastPapersPanel from "./PastPapersPanel";
 
 const REACTIONS = ["👍", "❤️", "😂", "🔥", "🎉", "👏"];
 
@@ -259,6 +260,8 @@ export default function CommunityPage({ student }) {
           {error}
         </div>
       )}
+
+      <PastPapersPanel student={student} />
 
       <div className="grid gap-3 md:grid-cols-2">
         <div className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
