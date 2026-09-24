@@ -349,7 +349,7 @@ function MarcelMarkdown({ children }) {
    MAIN COMPONENT
 ============================================================ */
 
-export default function AssistantWidget({ userRole = "guest" }) {
+export default function AssistantWidget({ userRole = "guest", currentPage = null }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const [messages, setMessages] = useState([
@@ -514,6 +514,7 @@ export default function AssistantWidget({ userRole = "guest" }) {
         {
           message: text,
           user_role: userRole,
+          current_page: currentPage,
           history: conversationHistory,
         },
         (chunk) => {

@@ -67,6 +67,11 @@ class AssistantChatRequest(BaseModel):
         default_factory=list
     )
 
+    current_page: str | None = Field(
+        default=None,
+        max_length=40,
+    )
+
 
 class AssistantChatResponse(BaseModel):
     message: str
@@ -116,6 +121,9 @@ def get_verified_role(
 
     role = current_user.get("role")
 
+    if current_user.get("is_impersonation") or current_user.get("impersonated_by") is not None:
+        return "admin"
+
     if role == "student":
         return "student"
 
@@ -157,6 +165,8 @@ def build_verified_context(
     if (
         role == "student"
         and user is not None
+        and not current_user.get("is_impersonation")
+        and current_user.get("impersonated_by") is None
     ):
         return build_student_assistant_context(
             db,
@@ -164,6 +174,66 @@ def build_verified_context(
         )
 
     return None
+
+
+# ==========================================================
+# Intent-aware student context
+# ==========================================================
+
+def select_relevant_student_context(
+    context: dict | None,
+    message: str,
+    current_page: str | None,
+) -> dict | None:
+    """Keep only the verified academic data relevant to this request."""
+    if not context:
+        return None
+
+    text = message.lower()
+    page = (current_page or "").lower()
+    selected = {
+        "student": context.get("student"),
+        "progress": context.get("progress"),
+        "page_context": page or None,
+    }
+
+    def wants(*terms: str) -> bool:
+        return any(term in text for term in terms)
+
+    if page in {"planning", "planner"} or wants(
+        "plan", "next semester", "eligible", "can i take",
+        "prerequisite", "module", "retake",
+    ):
+        for key in (
+            "eligible_modules", "module_eligibility",
+            "missing_compulsory_modules", "failed_modules",
+            "in_progress_modules",
+        ):
+            selected[key] = context.get(key)
+
+    if page in {"history", "timeline", "yearly"} or wants(
+        "history", "completed", "failed", "grade", "mark",
+        "previous", "timeline",
+    ):
+        for key in (
+            "academic_history", "completed_modules",
+            "failed_enrolments", "failed_modules",
+            "in_progress_modules",
+        ):
+            selected[key] = context.get(key)
+
+    if page in {"summary", "achievements", "predictor"} or wants(
+        "progress", "graduate", "graduation", "credit", "average",
+        "percentage", "requirement", "achievement", "predict",
+    ):
+        selected["missing_compulsory_modules"] = context.get(
+            "missing_compulsory_modules"
+        )
+        selected["category_breakdown"] = context.get("category_breakdown")
+
+    # Ambiguous page-aware questions such as "explain this" receive the
+    # page-relevant data above. If no intent matched, progress is enough.
+    return selected
 
 
 # ==========================================================
@@ -264,6 +334,11 @@ def chat_with_assistant(
         verified_context = build_verified_context(
             current_user,
             db,
+        )
+        verified_context = select_relevant_student_context(
+            verified_context,
+            payload.message,
+            payload.current_page,
         )
 
         # --------------------------------------------------
@@ -382,6 +457,11 @@ def stream_chat_with_assistant(
     verified_context = build_verified_context(
         current_user,
         db,
+    )
+    verified_context = select_relevant_student_context(
+        verified_context,
+        payload.message,
+        payload.current_page,
     )
 
     # ------------------------------------------------------
