@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session, joinedload
 from app import models, schemas
 from app.database import get_db
 from app.config import settings
-from app.dependencies import get_current_student
+from app.dependencies import get_current_real_student, get_current_student
 from app.rate_limit import limiter
 
 router = APIRouter(prefix="/community", tags=["Community"])
@@ -366,7 +366,7 @@ def _conversation_for(db: Session, a: int, b: int):
 def community_student_profile(
     student_id: int,
     db: Session = Depends(get_db),
-    current_student: models.Student = Depends(get_current_student),
+    current_student: models.Student = Depends(get_current_real_student),
 ):
     student = (
         db.query(models.Student)
@@ -434,7 +434,7 @@ def request_private_chat(
     request: Request,
     student_id: int,
     db: Session = Depends(get_db),
-    current_student: models.Student = Depends(get_current_student),
+    current_student: models.Student = Depends(get_current_real_student),
 ):
     if student_id == current_student.id:
         raise HTTPException(status_code=400, detail="You cannot request a chat with yourself")
@@ -494,7 +494,7 @@ def request_private_chat(
 @router.get("/chat-requests", response_model=list[schemas.PrivateChatRequestOut])
 def list_chat_requests(
     db: Session = Depends(get_db),
-    current_student: models.Student = Depends(get_current_student),
+    current_student: models.Student = Depends(get_current_real_student),
 ):
     rows = (
         db.query(models.PrivateChatRequest)
@@ -519,7 +519,7 @@ def list_chat_requests(
 def accept_chat_request(
     request_id: int,
     db: Session = Depends(get_db),
-    current_student: models.Student = Depends(get_current_student),
+    current_student: models.Student = Depends(get_current_real_student),
 ):
     row = (
         db.query(models.PrivateChatRequest)
@@ -555,7 +555,7 @@ def accept_chat_request(
 def decline_chat_request(
     request_id: int,
     db: Session = Depends(get_db),
-    current_student: models.Student = Depends(get_current_student),
+    current_student: models.Student = Depends(get_current_real_student),
 ):
     row = (
         db.query(models.PrivateChatRequest)
@@ -581,7 +581,7 @@ def decline_chat_request(
 @router.get("/conversations", response_model=list[schemas.PrivateConversationOut])
 def list_private_conversations(
     db: Session = Depends(get_db),
-    current_student: models.Student = Depends(get_current_student),
+    current_student: models.Student = Depends(get_current_real_student),
 ):
     rows = (
         db.query(models.PrivateConversation)
@@ -624,7 +624,7 @@ def _allowed_conversation(db: Session, conversation_id: int, student_id: int):
 def private_messages(
     conversation_id: int,
     db: Session = Depends(get_db),
-    current_student: models.Student = Depends(get_current_student),
+    current_student: models.Student = Depends(get_current_real_student),
 ):
     _allowed_conversation(db, conversation_id, current_student.id)
     rows = (
@@ -651,7 +651,7 @@ def send_private_message(
     conversation_id: int,
     payload: schemas.PrivateMessageCreate,
     db: Session = Depends(get_db),
-    current_student: models.Student = Depends(get_current_student),
+    current_student: models.Student = Depends(get_current_real_student),
 ):
     _allowed_conversation(db, conversation_id, current_student.id)
     message = models.PrivateMessage(
@@ -676,7 +676,7 @@ def send_private_message(
 @router.get("/notifications", response_model=list[schemas.StudentNotificationOut])
 def student_notifications(
     db: Session = Depends(get_db),
-    current_student: models.Student = Depends(get_current_student),
+    current_student: models.Student = Depends(get_current_real_student),
 ):
     items = []
     pending = (
@@ -726,7 +726,7 @@ def student_notifications(
 def mark_private_conversation_read(
     conversation_id: int,
     db: Session = Depends(get_db),
-    current_student: models.Student = Depends(get_current_student),
+    current_student: models.Student = Depends(get_current_real_student),
 ):
     _allowed_conversation(db, conversation_id, current_student.id)
     now = datetime.utcnow()
@@ -748,7 +748,7 @@ def mark_private_conversation_read(
 @router.post("/notifications/read-all", status_code=204)
 def mark_notifications_read(
     db: Session = Depends(get_db),
-    current_student: models.Student = Depends(get_current_student),
+    current_student: models.Student = Depends(get_current_real_student),
 ):
     now = datetime.utcnow()
     rows = (
@@ -819,7 +819,7 @@ def _past_paper_achievement_progress(db: Session, student_id: int):
 @router.get("/past-paper-achievements", response_model=schemas.PastPaperAchievementProgressOut)
 def my_past_paper_achievements(
     db: Session = Depends(get_db),
-    current_student: models.Student = Depends(get_current_student),
+    current_student: models.Student = Depends(get_current_real_student),
 ):
     return _past_paper_achievement_progress(db, current_student.id)
 
@@ -843,7 +843,7 @@ def list_past_papers(
     level: int | None = Query(default=None, ge=1, le=10),
     year: int | None = Query(default=None, ge=1990, le=2100),
     db: Session = Depends(get_db),
-    current_student: models.Student = Depends(get_current_student),
+    current_student: models.Student = Depends(get_current_real_student),
 ):
     query = (
         db.query(models.PastPaper)
@@ -875,7 +875,7 @@ async def upload_past_paper(
     description: str = Form(""),
     sharing_confirmed: bool = Form(...),
     db: Session = Depends(get_db),
-    current_student: models.Student = Depends(get_current_student),
+    current_student: models.Student = Depends(get_current_real_student),
 ):
     if not sharing_confirmed:
         raise HTTPException(status_code=400, detail="Confirm that you are allowed to share this paper")
@@ -927,7 +927,7 @@ async def upload_past_paper(
 def delete_own_past_paper(
     paper_id: int,
     db: Session = Depends(get_db),
-    current_student: models.Student = Depends(get_current_student),
+    current_student: models.Student = Depends(get_current_real_student),
 ):
     row = db.query(models.PastPaper).filter(
         models.PastPaper.id == paper_id,
