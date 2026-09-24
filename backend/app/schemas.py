@@ -837,3 +837,54 @@ class CommunityMessageOut(BaseModel):
     parent_message_id: Optional[int] = None
     author: CommunityAuthorOut
     reactions: List[CommunityReactionSummary] = []
+
+
+# ============================================================
+# PRIVATE STUDENT MESSAGING
+# ============================================================
+
+class CommunityStudentProfileOut(BaseModel):
+    id: int
+    name: str
+    programme_code: str
+    programme_name: str
+    current_year: int
+    is_simulated: bool = False
+    chat_status: Optional[str] = None
+
+
+class PrivateChatRequestOut(BaseModel):
+    id: int
+    sender: CommunityAuthorOut
+    receiver: CommunityAuthorOut
+    status: str
+    created_at: datetime
+    responded_at: Optional[datetime] = None
+
+
+class PrivateConversationOut(BaseModel):
+    id: int
+    other_student: CommunityAuthorOut
+    created_at: datetime
+    is_active: bool
+
+
+class PrivateMessageCreate(BaseModel):
+    content: str = Field(min_length=1, max_length=2000)
+
+    @field_validator("content")
+    @classmethod
+    def validate_private_message(cls, value: str):
+        value = value.strip()
+        if not value:
+            raise ValueError("Message cannot be empty")
+        return value
+
+
+class PrivateMessageOut(BaseModel):
+    id: int
+    conversation_id: int
+    sender: CommunityAuthorOut
+    content: str
+    created_at: datetime
+    read_at: Optional[datetime] = None

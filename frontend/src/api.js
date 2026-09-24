@@ -984,6 +984,34 @@ getModuleDetail: (
     }),
 
 
+  getCommunityStudentProfile: (studentId) =>
+    request(`/community/students/${studentId}/profile`),
+
+  requestPrivateChat: (studentId) =>
+    request(`/community/chat-requests/${studentId}`, { method: "POST" }),
+
+  getPrivateChatRequests: () =>
+    request("/community/chat-requests"),
+
+  acceptPrivateChatRequest: (requestId) =>
+    request(`/community/chat-requests/${requestId}/accept`, { method: "POST" }),
+
+  declinePrivateChatRequest: (requestId) =>
+    request(`/community/chat-requests/${requestId}/decline`, { method: "POST" }),
+
+  getPrivateConversations: () =>
+    request("/community/conversations"),
+
+  getPrivateMessages: (conversationId) =>
+    request(`/community/conversations/${conversationId}/messages`),
+
+  sendPrivateMessage: (conversationId, content) =>
+    request(`/community/conversations/${conversationId}/messages`, {
+      method: "POST",
+      body: { content },
+    }),
+
+
   // ==========================================================
   // AI Assistant
   // ==========================================================
