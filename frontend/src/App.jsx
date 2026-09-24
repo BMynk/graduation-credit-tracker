@@ -1257,7 +1257,28 @@ function StudentDashboard({ onLogout }) {
     })();
   }, []);
 
-  const adminStudentView = (() => {\n    try {\n      const token = localStorage.getItem("access_token");\n      if (!token) return false;\n      const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));\n      return payload?.is_impersonation === true || payload?.impersonated_by != null;\n    } catch {\n      return false;\n    }\n  })();\n\n  useEffect(() => {\n    if (adminStudentView && tab === "community") {\n      setTab("summary");\n    }\n  }, [adminStudentView, tab]);\n\n  return (\n    <StudentLayout\n      activeTab={tab}
+  const adminStudentView = (() => {
+    try {
+      const token = localStorage.getItem("access_token");
+      if (!token) return false;
+      const payload = JSON.parse(
+        atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))
+      );
+      return payload?.is_impersonation === true || payload?.impersonated_by != null;
+    } catch {
+      return false;
+    }
+  })();
+
+  useEffect(() => {
+    if (adminStudentView && tab === "community") {
+      setTab("summary");
+    }
+  }, [adminStudentView, tab]);
+
+  return (
+    <StudentLayout
+      activeTab={tab}
       onTabChange={setTab}
       student={me}
       onLogout={onLogout}
