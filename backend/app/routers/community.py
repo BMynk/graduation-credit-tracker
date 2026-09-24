@@ -412,6 +412,9 @@ def community_student_profile(
                 else:
                     chat_status = request_row.status
 
+    contribution_count = db.query(models.PastPaper).filter(models.PastPaper.uploader_id == student.id, models.PastPaper.is_active.is_(True)).count()
+    contribution_badge = next((name for _, name, _, threshold in reversed(PAST_PAPER_ACHIEVEMENTS) if contribution_count >= threshold), None)
+
     return schemas.CommunityStudentProfileOut(
         id=student.id,
         name=student.name,
@@ -420,6 +423,8 @@ def community_student_profile(
         current_year=student.current_year,
         is_simulated=student.student_number.startswith("SIM-"),
         chat_status=chat_status,
+        past_paper_upload_count=contribution_count,
+        contributor_achievement=contribution_badge,
     )
 
 
