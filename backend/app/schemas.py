@@ -851,6 +851,8 @@ class CommunityStudentProfileOut(BaseModel):
     current_year: int
     is_simulated: bool = False
     chat_status: Optional[str] = None
+    past_paper_upload_count: int = 0
+    contributor_achievement: Optional[str] = None
 
 
 class PrivateChatRequestOut(BaseModel):
