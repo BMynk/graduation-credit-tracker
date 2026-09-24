@@ -1257,9 +1257,7 @@ function StudentDashboard({ onLogout }) {
     })();
   }, []);
 
-  return (
-    <StudentLayout
-      activeTab={tab}
+  const adminStudentView = (() => {\n    try {\n      const token = localStorage.getItem("access_token");\n      if (!token) return false;\n      const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));\n      return payload?.is_impersonation === true || payload?.impersonated_by != null;\n    } catch {\n      return false;\n    }\n  })();\n\n  useEffect(() => {\n    if (adminStudentView && tab === "community") {\n      setTab("summary");\n    }\n  }, [adminStudentView, tab]);\n\n  return (\n    <StudentLayout\n      activeTab={tab}
       onTabChange={setTab}
       student={me}
       onLogout={onLogout}
@@ -1288,7 +1286,7 @@ function StudentDashboard({ onLogout }) {
         <YearlyBreakdown onModuleClick={handleModuleClick} />
       )}
       {!loading && tab === "peers" && <PeerComparison />}
-      {!loading && tab === "community" && <CommunityPage student={me} />}
+      {!loading && !adminStudentView && tab === "community" && <CommunityPage student={me} />}
       {!loading && tab === "history" && (
   <HistoryPage
 
