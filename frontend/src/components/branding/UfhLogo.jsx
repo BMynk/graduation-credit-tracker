@@ -27,10 +27,10 @@ export default function UfhLogo({ className = "", variant = "full" }) {
         loading="eager"
         referrerPolicy="no-referrer"
       />
-      <span className="-mt-[44%] font-serif text-[clamp(20px,8vw,34px)] font-semibold leading-none tracking-[-0.03em] text-zinc-950">
+      <span className="-mt-[28%] pb-[22%] font-serif text-[clamp(18px,6.5vw,30px)] font-semibold leading-tight tracking-[-0.03em] text-zinc-950">
         University of Fort Hare
       </span>
-      <span className="mt-2 pb-[25%] font-serif text-[clamp(13px,4.5vw,20px)] italic leading-none text-zinc-950">
+      <span className="-mt-[18%] pb-[12%] font-serif text-[clamp(12px,4vw,18px)] italic leading-tight text-zinc-950">
         Together in Excellence
       </span>
     </span>
