@@ -1211,7 +1211,7 @@ const STUDENT_TABS = [
   { id: "yearly", label: "Yearly" },
 ];
 
-function StudentDashboard({ onLogout }) {
+function StudentDashboard({ onLogout, onPageChange }) {
   const [tab, setTab] = useState("summary");
   const [me, setMe] = useState(null);
   const [summary, setSummary] = useState(null);
@@ -1269,6 +1269,10 @@ function StudentDashboard({ onLogout }) {
       return false;
     }
   })();
+
+  useEffect(() => {
+    onPageChange?.(tab);
+  }, [tab, onPageChange]);
 
   useEffect(() => {
     if (adminStudentView && tab === "community") {
@@ -1356,6 +1360,7 @@ function StudentDashboard({ onLogout }) {
 export default function App() {
   const [role, setRole] = useState(api.getRole());
   const [pickedRole, setPickedRole] = useState(null);
+  const [assistantPage, setAssistantPage] = useState(null);
 
   function handleLoggedIn() {
     setRole(api.getRole());
@@ -1372,7 +1377,12 @@ export default function App() {
   if (role === "admin") {
     content = <AdminApp onLogout={handleLogout} />;
   } else if (role === "student") {
-    content = <StudentDashboard onLogout={handleLogout} />;
+    content = (
+      <StudentDashboard
+        onLogout={handleLogout}
+        onPageChange={setAssistantPage}
+      />
+    );
   } else if (pickedRole === "student") {
     content = (
       <StudentLogin
@@ -1398,6 +1408,7 @@ export default function App() {
       {content}
 
       <AssistantWidget
+        currentPage={assistantPage}
         userRole={
           role === "admin"
             ? "admin"
