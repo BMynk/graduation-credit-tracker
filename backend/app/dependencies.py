@@ -97,6 +97,33 @@ def get_current_student(
 
 
 # ============================================================
+# Real student only (blocks admin impersonation)
+# ============================================================
+
+def get_current_real_student(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    db: Session = Depends(get_db),
+) -> models.Student:
+    token = credentials.credentials if credentials else ""
+
+    try:
+        payload = decode_token(token)
+    except (jwt.PyJWTError, ValueError, TypeError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+        )
+
+    if payload.get("is_impersonation") or payload.get("impersonated_by") is not None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Community conversations are private and unavailable in admin View as Student mode",
+        )
+
+    return get_current_student(credentials, db)
+
+
+# ============================================================
 # Current admin
 # ============================================================
 
