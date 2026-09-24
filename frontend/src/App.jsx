@@ -12,6 +12,7 @@ import TimelinePage from "./pages/student/TimelinePage";
 import AchievementsPage from "./pages/student/AchievementsPage";
 import CommunityPage from "./pages/student/CommunityPage";
 import AssistantWidget from "./components/assistant/AssistantWidget";
+import UfhLogo from "./components/branding/UfhLogo";
 
 // Import student components
 import DegreeProgressBar from "./components/DegreeProgressBar";
@@ -138,8 +139,8 @@ function RolePicker({ onPick }) {
           <div className="relative z-10 flex h-full flex-col px-12 py-10 xl:px-16 xl:py-12">
             {/* Brand */}
             <div className="flex items-center gap-3">
-              <div className="flex size-11 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-950/40">
-                <GraduationCap size={23} strokeWidth={2.2} />
+              <div className="flex h-14 w-[92px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 shadow-lg shadow-blue-950/30">
+                <UfhLogo className="h-full w-full object-contain" />
               </div>
 
               <div>
