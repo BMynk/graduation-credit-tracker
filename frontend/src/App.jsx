@@ -139,8 +139,8 @@ function RolePicker({ onPick }) {
           <div className="relative z-10 flex h-full flex-col px-12 py-10 xl:px-16 xl:py-12">
             {/* Brand */}
             <div className="flex items-center gap-3">
-              <div className="flex h-14 w-[92px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 shadow-lg shadow-blue-950/30">
-                <UfhLogo className="h-full w-full object-contain" />
+              <div className="w-[220px] shrink-0 rounded-2xl bg-white px-4 py-3 shadow-lg shadow-blue-950/30">
+                <UfhLogo className="h-auto w-full object-contain" />
               </div>
 
               <div>

@@ -131,9 +131,10 @@ export default function StudentSidebar({
         }`}
       >
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1 shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-700">
-            <UfhLogo className="h-full w-full object-contain" compact />
-          </div>
+          <UfhLogo
+            variant="crest"
+            className="size-11 shrink-0 rounded-xl shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-700"
+          />
 
           <div
             className={`overflow-hidden transition-all duration-300 ${
