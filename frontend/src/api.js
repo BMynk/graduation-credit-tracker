@@ -589,6 +589,12 @@ getModuleDetail: (
     ),
 
 
+  adminGetAnalytics: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/admin/analytics${qs ? `?${qs}` : ""}`);
+  },
+
+
   // ==========================================================
   // Admin student management
   // ==========================================================
