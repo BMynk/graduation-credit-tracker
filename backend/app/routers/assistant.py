@@ -231,6 +231,25 @@ def select_relevant_student_context(
         )
         selected["category_breakdown"] = context.get("category_breakdown")
 
+    if page in {"community"} or wants(
+        "si", "elep", "facilitator", "support", "session", "consultation",
+        "past paper", "past exam", "previous paper", "study support",
+    ):
+        selected["si_elep_support"] = context.get("si_elep_support")
+        selected["past_papers"] = context.get("past_papers")
+
+    if wants(
+        "notification", "unread", "message", "chat request",
+        "anything i need", "need to deal with",
+    ):
+        selected["notifications"] = context.get("notifications")
+
+    if wants(
+        "study plan", "study schedule", "study this week", "revision plan",
+    ):
+        selected["in_progress_modules"] = context.get("in_progress_modules")
+        selected["si_elep_support"] = context.get("si_elep_support")
+
     # Ambiguous page-aware questions such as "explain this" receive the
     # page-relevant data above. If no intent matched, progress is enough.
     return selected
