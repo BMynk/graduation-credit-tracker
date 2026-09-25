@@ -412,6 +412,14 @@ def community_student_profile(
                 else:
                     chat_status = request_row.status
 
+    equipped_rewards = {
+        row.category: row.reward_id
+        for row in db.query(models.StudentRewardPurchase).filter(
+            models.StudentRewardPurchase.student_id == student.id,
+            models.StudentRewardPurchase.is_equipped.is_(True),
+        ).all()
+    }
+
     contribution_count = db.query(models.PastPaper).filter(models.PastPaper.uploader_id == student.id, models.PastPaper.is_active.is_(True)).count()
     contribution_badge = next((name for _, name, _, threshold in reversed(PAST_PAPER_ACHIEVEMENTS) if contribution_count >= threshold), None)
 
@@ -425,6 +433,10 @@ def community_student_profile(
         chat_status=chat_status,
         past_paper_upload_count=contribution_count,
         contributor_achievement=contribution_badge,
+        equipped_title=equipped_rewards.get("title"),
+        equipped_theme=equipped_rewards.get("theme"),
+        equipped_frame=equipped_rewards.get("frame"),
+        equipped_marcel=equipped_rewards.get("marcel"),
     )
 
 
