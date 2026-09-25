@@ -121,14 +121,21 @@ function MarcelLogo({
     xl: "h-[92px] w-[92px]",
   };
 
-  const cosmeticGlow =
-    cosmetic === "marcel-graduation"
-      ? "shadow-[0_0_24px_rgba(245,158,11,0.55)]"
-      : cosmetic === "marcel-scholar"
-        ? "shadow-[0_0_24px_rgba(139,92,246,0.5)]"
-        : cosmetic === "marcel-classic"
-          ? "shadow-[0_0_20px_rgba(34,211,238,0.35)]"
-          : "";
+  const cosmeticGlow = {
+    "marcel-graduation": "shadow-[0_0_24px_rgba(245,158,11,0.55)]",
+    "marcel-scholar": "shadow-[0_0_24px_rgba(139,92,246,0.5)]",
+    "marcel-classic": "shadow-[0_0_20px_rgba(34,211,238,0.35)]",
+    "marcel-focus": "shadow-[0_0_24px_rgba(16,185,129,0.5)]",
+    "marcel-night": "shadow-[0_0_24px_rgba(99,102,241,0.5)]",
+    "marcel-coach": "shadow-[0_0_24px_rgba(249,115,22,0.5)]",
+    "marcel-legend": "shadow-[0_0_28px_rgba(217,70,239,0.55)]",
+    "marcel-lion": "shadow-[0_0_30px_rgba(234,179,8,0.6)]",
+    "marcel-calm": "shadow-[0_0_24px_rgba(45,212,191,0.45)]",
+    "marcel-strategist": "shadow-[0_0_24px_rgba(59,130,246,0.5)]",
+    "marcel-campus": "shadow-[0_0_26px_rgba(16,185,129,0.5)]",
+    "marcel-cosmic": "shadow-[0_0_30px_rgba(99,102,241,0.6)]",
+    "marcel-master": "shadow-[0_0_34px_rgba(250,204,21,0.65)]",
+  }[cosmetic] || "";
 
   const ringSpeed = thinking ? 1.15 : 5.5;
   const reverseRingSpeed = thinking ? 0.9 : 7;
@@ -718,7 +725,13 @@ export default function AssistantWidget({ userRole = "guest", currentPage = null
                       >
                         {MARCEL_NAME}
                       </h2>
-                      {marcelCosmetic && <span className="text-[9px] font-semibold text-zinc-400">{marcelCosmetic === "marcel-scholar" ? "Scholar" : marcelCosmetic === "marcel-graduation" ? "Graduation" : "Classic"} style</span>}
+                      {marcelCosmetic && <span className="text-[9px] font-semibold text-zinc-400">{({
+                        "marcel-scholar": "Scholar", "marcel-graduation": "Graduation", "marcel-focus": "Focus",
+                        "marcel-night": "Midnight", "marcel-coach": "Coach", "marcel-legend": "Legend",
+                        "marcel-lion": "Lion", "marcel-classic": "Classic", "marcel-calm": "Calm",
+                        "marcel-strategist": "Strategist", "marcel-campus": "Campus",
+                        "marcel-cosmic": "Cosmic", "marcel-master": "Master",
+                      })[marcelCosmetic] || "Custom"} style</span>}
 
                       <span
                         className="
