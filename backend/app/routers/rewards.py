@@ -52,7 +52,8 @@ def _state(db: Session, student: models.Student):
     wallet, summary = _wallet(db, student)
     purchases = db.query(models.StudentRewardPurchase).filter(models.StudentRewardPurchase.student_id == student.id).all()
     owned = {row.reward_id: row for row in purchases}
-    level = int(summary.get("level") or 1)
+    level_info = progress_service._get_achievement_level(wallet.lifetime_xp)
+    level = int(level_info.get("level") or 1)
     rewards = []
     for item in REWARD_CATALOG:
         row = owned.get(item["id"])
@@ -67,7 +68,7 @@ def _state(db: Session, student: models.Student):
         "spent_xp": wallet.spent_xp,
         "available_xp": max(wallet.lifetime_xp - wallet.spent_xp, 0),
         "level": level,
-        "level_title": progress_service._get_achievement_level(wallet.lifetime_xp).get("level_title"),
+        "level_title": level_info.get("level_title"),
         "community_xp": sum(
             amount or 0
             for (amount,) in db.query(models.StudentXpEvent.xp_amount).filter(
@@ -96,7 +97,8 @@ def purchase_reward(reward_id: str, current_student: models.Student = Depends(ge
     if reward is None:
         raise HTTPException(status_code=404, detail="Reward not found")
     wallet, summary = _wallet(db, current_student)
-    if int(summary.get("level") or 1) < reward["min_level"]:
+    level = int(progress_service._get_achievement_level(wallet.lifetime_xp).get("level") or 1)
+    if level < reward["min_level"]:
         raise HTTPException(status_code=400, detail=f"Reach Level {reward['min_level']} to unlock this reward")
     exists = db.query(models.StudentRewardPurchase).filter(
         models.StudentRewardPurchase.student_id == current_student.id,
