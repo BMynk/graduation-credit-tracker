@@ -887,7 +887,7 @@ class CommunityStudentProfileOut(BaseModel):
     equipped_theme: Optional[str] = None
     equipped_frame: Optional[str] = None
     equipped_marcel: Optional[str] = None
-    achievement_showcase: List[str] = []
+    achievement_showcase: List[str] = Field(default_factory=list)
 
 
 class PrivateChatRequestOut(BaseModel):
