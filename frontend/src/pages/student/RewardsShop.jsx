@@ -15,12 +15,17 @@ export default function RewardsShop({ onWalletChange }) {
   const [category, setCategory] = useState("all");
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
+  const [achievements, setAchievements] = useState([]);
 
   async function load() {
     try {
       setError("");
-      const result = await api.getRewards();
+      const [result, achievementData] = await Promise.all([
+        api.getRewards(),
+        api.getAchievements(),
+      ]);
       setData(result);
+      setAchievements((achievementData?.achievements || []).filter((item) => item.unlocked));
       onWalletChange?.(result);
     } catch (err) {
       setError(err?.message || "Unable to load XP rewards.");
@@ -31,8 +36,31 @@ export default function RewardsShop({ onWalletChange }) {
 
   const rewards = useMemo(() => {
     const all = data?.rewards || [];
-    return category === "all" ? all : all.filter((item) => item.category === category);
+    if (category === "all") return all;
+    if (category === "collection") return all.filter((item) => item.owned);
+    return all.filter((item) => item.category === category);
   }, [data, category]);
+
+  async function toggleShowcase(achievementId) {
+    const current = data?.showcase || [];
+    const next = current.includes(achievementId)
+      ? current.filter((id) => id !== achievementId)
+      : current.length < 3 ? [...current, achievementId] : current;
+    if (next === current) {
+      setError("You can showcase up to 3 achievements.");
+      return;
+    }
+    try {
+      setBusy(`showcase-${achievementId}`);
+      const result = await api.updateAchievementShowcase(next);
+      setData(result);
+      onWalletChange?.(result);
+    } catch (err) {
+      setError(err?.message || "Unable to update your showcase.");
+    } finally {
+      setBusy("");
+    }
+  }
 
   async function act(kind, reward) {
     try {
@@ -76,7 +104,7 @@ export default function RewardsShop({ onWalletChange }) {
           </div>
         </div>
         <div className="mt-4 flex gap-2 overflow-x-auto">
-          {[["all","All"], ...Object.entries(CATEGORY_LABELS)].map(([id,label]) => (
+          {[["all","All"], ["collection","My Collection"], ...Object.entries(CATEGORY_LABELS)].map(([id,label]) => (
             <button key={id} type="button" onClick={() => setCategory(id)}
               className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold transition ${category === id ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900" : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"}`}>
               {label}
@@ -110,6 +138,29 @@ export default function RewardsShop({ onWalletChange }) {
             </div>
           );
         })}
+      </div>
+
+      <div className="border-t border-zinc-100 p-5 dark:border-zinc-800">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Achievement Showcase</h3>
+            <p className="mt-1 text-xs text-zinc-500">Choose up to 3 unlocked achievements to display on your Community profile.</p>
+          </div>
+          <span className="text-xs font-bold text-brand-600">{data?.showcase?.length || 0}/3</span>
+        </div>
+        <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+          {achievements.map((achievement) => {
+            const selected = (data?.showcase || []).includes(achievement.id);
+            return (
+              <button key={achievement.id} type="button" onClick={() => toggleShowcase(achievement.id)}
+                disabled={busy === `showcase-${achievement.id}`}
+                className={`min-w-[180px] rounded-xl border p-3 text-left transition ${selected ? "border-brand-400 bg-brand-500/10" : "border-zinc-200 dark:border-zinc-800"}`}>
+                <div className="flex items-center gap-2"><span className="text-lg">{achievement.icon}</span><span className="text-xs font-bold text-zinc-900 dark:text-white">{achievement.title}</span></div>
+                <p className="mt-2 text-[10px] font-semibold text-zinc-500">{selected ? "Displayed on profile" : "Add to showcase"}</p>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </Card>
   );
