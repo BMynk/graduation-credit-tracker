@@ -53,22 +53,16 @@ export default function MobileNavigation({
             }}
             className="fixed inset-y-0 left-0 z-50 flex w-[290px] flex-col bg-white shadow-2xl lg:hidden dark:bg-zinc-950"
           >
-            <div className="flex h-[72px] items-center justify-between border-b border-zinc-200 px-5 dark:border-zinc-800">
-              <div className="flex items-center gap-3">
-                <UfhLogo
-                  variant="crest"
-                  className="size-10 shrink-0 rounded-xl object-contain shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-700"
-                />
-
-                <span className="text-sm font-bold text-zinc-950 dark:text-white">
-                  Credit Tracker
-                </span>
-              </div>
+            <div className="relative flex h-[88px] items-center justify-center border-b border-zinc-200 px-5 dark:border-zinc-800">
+              <UfhLogo
+                variant="crest"
+                className="size-14 shrink-0 rounded-xl object-contain shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-700"
+              />
 
               <button
                 type="button"
                 onClick={onClose}
-                className="flex size-9 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                className="absolute right-5 flex size-9 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-900"
                 aria-label="Close menu"
               >
                 <X size={19} />
