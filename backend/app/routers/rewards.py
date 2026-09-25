@@ -18,7 +18,7 @@ REWARD_CATALOG = [
     {"id": "theme-violet", "name": "Violet Scholar", "description": "Unlock a violet profile theme.", "category": "theme", "cost_xp": 650, "icon": "💜", "min_level": 3},
     {"id": "theme-gold", "name": "Fort Hare Gold", "description": "Unlock a premium gold profile theme.", "category": "theme", "cost_xp": 1200, "icon": "✨", "min_level": 4},
     {"id": "frame-scholar", "name": "Scholar Frame", "description": "A clean frame for your community profile.", "category": "frame", "cost_xp": 500, "icon": "🖼️", "min_level": 2},
-    {"id": "frame-legend", "name": "Legend Frame", "description": "An animated-style prestige frame for top progress.", "category": "frame", "cost_xp": 2500, "icon": "💫", "min_level": 6},
+    {"id": "frame-legend", "name": "Legend Frame", "description": "A premium animated prestige frame for top progress.", "category": "frame", "cost_xp": 5000, "icon": "💫", "min_level": 8},
     {"id": "marcel-classic", "name": "Classic Marcel", "description": "Classic Marcel visual theme and concise response style.", "category": "marcel", "cost_xp": 300, "icon": "🤖", "min_level": 1},
     {"id": "marcel-scholar", "name": "Scholar Marcel", "description": "Give Marcel a scholar-themed presentation.", "category": "marcel", "cost_xp": 900, "icon": "📚", "min_level": 3},
     {"id": "marcel-graduation", "name": "Graduation Marcel", "description": "A graduation-themed Marcel cosmetic.", "category": "marcel", "cost_xp": 1600, "icon": "🎓", "min_level": 5},
@@ -28,7 +28,14 @@ CATALOG = {item["id"]: item for item in REWARD_CATALOG}
 
 def _wallet(db: Session, student: models.Student):
     summary = progress_service.get_achievement_summary(db, student)
-    current_xp = int(summary.get("total_xp") or 0)
+    achievement_xp = int(summary.get("total_xp") or 0)
+    community_xp = sum(
+        amount or 0
+        for (amount,) in db.query(models.StudentXpEvent.xp_amount).filter(
+            models.StudentXpEvent.student_id == student.id
+        ).all()
+    )
+    current_xp = achievement_xp + community_xp
     wallet = db.query(models.StudentRewardWallet).filter(models.StudentRewardWallet.student_id == student.id).first()
     if wallet is None:
         wallet = models.StudentRewardWallet(student_id=student.id, lifetime_xp=current_xp, spent_xp=0)
@@ -60,7 +67,19 @@ def _state(db: Session, student: models.Student):
         "spent_xp": wallet.spent_xp,
         "available_xp": max(wallet.lifetime_xp - wallet.spent_xp, 0),
         "level": level,
-        "level_title": summary.get("level_title"),
+        "level_title": progress_service._get_achievement_level(wallet.lifetime_xp).get("level_title"),
+        "community_xp": sum(
+            amount or 0
+            for (amount,) in db.query(models.StudentXpEvent.xp_amount).filter(
+                models.StudentXpEvent.student_id == student.id
+            ).all()
+        ),
+        "showcase": [
+            row.achievement_id
+            for row in db.query(models.StudentAchievementShowcase).filter(
+                models.StudentAchievementShowcase.student_id == student.id
+            ).order_by(models.StudentAchievementShowcase.position.asc()).all()
+        ],
         "rewards": rewards,
         "equipped": {row.category: row.reward_id for row in purchases if row.is_equipped},
     }
@@ -125,5 +144,34 @@ def unequip_reward(reward_id: str, current_student: models.Student = Depends(get
     if row is None:
         raise HTTPException(status_code=404, detail="Reward not owned")
     row.is_equipped = False
+    db.commit()
+    return _state(db, current_student)
+
+
+@router.put("/showcase")
+def update_showcase(
+    achievement_ids: list[str],
+    current_student: models.Student = Depends(get_current_student),
+    db: Session = Depends(get_db),
+):
+    unique_ids = list(dict.fromkeys(achievement_ids))
+    if len(unique_ids) > 3:
+        raise HTTPException(status_code=400, detail="You can showcase up to 3 achievements")
+
+    summary = progress_service.get_achievement_summary(db, current_student)
+    unlocked = {item["id"] for item in summary.get("achievements", []) if item.get("unlocked")}
+    invalid = [item for item in unique_ids if item not in unlocked]
+    if invalid:
+        raise HTTPException(status_code=400, detail="Only unlocked achievements can be showcased")
+
+    db.query(models.StudentAchievementShowcase).filter(
+        models.StudentAchievementShowcase.student_id == current_student.id
+    ).delete(synchronize_session=False)
+    for position, achievement_id in enumerate(unique_ids, start=1):
+        db.add(models.StudentAchievementShowcase(
+            student_id=current_student.id,
+            achievement_id=achievement_id,
+            position=position,
+        ))
     db.commit()
     return _state(db, current_student)
