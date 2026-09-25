@@ -15,25 +15,22 @@ export default function UfhLogo({ className = "", variant = "full" }) {
 
   return (
     <span
-      className={`flex flex-col items-center text-center ${className}`}
+      className={`flex flex-col items-center justify-center text-center ${className}`}
       role="img"
       aria-label="University of Fort Hare — Together in Excellence"
     >
-      <span className="relative h-[150px] w-[150px] overflow-hidden">
-        <img
-          src={UFH_LOGO_URL}
-          alt=""
-          aria-hidden="true"
-          className="absolute left-1/2 top-0 h-auto max-w-none -translate-x-1/2"
-          style={{ width: "430px" }}
-          loading="eager"
-          referrerPolicy="no-referrer"
-        />
-      </span>
-      <span className="mt-3 whitespace-nowrap font-serif text-[clamp(19px,5.8vw,28px)] font-semibold leading-none tracking-[-0.03em] text-zinc-950">
+      <img
+        src={UFH_LOGO_URL}
+        alt=""
+        aria-hidden="true"
+        className="block h-auto w-full object-contain"
+        loading="eager"
+        referrerPolicy="no-referrer"
+      />
+      <span className="-mt-[28%] pb-[22%] font-serif text-[clamp(18px,6.5vw,30px)] font-semibold leading-tight tracking-[-0.03em] text-zinc-950">
         University of Fort Hare
       </span>
-      <span className="mt-2 whitespace-nowrap font-serif text-[clamp(13px,4vw,18px)] italic leading-none text-zinc-950">
+      <span className="-mt-[18%] pb-[12%] font-serif text-[clamp(12px,4vw,18px)] italic leading-tight text-zinc-950">
         Together in Excellence
       </span>
     </span>
