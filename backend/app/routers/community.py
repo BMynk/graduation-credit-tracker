@@ -840,6 +840,33 @@ def my_past_paper_achievements(
 # COMMUNITY PAST PAPER LIBRARY
 # ============================================================
 
+PAST_PAPER_XP_MILESTONES = {1: 100, 5: 250, 10: 500, 25: 1000, 50: 2000}
+
+
+def _award_past_paper_milestone_xp(db: Session, student_id: int) -> None:
+    """Award one-time community EXP for meaningful contribution milestones."""
+    count = db.query(models.PastPaper).filter(
+        models.PastPaper.uploader_id == student_id,
+        models.PastPaper.is_active.is_(True),
+    ).count()
+    for threshold, amount in PAST_PAPER_XP_MILESTONES.items():
+        if count < threshold:
+            continue
+        source_key = f"past-paper-milestone-{threshold}"
+        exists = db.query(models.StudentXpEvent).filter(
+            models.StudentXpEvent.student_id == student_id,
+            models.StudentXpEvent.source_key == source_key,
+        ).first()
+        if exists is None:
+            db.add(models.StudentXpEvent(
+                student_id=student_id,
+                source_key=source_key,
+                description=f"Shared {threshold} past paper{'s' if threshold != 1 else ''}",
+                xp_amount=amount,
+            ))
+    db.commit()
+
+
 def _paper_out(row: models.PastPaper):
     return schemas.PastPaperOut(
         id=row.id, module_code=row.module_code, module_name=row.module_name,
@@ -931,6 +958,7 @@ async def upload_past_paper(
     )
     db.add(row)
     db.commit()
+    _award_past_paper_milestone_xp(db, current_student.id)
     row = db.query(models.PastPaper).options(joinedload(models.PastPaper.uploader)).filter(models.PastPaper.id == row.id).first()
     return _paper_out(row)
 
