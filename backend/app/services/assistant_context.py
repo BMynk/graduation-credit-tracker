@@ -724,6 +724,87 @@ def _build_student_notifications_summary(
     }
 
 
+def build_admin_assistant_context(
+    db: Session,
+) -> dict:
+    """Build aggregate-only analytics for authenticated admins."""
+    students = (
+        db.query(models.Student)
+        .options(joinedload(models.Student.programme))
+        .filter(models.Student.is_active.is_(True))
+        .all()
+    )
+    progress_bands = {"0-25%": 0, "26-50%": 0, "51-75%": 0, "76-100%": 0}
+    year_counts = {}
+    programme_stats = {}
+    fail_counts = {}
+    graduation_ready = 0
+    prerequisite_blocks = 0
+    below_target = 0
+
+    for student in students:
+        summary = progress_service.build_progress_summary(db, student)
+        percentage = float(summary.get("percentage_complete") or 0)
+        band = "0-25%" if percentage <= 25 else "26-50%" if percentage <= 50 else "51-75%" if percentage <= 75 else "76-100%"
+        progress_bands[band] += 1
+        year_counts[student.current_year] = year_counts.get(student.current_year, 0) + 1
+
+        programme = student.programme
+        if programme:
+            stats = programme_stats.setdefault(programme.code, {"name": programme.name, "count": 0, "progress": [], "averages": []})
+            stats["count"] += 1
+            stats["progress"].append(percentage)
+            average = summary.get("weighted_average")
+            if average is not None:
+                stats["averages"].append(float(average))
+                if student.target_average is not None and float(average) < float(student.target_average):
+                    below_target += 1
+
+        blocked = False
+        for failed in summary.get("failed_modules", []):
+            module = failed.get("module") if isinstance(failed, dict) else None
+            if module is not None:
+                fail_counts[module.id] = fail_counts.get(module.id, 0) + 1
+            if isinstance(failed, dict) and failed.get("is_prerequisite_for_major"):
+                blocked = True
+        if blocked:
+            prerequisite_blocks += 1
+        if (
+            summary.get("credits_remaining") == 0
+            and not summary.get("missing_compulsory_modules")
+            and not summary.get("failed_modules")
+        ):
+            graduation_ready += 1
+
+    bottlenecks = []
+    for module_id, count in sorted(fail_counts.items(), key=lambda item: (-item[1], item[0]))[:8]:
+        module = db.query(models.Module).filter(models.Module.id == module_id).first()
+        if module:
+            bottlenecks.append({"code": module.code, "name": module.name, "fail_count": count})
+
+    programmes = []
+    for code, values in sorted(programme_stats.items()):
+        programmes.append({
+            "programme_code": code,
+            "programme_name": values["name"],
+            "student_count": values["count"],
+            "avg_percentage_complete": round(sum(values["progress"]) / len(values["progress"]), 1) if values["progress"] else None,
+            "avg_weighted_average": round(sum(values["averages"]) / len(values["averages"]), 2) if values["averages"] else None,
+        })
+
+    return {
+        "active_students": len(students),
+        "graduation_ready_count": graduation_ready,
+        "requirements_remaining_count": max(len(students) - graduation_ready, 0),
+        "failed_prerequisite_count": prerequisite_blocks,
+        "below_target_count": below_target,
+        "progress_distribution": [{"label": label, "student_count": count} for label, count in progress_bands.items()],
+        "students_by_year": [{"year": year, "student_count": count} for year, count in sorted(year_counts.items())],
+        "programme_performance": programmes,
+        "bottleneck_modules": bottlenecks,
+    }
+
+
 def build_facilitator_context(
     db: Session,
 ) -> list[dict]:
