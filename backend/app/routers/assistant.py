@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dependencies import get_optional_current_user
 from app.services.assistant_context import (
+    build_admin_assistant_context,
     build_facilitator_context,
     build_student_assistant_context,
 )
@@ -173,6 +174,11 @@ def build_verified_context(
             user,
         )
 
+    if role == "admin" or current_user.get("is_impersonation"):
+        return {
+            "admin_analytics": build_admin_assistant_context(db),
+        }
+
     return None
 
 
@@ -188,6 +194,12 @@ def select_relevant_student_context(
     """Keep only the verified academic data relevant to this request."""
     if not context:
         return None
+
+    if "admin_analytics" in context:
+        return {
+            "admin_analytics": context.get("admin_analytics"),
+            "page_context": (current_page or "").lower() or None,
+        }
 
     text = message.lower()
     page = (current_page or "").lower()
