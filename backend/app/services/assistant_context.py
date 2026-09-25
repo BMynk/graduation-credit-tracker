@@ -595,7 +595,134 @@ def build_student_assistant_context(
                 {},
             )
         ),
+
+        # --------------------------------------------------
+        # Personalized support and community resources
+        # --------------------------------------------------
+
+        "si_elep_support": _build_student_support_matches(
+            academic_history,
+            eligible_modules,
+        ),
+
+        "past_papers": _build_student_past_papers(
+            db,
+            student,
+            academic_history,
+            eligible_modules,
+        ),
+
+        "notifications": _build_student_notifications_summary(
+            db,
+            student,
+        ),
     }
+
+# ==========================================================
+# Marcel 2.0 contextual helpers
+# ==========================================================
+
+def _normalise_module_code(value: str | None) -> str:
+    return "".join((value or "").upper().split())
+
+
+def _build_student_support_matches(
+    academic_history: list[dict],
+    eligible_modules: list[dict],
+) -> list[dict]:
+    """Match the student's current/eligible modules to verified SI/ELEP support."""
+    codes = set()
+    for item in academic_history:
+        if item.get("status") not in {"completed", "failed"}:
+            module = item.get("module") or {}
+            if module.get("code"):
+                codes.add(_normalise_module_code(module["code"]))
+    for module in eligible_modules:
+        if module.get("code"):
+            codes.add(_normalise_module_code(module["code"]))
+
+    matches = []
+    for facilitator in VERIFIED_SEMESTER2_FACILITATORS:
+        assignment = _normalise_module_code(facilitator.get("module_assignment"))
+        supported = sorted(code for code in codes if code and code in assignment)
+        if supported:
+            matches.append({**facilitator, "matched_modules": supported})
+    return matches
+
+
+def _build_student_past_papers(
+    db: Session,
+    student: models.Student,
+    academic_history: list[dict],
+    eligible_modules: list[dict],
+) -> list[dict]:
+    """Expose only active past-paper metadata relevant to this student's modules."""
+    codes = {
+        (item.get("module") or {}).get("code")
+        for item in academic_history
+        if (item.get("module") or {}).get("code")
+    }
+    codes.update(module.get("code") for module in eligible_modules if module.get("code"))
+    codes.discard(None)
+    if not codes:
+        return []
+
+    rows = (
+        db.query(models.PastPaper)
+        .filter(
+            models.PastPaper.is_active.is_(True),
+            models.PastPaper.module_code.in_(codes),
+        )
+        .order_by(models.PastPaper.paper_year.desc(), models.PastPaper.module_code.asc())
+        .limit(80)
+        .all()
+    )
+    return [
+        {
+            "module_code": row.module_code,
+            "module_name": row.module_name,
+            "year": row.paper_year,
+            "semester": row.semester,
+            "level": row.level,
+            "description": row.description,
+            "file_name": row.file_name,
+            "file_url": row.file_url,
+        }
+        for row in rows
+    ]
+
+
+def _build_student_notifications_summary(
+    db: Session,
+    student: models.Student,
+) -> dict:
+    pending_requests = (
+        db.query(models.PrivateChatRequest)
+        .filter(
+            models.PrivateChatRequest.receiver_id == student.id,
+            models.PrivateChatRequest.status == "pending",
+        )
+        .count()
+    )
+    unread_messages = (
+        db.query(models.PrivateMessage)
+        .join(models.PrivateConversation)
+        .filter(
+            models.PrivateMessage.sender_id != student.id,
+            models.PrivateMessage.read_at.is_(None),
+            models.PrivateConversation.is_active.is_(True),
+            (
+                (models.PrivateConversation.student_one_id == student.id)
+                | (models.PrivateConversation.student_two_id == student.id)
+            ),
+        )
+        .count()
+    )
+    return {
+        "pending_chat_requests": pending_requests,
+        "unread_private_messages": unread_messages,
+    }
+
 
 def build_facilitator_context(
     db: Session,
