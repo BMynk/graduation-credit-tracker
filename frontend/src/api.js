@@ -573,6 +573,12 @@ getModuleDetail: (
   unequipReward: (rewardId) =>
     request(`/rewards/${rewardId}/unequip`, { method: "POST" }),
 
+  updateAchievementShowcase: (achievementIds) =>
+    request("/rewards/showcase", {
+      method: "PUT",
+      body: JSON.stringify(achievementIds),
+    }),
+
 
   // ==========================================================
   // Peer Comparison
