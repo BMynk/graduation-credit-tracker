@@ -1159,6 +1159,8 @@ function StudentDetail({ studentId, onBack, onChanged }) {
   const [editForm, setEditForm] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [resettingPin, setResettingPin] = useState(false);
+  const [generatingTestRecord, setGeneratingTestRecord] = useState(false);
+  const [resettingTestRecord, setResettingTestRecord] = useState(false);
 
   async function load() {
     try {
@@ -1270,6 +1272,36 @@ useEffect(() => {
       setError(err.message);
     } finally {
       setSavingMark(false);
+    }
+  }
+
+  async function handleGenerateTestRecord() {
+    if (!confirm("Generate reversible 95% test completions for every programme module that does not already have an academic record? Existing marks will not be overwritten.")) return;
+    setError(""); setSuccess(""); setGeneratingTestRecord(true);
+    try {
+      const result = await api.adminGenerateTestAcademicRecord(studentId);
+      setSuccess(result.message);
+      await load();
+      onChanged?.();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGeneratingTestRecord(false);
+    }
+  }
+
+  async function handleResetTestRecord() {
+    if (!confirm("Remove only the academic completions created by the test generator? Original academic records will be preserved.")) return;
+    setError(""); setSuccess(""); setResettingTestRecord(true);
+    try {
+      const result = await api.adminResetTestAcademicRecord(studentId);
+      setSuccess(result.message);
+      await load();
+      onChanged?.();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setResettingTestRecord(false);
     }
   }
 
@@ -1451,6 +1483,29 @@ useEffect(() => {
             <X size={16} />
           </button>
         </div>
+      )}
+
+      {student.student_number === "202355290" && (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-900/60 dark:bg-amber-950/20">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">EXP testing academic record</p>
+              <p className="mt-1 max-w-2xl text-xs leading-5 text-amber-800/80 dark:text-amber-300/80">
+                Creates 95% completed test records for this student's programme modules without overwriting existing academic records. Use Reset to remove only generated test records.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={handleGenerateTestRecord} disabled={generatingTestRecord || resettingTestRecord}
+                className="rounded-xl bg-amber-600 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-amber-700 disabled:opacity-50">
+                {generatingTestRecord ? "Generating..." : "Generate 95% test record"}
+              </button>
+              <button type="button" onClick={handleResetTestRecord} disabled={generatingTestRecord || resettingTestRecord}
+                className="rounded-xl border border-amber-300 bg-white px-4 py-2.5 text-xs font-semibold text-amber-800 transition hover:bg-amber-100 disabled:opacity-50 dark:border-amber-800 dark:bg-zinc-950 dark:text-amber-300">
+                {resettingTestRecord ? "Resetting..." : "Reset test record"}
+              </button>
+            </div>
+          </div>
+        </section>
       )}
 
       {/* ================================================== */}
