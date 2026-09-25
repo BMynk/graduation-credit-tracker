@@ -19,7 +19,7 @@ REWARD_CATALOG = [
     {"id": "theme-gold", "name": "Fort Hare Gold", "description": "Unlock a premium gold profile theme.", "category": "theme", "cost_xp": 1200, "icon": "✨", "min_level": 4},
     {"id": "frame-scholar", "name": "Scholar Frame", "description": "A clean frame for your community profile.", "category": "frame", "cost_xp": 500, "icon": "🖼️", "min_level": 2},
     {"id": "frame-legend", "name": "Legend Frame", "description": "An animated-style prestige frame for top progress.", "category": "frame", "cost_xp": 2500, "icon": "💫", "min_level": 6},
-    {"id": "marcel-classic", "name": "Classic Marcel", "description": "Classic Marcel visual theme.", "category": "marcel", "cost_xp": 300, "icon": "🤖", "min_level": 1},
+    {"id": "marcel-classic", "name": "Classic Marcel", "description": "Classic Marcel visual theme and concise response style.", "category": "marcel", "cost_xp": 300, "icon": "🤖", "min_level": 1},
     {"id": "marcel-scholar", "name": "Scholar Marcel", "description": "Give Marcel a scholar-themed presentation.", "category": "marcel", "cost_xp": 900, "icon": "📚", "min_level": 3},
     {"id": "marcel-graduation", "name": "Graduation Marcel", "description": "A graduation-themed Marcel cosmetic.", "category": "marcel", "cost_xp": 1600, "icon": "🎓", "min_level": 5},
 ]
