@@ -654,6 +654,117 @@ def record_mark(
 
 
 # ============================================================
+# TEST ACADEMIC RECORD
+# ============================================================
+
+TEST_STUDENT_NUMBER = "202355290"
+TEST_GRADE = 95.0
+TEST_SEMESTER_PREFIX = "TEST"
+
+
+@router.post("/students/{student_id}/test-academic-record")
+def generate_test_academic_record(
+    student_id: int,
+    current_admin: models.Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """Generate reversible 95% test completions for the designated test student."""
+    student = db.query(models.Student).filter(models.Student.id == student_id).first()
+    if student is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+    if student.student_number != TEST_STUDENT_NUMBER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Test academic records are restricted to the designated test student.",
+        )
+
+    links = (
+        db.query(models.ProgrammeModule)
+        .filter(models.ProgrammeModule.programme_id == student.programme_id)
+        .order_by(models.ProgrammeModule.year, models.ProgrammeModule.semester)
+        .all()
+    )
+    if not links:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No programme modules are configured for this student.",
+        )
+
+    created = 0
+    skipped = 0
+    for link in links:
+        existing = (
+            db.query(models.Enrolment)
+            .filter(
+                models.Enrolment.student_id == student.id,
+                models.Enrolment.module_id == link.module_id,
+            )
+            .first()
+        )
+        if existing:
+            skipped += 1
+            continue
+
+        semester = f"{TEST_SEMESTER_PREFIX}-Y{link.year}-S{link.semester}"
+        db.add(
+            models.Enrolment(
+                student_id=student.id,
+                module_id=link.module_id,
+                semester=semester,
+                grade=TEST_GRADE,
+                status="completed",
+                attempt=1,
+            )
+        )
+        created += 1
+
+    db.commit()
+    progress_service.check_and_notify_achievements(db, student)
+    return {
+        "student_number": student.student_number,
+        "grade": TEST_GRADE,
+        "created": created,
+        "skipped_existing": skipped,
+        "message": f"Created {created} reversible test completion(s) at {TEST_GRADE}%. Existing academic records were left unchanged.",
+    }
+
+
+@router.delete("/students/{student_id}/test-academic-record")
+def reset_test_academic_record(
+    student_id: int,
+    current_admin: models.Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """Remove only enrolments created by the test-record generator."""
+    student = db.query(models.Student).filter(models.Student.id == student_id).first()
+    if student is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+    if student.student_number != TEST_STUDENT_NUMBER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Test academic records are restricted to the designated test student.",
+        )
+
+    rows = (
+        db.query(models.Enrolment)
+        .filter(
+            models.Enrolment.student_id == student.id,
+            models.Enrolment.semester.like(f"{TEST_SEMESTER_PREFIX}-%"),
+        )
+        .all()
+    )
+    removed = len(rows)
+    for row in rows:
+        db.delete(row)
+    db.commit()
+    return {
+        "student_number": student.student_number,
+        "removed": removed,
+        "message": f"Removed {removed} generated test completion(s). Original academic records were preserved.",
+    }
+
+
+# ============================================================
 # BULK STUDENT CSV UPLOAD
 # ============================================================
 
