@@ -11,15 +11,30 @@ const REWARD_NAMES = {
   "title-study-strategist": "Study Strategist",
   "title-campus-scholar": "Campus Scholar",
   "title-graduation-master": "Graduation Master",
+  "title-module-master": "Module Master",
+  "title-prerequisite-pro": "Prerequisite Pro",
+  "title-credit-commander": "Credit Commander",
+  "title-knowledge-sharer": "Knowledge Sharer",
+  "title-fort-hare-legend": "Fort Hare Legend",
 };
 const THEME_CLASSES = {
   "theme-ocean": "from-cyan-50 via-white to-blue-50 dark:from-cyan-950/30 dark:via-zinc-900 dark:to-blue-950/30",
   "theme-violet": "from-violet-50 via-white to-fuchsia-50 dark:from-violet-950/30 dark:via-zinc-900 dark:to-fuchsia-950/30",
   "theme-gold": "from-amber-50 via-white to-yellow-50 dark:from-amber-950/30 dark:via-zinc-900 dark:to-yellow-950/20",
+  "theme-emerald": "from-emerald-50 via-white to-teal-50 dark:from-emerald-950/30 dark:via-zinc-900 dark:to-teal-950/30",
+  "theme-midnight": "from-slate-100 via-zinc-50 to-indigo-100 dark:from-slate-950 dark:via-zinc-900 dark:to-indigo-950/50",
+  "theme-sunset": "from-orange-50 via-rose-50 to-amber-50 dark:from-orange-950/30 dark:via-zinc-900 dark:to-rose-950/30",
+  "theme-royal": "from-purple-50 via-white to-indigo-50 dark:from-purple-950/40 dark:via-zinc-900 dark:to-indigo-950/40",
+  "theme-legend": "from-amber-100 via-zinc-50 to-yellow-100 dark:from-zinc-950 dark:via-amber-950/30 dark:to-zinc-950",
 };
 const FRAME_CLASSES = {
   "frame-scholar": "ring-2 ring-brand-400/60 ring-offset-2 dark:ring-offset-zinc-900",
   "frame-legend": "ring-4 ring-amber-400/70 ring-offset-2 shadow-[0_0_28px_rgba(245,158,11,0.35)] animate-pulse dark:ring-offset-zinc-900",
+  "frame-focus": "ring-2 ring-emerald-400/70 ring-offset-2 dark:ring-offset-zinc-900",
+  "frame-campus": "ring-2 ring-blue-400/70 ring-offset-2 shadow-md dark:ring-offset-zinc-900",
+  "frame-honours": "ring-[3px] ring-violet-400/70 ring-offset-2 shadow-lg dark:ring-offset-zinc-900",
+  "frame-lion": "ring-4 ring-yellow-500/70 ring-offset-2 shadow-[0_0_20px_rgba(234,179,8,0.3)] dark:ring-offset-zinc-900",
+  "frame-master": "ring-4 ring-fuchsia-400/70 ring-offset-2 shadow-[0_0_30px_rgba(217,70,239,0.35)] animate-pulse dark:ring-offset-zinc-900",
 };
 function achievementLabel(id = "") {
   return id.split("-").join(" ").split("_").join(" ").replace(/\b\w/g, (letter) => letter.toUpperCase());
