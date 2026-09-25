@@ -1,4 +1,5 @@
-import { X, GraduationCap, LogOut } from "lucide-react";
+import { X, LogOut } from "lucide-react";
+import UfhLogo from "../branding/UfhLogo";
 import { motion, AnimatePresence } from "framer-motion";
 
 const tabs = [
@@ -54,9 +55,10 @@ export default function MobileNavigation({
           >
             <div className="flex h-[72px] items-center justify-between border-b border-zinc-200 px-5 dark:border-zinc-800">
               <div className="flex items-center gap-3">
-                <div className="flex size-9 items-center justify-center rounded-xl bg-brand-500 text-white">
-                  <GraduationCap size={19} />
-                </div>
+                <UfhLogo
+                  variant="crest"
+                  className="size-10 shrink-0 rounded-xl object-contain shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-700"
+                />
 
                 <span className="text-sm font-bold text-zinc-950 dark:text-white">
                   Credit Tracker
