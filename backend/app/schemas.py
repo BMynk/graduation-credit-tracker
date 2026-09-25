@@ -883,6 +883,11 @@ class CommunityStudentProfileOut(BaseModel):
     chat_status: Optional[str] = None
     past_paper_upload_count: int = 0
     contributor_achievement: Optional[str] = None
+    equipped_title: Optional[str] = None
+    equipped_theme: Optional[str] = None
+    equipped_frame: Optional[str] = None
+    equipped_marcel: Optional[str] = None
+    achievement_showcase: List[str] = Field(default_factory=list)
 
 
 class PrivateChatRequestOut(BaseModel):

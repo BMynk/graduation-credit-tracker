@@ -207,6 +207,7 @@ def select_relevant_student_context(
         "student": context.get("student"),
         "progress": context.get("progress"),
         "page_context": page or None,
+        "equipped_marcel_cosmetic": context.get("equipped_marcel_cosmetic"),
     }
 
     def wants(*terms: str) -> bool:

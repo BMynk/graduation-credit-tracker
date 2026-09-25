@@ -24,6 +24,7 @@ from app.routers import (
     planning,
     programmes,
     progress,
+    rewards,
     students,
     support_services,
     
@@ -135,6 +136,7 @@ app.include_router(students.router)
 app.include_router(modules.router)
 app.include_router(programmes.router)
 app.include_router(progress.router)
+app.include_router(rewards.router)
 app.include_router(planning.router)
 app.include_router(email.router)
 app.include_router(assistant.router)

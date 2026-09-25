@@ -1591,36 +1591,18 @@ ACHIEVEMENT_DEFINITIONS = {
 
 # XP level system
 ACHIEVEMENT_LEVELS = [
-    {
-        "level": 1,
-        "title": "Rookie",
-        "min_xp": 0,
-    },
-    {
-        "level": 2,
-        "title": "Explorer",
-        "min_xp": 500,
-    },
-    {
-        "level": 3,
-        "title": "Achiever",
-        "min_xp": 1200,
-    },
-    {
-        "level": 4,
-        "title": "Scholar",
-        "min_xp": 2200,
-    },
-    {
-        "level": 5,
-        "title": "Master",
-        "min_xp": 3500,
-    },
-    {
-        "level": 6,
-        "title": "Legend",
-        "min_xp": 5500,
-    },
+    {"level": 1, "title": "Rookie", "min_xp": 0},
+    {"level": 2, "title": "Explorer", "min_xp": 500},
+    {"level": 3, "title": "Achiever", "min_xp": 1200},
+    {"level": 4, "title": "Scholar", "min_xp": 2200},
+    {"level": 5, "title": "Master", "min_xp": 3500},
+    {"level": 6, "title": "Legend", "min_xp": 5500},
+    {"level": 7, "title": "Credit Hunter", "min_xp": 7000},
+    {"level": 8, "title": "Study Strategist", "min_xp": 8500},
+    {"level": 9, "title": "Campus Scholar", "min_xp": 10000},
+    {"level": 10, "title": "Academic Vanguard", "min_xp": 11500},
+    {"level": 11, "title": "Graduation Master", "min_xp": 13000},
+    {"level": 12, "title": "Fort Hare Legend", "min_xp": 15000},
 ]
 
 
@@ -2242,10 +2224,17 @@ def get_achievement_summary(
     total = len(achievements)
     unlocked_count = len(unlocked)
 
-    total_xp = sum(
+    achievement_xp = sum(
         achievement["xp"]
         for achievement in unlocked
     )
+    community_xp = sum(
+        amount or 0
+        for (amount,) in db.query(models.StudentXpEvent.xp_amount).filter(
+            models.StudentXpEvent.student_id == student.id
+        ).all()
+    )
+    total_xp = achievement_xp + community_xp
 
     level_info = _get_achievement_level(
         total_xp

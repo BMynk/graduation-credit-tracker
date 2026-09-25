@@ -504,6 +504,73 @@ class StudentAchievement(Base):
     )
 
 # ============================================================
+# XP REWARDS
+# ============================================================
+
+class StudentRewardWallet(Base):
+    __tablename__ = "student_reward_wallets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, unique=True, index=True)
+    lifetime_xp = Column(Integer, nullable=False, default=0)
+    spent_xp = Column(Integer, nullable=False, default=0)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    student = relationship("Student")
+
+
+class StudentRewardPurchase(Base):
+    __tablename__ = "student_reward_purchases"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
+    reward_id = Column(String, nullable=False, index=True)
+    category = Column(String, nullable=False, index=True)
+    cost_xp = Column(Integer, nullable=False)
+    purchased_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    is_equipped = Column(Boolean, nullable=False, default=False)
+
+    student = relationship("Student")
+
+    __table_args__ = (
+        UniqueConstraint("student_id", "reward_id", name="uq_student_reward_purchase"),
+    )
+
+
+class StudentXpEvent(Base):
+    __tablename__ = "student_xp_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
+    source_key = Column(String(120), nullable=False)
+    description = Column(String(255), nullable=False)
+    xp_amount = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    student = relationship("Student")
+
+    __table_args__ = (
+        UniqueConstraint("student_id", "source_key", name="uq_student_xp_event_source"),
+    )
+
+
+class StudentAchievementShowcase(Base):
+    __tablename__ = "student_achievement_showcases"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
+    achievement_id = Column(String(80), nullable=False)
+    position = Column(Integer, nullable=False, default=1)
+
+    student = relationship("Student")
+
+    __table_args__ = (
+        UniqueConstraint("student_id", "achievement_id", name="uq_student_showcase_achievement"),
+        UniqueConstraint("student_id", "position", name="uq_student_showcase_position"),
+    )
+
+
+# ============================================================
 # SUPPORT SERVICE
 # ============================================================
 

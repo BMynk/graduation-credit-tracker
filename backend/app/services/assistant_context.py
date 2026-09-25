@@ -616,6 +616,18 @@ def build_student_assistant_context(
             db,
             student,
         ),
+
+        "equipped_marcel_cosmetic": next(
+            (
+                row.reward_id
+                for row in db.query(models.StudentRewardPurchase).filter(
+                    models.StudentRewardPurchase.student_id == student.id,
+                    models.StudentRewardPurchase.category == "marcel",
+                    models.StudentRewardPurchase.is_equipped.is_(True),
+                ).all()
+            ),
+            None,
+        ),
     }
 
 # ==========================================================

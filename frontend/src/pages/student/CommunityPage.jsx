@@ -5,6 +5,26 @@ import PastPapersPanel from "./PastPapersPanel";
 
 const REACTIONS = ["👍", "❤️", "😂", "🔥", "🎉", "👏"];
 
+const REWARD_NAMES = {
+  "title-rising-scholar": "Rising Scholar",
+  "title-credit-hunter": "Credit Hunter",
+  "title-study-strategist": "Study Strategist",
+  "title-campus-scholar": "Campus Scholar",
+  "title-graduation-master": "Graduation Master",
+};
+const THEME_CLASSES = {
+  "theme-ocean": "from-cyan-50 via-white to-blue-50 dark:from-cyan-950/30 dark:via-zinc-900 dark:to-blue-950/30",
+  "theme-violet": "from-violet-50 via-white to-fuchsia-50 dark:from-violet-950/30 dark:via-zinc-900 dark:to-fuchsia-950/30",
+  "theme-gold": "from-amber-50 via-white to-yellow-50 dark:from-amber-950/30 dark:via-zinc-900 dark:to-yellow-950/20",
+};
+const FRAME_CLASSES = {
+  "frame-scholar": "ring-2 ring-brand-400/60 ring-offset-2 dark:ring-offset-zinc-900",
+  "frame-legend": "ring-4 ring-amber-400/70 ring-offset-2 shadow-[0_0_28px_rgba(245,158,11,0.35)] animate-pulse dark:ring-offset-zinc-900",
+};
+function achievementLabel(id = "") {
+  return id.split("-").join(" ").split("_").join(" ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 function initials(name = "Student") {
   return name.split(" ").filter(Boolean).map((p) => p[0]).join("").slice(0, 2).toUpperCase();
 }
@@ -496,11 +516,11 @@ export default function CommunityPage({ student }) {
 
       {profile && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setProfile(null)}>
-          <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900" onClick={(e) => e.stopPropagation()}>
+          <div className={`w-full max-w-md rounded-2xl border border-zinc-200 bg-gradient-to-br p-6 shadow-2xl dark:border-zinc-800 ${THEME_CLASSES[profile.equipped_theme] || "from-white via-white to-zinc-50 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-950"}`} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex size-12 items-center justify-center rounded-2xl bg-brand-100 font-bold text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">{initials(profile.name)}</div>
-                <div><h2 className="font-bold text-zinc-950 dark:text-white">{profile.name}</h2><p className="text-xs text-zinc-500">{profile.programme_code} · Year {profile.current_year}</p></div>
+                <div className={`flex size-12 items-center justify-center rounded-2xl bg-brand-100 font-bold text-brand-700 dark:bg-brand-500/15 dark:text-brand-300 ${FRAME_CLASSES[profile.equipped_frame] || ""}`}>{initials(profile.name)}</div>
+                <div><h2 className="font-bold text-zinc-950 dark:text-white">{profile.name}</h2><p className="text-xs text-zinc-500">{profile.programme_code} · Year {profile.current_year}</p>{profile.equipped_title && <span className="mt-1 inline-flex rounded-full bg-brand-500/10 px-2 py-0.5 text-[10px] font-bold text-brand-700 dark:text-brand-300">✦ {REWARD_NAMES[profile.equipped_title] || achievementLabel(profile.equipped_title)}</span>}</div>
               </div>
               <button onClick={() => setProfile(null)} className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"><X size={18}/></button>
             </div>
@@ -508,7 +528,8 @@ export default function CommunityPage({ student }) {
               <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Programme</p>
               <p className="mt-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">{profile.programme_name}</p>
               {profile.contributor_achievement && <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">🏆 {profile.contributor_achievement} · {profile.past_paper_upload_count} papers shared</div>}
-              <p className="mt-3 text-xs text-zinc-500">Only basic community profile information and contribution achievements are shared. Academic marks and contact details stay private.</p>
+              {profile.achievement_showcase?.length > 0 && <div className="mt-4"><p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Achievement showcase</p><div className="mt-2 flex flex-wrap gap-2">{profile.achievement_showcase.map((id) => <span key={id} className="rounded-lg border border-zinc-200 bg-white/70 px-2.5 py-1.5 text-[10px] font-bold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-zinc-200">🏅 {achievementLabel(id)}</span>)}</div></div>}
+              <p className="mt-3 text-xs text-zinc-500">Only basic community profile information, equipped cosmetics and contribution achievements are shared. Academic marks and contact details stay private.</p>
             </div>
             <div className="mt-5">
               {!profile.chat_status && <button onClick={requestChat} className="w-full rounded-xl bg-brand-500 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-600">Request to chat privately</button>}

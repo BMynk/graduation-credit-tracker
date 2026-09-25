@@ -561,6 +561,24 @@ getModuleDetail: (
       "/progress/achievements"
     ),
 
+  getRewards: () =>
+    request("/rewards"),
+
+  purchaseReward: (rewardId) =>
+    request(`/rewards/${rewardId}/purchase`, { method: "POST" }),
+
+  equipReward: (rewardId) =>
+    request(`/rewards/${rewardId}/equip`, { method: "POST" }),
+
+  unequipReward: (rewardId) =>
+    request(`/rewards/${rewardId}/unequip`, { method: "POST" }),
+
+  updateAchievementShowcase: (achievementIds) =>
+    request("/rewards/showcase", {
+      method: "PUT",
+      body: JSON.stringify(achievementIds),
+    }),
+
 
   // ==========================================================
   // Peer Comparison
