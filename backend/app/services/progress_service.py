@@ -1597,12 +1597,12 @@ ACHIEVEMENT_LEVELS = [
     {"level": 4, "title": "Scholar", "min_xp": 2200},
     {"level": 5, "title": "Master", "min_xp": 3500},
     {"level": 6, "title": "Legend", "min_xp": 5500},
-    {"level": 7, "title": "Credit Hunter", "min_xp": 7500},
-    {"level": 8, "title": "Study Strategist", "min_xp": 10000},
-    {"level": 9, "title": "Campus Scholar", "min_xp": 13000},
-    {"level": 10, "title": "Academic Vanguard", "min_xp": 16500},
-    {"level": 11, "title": "Graduation Master", "min_xp": 20500},
-    {"level": 12, "title": "Fort Hare Legend", "min_xp": 25000},
+    {"level": 7, "title": "Credit Hunter", "min_xp": 7000},
+    {"level": 8, "title": "Study Strategist", "min_xp": 8500},
+    {"level": 9, "title": "Campus Scholar", "min_xp": 10000},
+    {"level": 10, "title": "Academic Vanguard", "min_xp": 11500},
+    {"level": 11, "title": "Graduation Master", "min_xp": 13000},
+    {"level": 12, "title": "Fort Hare Legend", "min_xp": 15000},
 ]
 
 
