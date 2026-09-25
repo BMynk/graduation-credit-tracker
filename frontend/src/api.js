@@ -700,6 +700,19 @@ getModuleDetail: (
     ),
 
 
+  adminGenerateTestAcademicRecord: (id) =>
+    request(
+      `/admin/students/${id}/test-academic-record`,
+      { method: "POST" }
+    ),
+
+  adminResetTestAcademicRecord: (id) =>
+    request(
+      `/admin/students/${id}/test-academic-record`,
+      { method: "DELETE" }
+    ),
+
+
   adminRegeneratePin: (
     id
   ) =>
