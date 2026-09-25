@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app import models
 from app.services import progress_service
+from app.data.facilitators_semester2 import FACILITATORS as VERIFIED_SEMESTER2_FACILITATORS
 
 
 # ==========================================================
@@ -600,9 +601,16 @@ def build_facilitator_context(
     db: Session,
 ) -> list[dict]:
     """
-    Return active and verified SI/ELEP facilitator information
-    that is safe for the assistant to use.
+    Return public, verified SI/ELEP facilitator information for Marcel.
+
+    Semester 2 data supplied by the project owner is always available to
+    guests, students, and admins. Verified database rows can extend/override
+    the same facilitator + programme entry without creating duplicates.
     """
+    combined = {
+        (item["programme_type"].upper(), item["name"].casefold()): dict(item)
+        for item in VERIFIED_SEMESTER2_FACILITATORS
+    }
 
     facilitators = (
         db.query(models.Facilitator)
@@ -610,15 +618,11 @@ def build_facilitator_context(
             models.Facilitator.is_active.is_(True),
             models.Facilitator.verified_at.isnot(None),
         )
-        .order_by(
-            models.Facilitator.programme_type.asc(),
-            models.Facilitator.name.asc(),
-        )
         .all()
     )
 
-    return [
-        {
+    for facilitator in facilitators:
+        item = {
             "name": facilitator.name,
             "programme_type": facilitator.programme_type,
             "module_assignment": facilitator.module_assignment,
@@ -627,5 +631,14 @@ def build_facilitator_context(
             "consultation_time": facilitator.consultation_time,
             "is_assistant": facilitator.is_assistant,
         }
-        for facilitator in facilitators
-    ]
+        combined[
+            (facilitator.programme_type.upper(), facilitator.name.casefold())
+        ] = item
+
+    return sorted(
+        combined.values(),
+        key=lambda item: (
+            item["programme_type"].upper(),
+            item["name"].casefold(),
+        ),
+    )
