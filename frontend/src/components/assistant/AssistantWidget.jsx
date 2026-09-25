@@ -112,6 +112,7 @@ function MarcelLogo({
   size = "md",
   animated = false,
   thinking = false,
+  cosmetic = null,
 }) {
   const sizes = {
     sm: "h-9 w-9",
@@ -120,12 +121,21 @@ function MarcelLogo({
     xl: "h-[92px] w-[92px]",
   };
 
+  const cosmeticGlow =
+    cosmetic === "marcel-graduation"
+      ? "shadow-[0_0_24px_rgba(245,158,11,0.55)]"
+      : cosmetic === "marcel-scholar"
+        ? "shadow-[0_0_24px_rgba(139,92,246,0.5)]"
+        : cosmetic === "marcel-classic"
+          ? "shadow-[0_0_20px_rgba(34,211,238,0.35)]"
+          : "";
+
   const ringSpeed = thinking ? 1.15 : 5.5;
   const reverseRingSpeed = thinking ? 0.9 : 7;
 
   return (
     <motion.div
-      className={`${sizes[size] || sizes.md} relative shrink-0`}
+      className={`${sizes[size] || sizes.md} relative shrink-0 rounded-full ${cosmeticGlow}`}
       animate={animated ? { y: [0, -2, 0] } : undefined}
       transition={
         animated
@@ -359,6 +369,7 @@ export default function AssistantWidget({ userRole = "guest", currentPage = null
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [marcelCosmetic, setMarcelCosmetic] = useState(null);
   const [streamStarted, setStreamStarted] =
     useState(false);
 
@@ -416,6 +427,22 @@ export default function AssistantWidget({ userRole = "guest", currentPage = null
 
     return GUEST_SUGGESTIONS;
   }, [userRole]);
+
+  useEffect(() => {
+    if (userRole !== "student") {
+      setMarcelCosmetic(null);
+      return;
+    }
+    let alive = true;
+    api.getRewards()
+      .then((result) => {
+        if (alive) setMarcelCosmetic(result?.equipped?.marcel || null);
+      })
+      .catch(() => {
+        if (alive) setMarcelCosmetic(null);
+      });
+    return () => { alive = false; };
+  }, [userRole, isOpen]);
 
   const roleLabel =
     userRole === "student"
@@ -677,7 +704,7 @@ export default function AssistantWidget({ userRole = "guest", currentPage = null
 
               <div className="relative flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <MarcelLogo size="md" animated />
+                  <MarcelLogo size="md" animated cosmetic={marcelCosmetic} />
 
                   <div>
                     <div className="flex items-center gap-2">
@@ -691,6 +718,7 @@ export default function AssistantWidget({ userRole = "guest", currentPage = null
                       >
                         {MARCEL_NAME}
                       </h2>
+                      {marcelCosmetic && <span className="text-[9px] font-semibold text-zinc-400">{marcelCosmetic === "marcel-scholar" ? "Scholar" : marcelCosmetic === "marcel-graduation" ? "Graduation" : "Classic"} style</span>}
 
                       <span
                         className="
@@ -836,6 +864,7 @@ export default function AssistantWidget({ userRole = "guest", currentPage = null
                           <MarcelLogo
                             size="xl"
                             animated
+                            cosmetic={marcelCosmetic}
                           />
 
                           <div className="mt-4">
@@ -904,7 +933,7 @@ export default function AssistantWidget({ userRole = "guest", currentPage = null
                     >
                       {!isUser && (
                         <div className="mr-2 mt-1">
-                          <MarcelLogo size="sm" />
+                          <MarcelLogo size="sm" cosmetic={marcelCosmetic} />
                         </div>
                       )}
 
@@ -1101,6 +1130,7 @@ export default function AssistantWidget({ userRole = "guest", currentPage = null
                       size="sm"
                       animated
                       thinking
+                      cosmetic={marcelCosmetic}
                       />
                     </div>
 
@@ -1545,6 +1575,7 @@ export default function AssistantWidget({ userRole = "guest", currentPage = null
                 <MarcelLogo
               size="md"
               animated
+              cosmetic={marcelCosmetic}
               />
               
               </motion.div>
