@@ -21,6 +21,7 @@ import { api } from "../../api";
 import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { Progress } from "../../components/ui/Progress";
+import RewardsShop from "./RewardsShop";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 12 },
@@ -877,6 +878,12 @@ export default function AchievementsPage() {
           helper="Highest rarity unlocked"
           accent="violet"
         />
+      </motion.div>
+
+      {/* EXP rewards, inventory and equip system */}
+
+      <motion.div variants={fadeUp}>
+        <RewardsShop />
       </motion.div>
 
       {/* Recent unlocks */}
