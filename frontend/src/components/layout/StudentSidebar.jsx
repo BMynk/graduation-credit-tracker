@@ -133,7 +133,7 @@ export default function StudentSidebar({
         <div className="flex min-w-0 items-center gap-3">
           <UfhLogo
             variant="crest"
-            className="size-11 shrink-0 rounded-xl shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-700"
+            className="size-11 shrink-0 object-contain mix-blend-multiply dark:mix-blend-normal"
           />
 
           <div
