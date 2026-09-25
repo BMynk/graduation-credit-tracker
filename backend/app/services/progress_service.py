@@ -2224,10 +2224,17 @@ def get_achievement_summary(
     total = len(achievements)
     unlocked_count = len(unlocked)
 
-    total_xp = sum(
+    achievement_xp = sum(
         achievement["xp"]
         for achievement in unlocked
     )
+    community_xp = sum(
+        amount or 0
+        for (amount,) in db.query(models.StudentXpEvent.xp_amount).filter(
+            models.StudentXpEvent.student_id == student.id
+        ).all()
+    )
+    total_xp = achievement_xp + community_xp
 
     level_info = _get_achievement_level(
         total_xp
