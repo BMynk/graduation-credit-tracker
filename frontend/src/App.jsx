@@ -310,7 +310,14 @@ function RolePicker({ onPick }) {
               }}
             >
               <div className="mb-9">
-                <div className="mb-4 flex size-11 items-center justify-center rounded-xl border border-zinc-200 bg-white text-blue-600 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="mb-5 hidden lg:block">
+                  <UfhLogo
+                    variant="crest"
+                    className="size-16 object-contain"
+                  />
+                </div>
+
+                <div className="mb-4 flex size-11 items-center justify-center rounded-xl border border-zinc-200 bg-white text-blue-600 shadow-sm lg:hidden dark:border-zinc-800 dark:bg-zinc-900">
                   <GraduationCap size={21} />
                 </div>
 
