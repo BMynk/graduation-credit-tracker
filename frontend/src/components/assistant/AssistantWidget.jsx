@@ -27,8 +27,8 @@ const WELCOME_MESSAGE = {
   role: "model",
   text:
     "Hi! I'm **Marcel**, your academic assistant. 👋\n\n" +
-    "I can help you understand your academic progress, plan your modules, " +
-    "check prerequisites, find facilitator information, and navigate university services.",
+    "I can help with academic progress, module planning, prerequisites, SI/ELEP support, " +
+    "past papers, study planning, notifications, GCT navigation, and verified admin analytics.",
 };
 
 /* ============================================================
@@ -48,8 +48,8 @@ const GUEST_SUGGESTIONS = [
   },
   {
     icon: Users,
-    label: "Find a facilitator",
-    prompt: "Can you help me find a facilitator?",
+    label: "Find SI / ELEP",
+    prompt: "Which SI or ELEP facilitators and sessions are available?",
   },
   {
     icon: Sparkles,
@@ -76,16 +76,16 @@ const STUDENT_SUGGESTIONS = [
   },
   {
     icon: Users,
-    label: "Find a facilitator",
-    prompt: "Can you help me find one of my module facilitators?",
+    label: "My SI / ELEP support",
+    prompt: "Which of my modules have SI or ELEP support?",
   },
 ];
 
 const ADMIN_SUGGESTIONS = [
   {
     icon: Users,
-    label: "Student support",
-    prompt: "How can I identify students who may need academic support?",
+    label: "Analytics overview",
+    prompt: "Summarize the current aggregate academic analytics and bottleneck modules.",
   },
   {
     icon: GraduationCap,
