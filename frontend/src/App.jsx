@@ -139,8 +139,8 @@ function RolePicker({ onPick }) {
           <div className="relative z-10 flex h-full flex-col px-12 py-10 xl:px-16 xl:py-12">
             {/* Brand */}
             <div className="flex items-center gap-3">
-              <div className="w-[250px] shrink-0 rounded-2xl bg-white px-5 py-4 shadow-lg shadow-blue-950/30">
-                <UfhLogo className="w-full" />
+              <div className="flex w-[280px] shrink-0 justify-center rounded-2xl bg-white px-4 py-4 shadow-lg shadow-blue-950/30">
+                <UfhLogo className="w-[260px] max-w-full" />
               </div>
 
               <div>
@@ -287,10 +287,8 @@ function RolePicker({ onPick }) {
         <section className="relative flex min-h-screen items-center justify-center bg-[#f8f9fb] px-5 py-10 sm:px-8 dark:bg-zinc-950">
           <div className="w-full max-w-[520px]">
             {/* Mobile brand */}
-            <div className="mb-12 flex items-center gap-3 lg:hidden">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
-                <GraduationCap size={21} />
-              </div>
+            <div className="mb-12 flex flex-col items-center gap-4 text-center lg:hidden">
+              <UfhLogo className="w-[280px] max-w-full" />
 
               <div>
                 <p className="text-sm font-semibold tracking-tight text-zinc-950 dark:text-white">
