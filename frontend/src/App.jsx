@@ -138,17 +138,17 @@ function RolePicker({ onPick }) {
 
           <div className="relative z-10 flex h-full flex-col px-12 py-10 xl:px-16 xl:py-12">
             {/* Brand */}
-            <div className="flex items-center gap-3">
-              <div className="flex w-[280px] shrink-0 justify-center rounded-2xl bg-white px-4 py-4 shadow-lg shadow-blue-950/30">
-                <UfhLogo className="w-[260px] max-w-full" />
+            <div className="flex flex-col items-center text-center">
+              <div className="flex w-[300px] justify-center rounded-2xl bg-white px-4 py-4 shadow-lg shadow-blue-950/30">
+                <UfhLogo className="w-[270px] max-w-full" />
               </div>
 
-              <div>
+              <div className="mt-4">
                 <p className="text-[15px] font-semibold tracking-tight text-white">
                   Graduation Credit Tracker
                 </p>
 
-                <p className="text-[11px] font-medium text-zinc-500">
+                <p className="mt-1 text-[11px] font-medium text-zinc-500">
                   Academic progress platform
                 </p>
               </div>
@@ -310,13 +310,6 @@ function RolePicker({ onPick }) {
               }}
             >
               <div className="mb-9">
-                <div className="mb-5 hidden lg:block">
-                  <UfhLogo
-                    variant="crest"
-                    className="size-16 object-contain"
-                  />
-                </div>
-
                 <div className="mb-4 flex size-11 items-center justify-center rounded-xl border border-zinc-200 bg-white text-blue-600 shadow-sm lg:hidden dark:border-zinc-800 dark:bg-zinc-900">
                   <GraduationCap size={21} />
                 </div>
