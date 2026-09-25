@@ -282,8 +282,8 @@ function RolePicker({ onPick }) {
           <div className="w-full max-w-[520px]">
             {/* Desktop UFH brand */}
             <div className="mb-10 hidden flex-col items-center text-center lg:flex">
-              <div className="flex w-[300px] justify-center rounded-2xl bg-white px-4 py-4 shadow-sm">
-                <UfhLogo className="w-[270px] max-w-full" />
+              <div className="flex w-[300px] justify-center">
+                <UfhLogo className="w-[270px] max-w-full mix-blend-multiply" />
               </div>
             </div>
 
