@@ -50,6 +50,34 @@ REWARD_CATALOG = [
     {"id": "marcel-coach", "name": "Coach Marcel", "description": "A motivating study-coach presentation that keeps academic advice grounded.", "category": "marcel", "cost_xp": 2100, "icon": "📣", "min_level": 6},
     {"id": "marcel-legend", "name": "Legend Marcel", "description": "A premium Marcel cosmetic for high-level students.", "category": "marcel", "cost_xp": 4200, "icon": "✨", "min_level": 9},
     {"id": "marcel-lion", "name": "Lion Marcel", "description": "A Fort Hare-inspired prestige Marcel cosmetic.", "category": "marcel", "cost_xp": 6500, "icon": "🦁", "min_level": 12},
+
+    # Extra titles
+    {"id": "title-study-streak", "name": "Study Streak", "description": "A bright title for students building steady academic momentum.", "category": "title", "cost_xp": 600, "icon": "🔥", "min_level": 2},
+    {"id": "title-goal-getter", "name": "Goal Getter", "description": "For students who keep moving toward their graduation goals.", "category": "title", "cost_xp": 1050, "icon": "🎯", "min_level": 4},
+    {"id": "title-campus-mentor", "name": "Campus Mentor", "description": "A community-minded prestige title.", "category": "title", "cost_xp": 1750, "icon": "🫱🏽‍🫲🏾", "min_level": 5},
+    {"id": "title-academic-vanguard", "name": "Academic Vanguard", "description": "A high-tier title for advanced GCT progression.", "category": "title", "cost_xp": 3200, "icon": "🛡️", "min_level": 9},
+    {"id": "title-lions-pride", "name": "Lion's Pride", "description": "A premium Fort Hare-inspired community title.", "category": "title", "cost_xp": 5000, "icon": "🦁", "min_level": 11},
+
+    # Extra themes
+    {"id": "theme-sky", "name": "Sky Scholar", "description": "A light sky-inspired profile theme.", "category": "theme", "cost_xp": 700, "icon": "☁️", "min_level": 3},
+    {"id": "theme-forest", "name": "Forest Focus", "description": "A rich forest-inspired profile theme.", "category": "theme", "cost_xp": 1100, "icon": "🌲", "min_level": 4},
+    {"id": "theme-rose", "name": "Rose Quartz", "description": "A soft rose-inspired Community profile theme.", "category": "theme", "cost_xp": 1600, "icon": "🌸", "min_level": 5},
+    {"id": "theme-cosmic", "name": "Cosmic Scholar", "description": "A deep cosmic prestige profile theme.", "category": "theme", "cost_xp": 2900, "icon": "🌌", "min_level": 8},
+    {"id": "theme-lion", "name": "Lion Pride", "description": "A premium blue-and-gold Fort Hare-inspired theme.", "category": "theme", "cost_xp": 5200, "icon": "🦁", "min_level": 11},
+
+    # Extra frames
+    {"id": "frame-spark", "name": "Spark Frame", "description": "A bright starter prestige frame.", "category": "frame", "cost_xp": 650, "icon": "⚡", "min_level": 2},
+    {"id": "frame-book", "name": "Knowledge Frame", "description": "A book-inspired frame for dedicated learners.", "category": "frame", "cost_xp": 1000, "icon": "📚", "min_level": 4},
+    {"id": "frame-diamond", "name": "Diamond Scholar Frame", "description": "A crisp premium frame for accomplished students.", "category": "frame", "cost_xp": 2800, "icon": "💎", "min_level": 7},
+    {"id": "frame-cosmic", "name": "Cosmic Frame", "description": "A glowing cosmic frame for high-level profiles.", "category": "frame", "cost_xp": 4600, "icon": "🌌", "min_level": 10},
+    {"id": "frame-ultimate", "name": "Ultimate Scholar Frame", "description": "One of GCT's rarest profile frames.", "category": "frame", "cost_xp": 8500, "icon": "👑", "min_level": 12},
+
+    # Extra Marcel styles
+    {"id": "marcel-calm", "name": "Calm Marcel", "description": "A relaxed Marcel style with clear, measured explanations.", "category": "marcel", "cost_xp": 800, "icon": "🧘", "min_level": 3},
+    {"id": "marcel-strategist", "name": "Strategist Marcel", "description": "A planning-focused Marcel presentation for structured guidance.", "category": "marcel", "cost_xp": 1450, "icon": "🧠", "min_level": 5},
+    {"id": "marcel-campus", "name": "Campus Marcel", "description": "A friendly campus-inspired Marcel style.", "category": "marcel", "cost_xp": 2500, "icon": "🏛️", "min_level": 7},
+    {"id": "marcel-cosmic", "name": "Cosmic Marcel", "description": "A premium cosmic Marcel visual style.", "category": "marcel", "cost_xp": 4800, "icon": "🌌", "min_level": 10},
+    {"id": "marcel-master", "name": "Master Marcel", "description": "The highest-tier Marcel cosmetic in the rewards collection.", "category": "marcel", "cost_xp": 8000, "icon": "👑", "min_level": 12},
 ]
 CATALOG = {item["id"]: item for item in REWARD_CATALOG}
 
