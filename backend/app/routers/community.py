@@ -437,6 +437,12 @@ def community_student_profile(
         equipped_theme=equipped_rewards.get("theme"),
         equipped_frame=equipped_rewards.get("frame"),
         equipped_marcel=equipped_rewards.get("marcel"),
+        achievement_showcase=[
+            row.achievement_id
+            for row in db.query(models.StudentAchievementShowcase).filter(
+                models.StudentAchievementShowcase.student_id == student.id
+            ).order_by(models.StudentAchievementShowcase.position.asc()).all()
+        ],
     )
 
 
