@@ -138,14 +138,20 @@ function RolePicker({ onPick }) {
 
           <div className="relative z-10 flex h-full flex-col px-12 py-10 xl:px-16 xl:py-12">
             {/* Brand */}
-            <div className="text-center">
-              <p className="text-[15px] font-semibold tracking-tight text-white">
-                Graduation Credit Tracker
-              </p>
+            <div className="flex flex-col items-center text-center">
+              <div className="flex w-[300px] justify-center rounded-2xl bg-white px-4 py-4 shadow-lg shadow-blue-950/30">
+                <UfhLogo className="w-[270px] max-w-full" />
+              </div>
 
-              <p className="mt-1 text-[11px] font-medium text-zinc-500">
-                Academic progress platform
-              </p>
+              <div className="mt-4">
+                <p className="text-[15px] font-semibold tracking-tight text-white">
+                  Graduation Credit Tracker
+                </p>
+
+                <p className="mt-1 text-[11px] font-medium text-zinc-500">
+                  Academic progress platform
+                </p>
+              </div>
             </div>
 
             {/* Main message */}
