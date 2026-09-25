@@ -138,20 +138,14 @@ function RolePicker({ onPick }) {
 
           <div className="relative z-10 flex h-full flex-col px-12 py-10 xl:px-16 xl:py-12">
             {/* Brand */}
-            <div className="flex flex-col items-center text-center">
-              <div className="flex w-[300px] justify-center rounded-2xl bg-white px-4 py-4 shadow-lg shadow-blue-950/30">
-                <UfhLogo className="w-[270px] max-w-full" />
-              </div>
+            <div className="text-center">
+              <p className="text-[15px] font-semibold tracking-tight text-white">
+                Graduation Credit Tracker
+              </p>
 
-              <div className="mt-4">
-                <p className="text-[15px] font-semibold tracking-tight text-white">
-                  Graduation Credit Tracker
-                </p>
-
-                <p className="mt-1 text-[11px] font-medium text-zinc-500">
-                  Academic progress platform
-                </p>
-              </div>
+              <p className="mt-1 text-[11px] font-medium text-zinc-500">
+                Academic progress platform
+              </p>
             </div>
 
             {/* Main message */}
@@ -286,6 +280,13 @@ function RolePicker({ onPick }) {
         {/* Right side */}
         <section className="relative flex min-h-screen items-center justify-center bg-[#f8f9fb] px-5 py-10 sm:px-8 dark:bg-zinc-950">
           <div className="w-full max-w-[520px]">
+            {/* Desktop UFH brand */}
+            <div className="mb-10 hidden flex-col items-center text-center lg:flex">
+              <div className="flex w-[300px] justify-center rounded-2xl bg-white px-4 py-4 shadow-sm">
+                <UfhLogo className="w-[270px] max-w-full" />
+              </div>
+            </div>
+
             {/* Mobile brand */}
             <div className="mb-12 flex flex-col items-center gap-4 text-center lg:hidden">
               <UfhLogo className="w-[280px] max-w-full" />
