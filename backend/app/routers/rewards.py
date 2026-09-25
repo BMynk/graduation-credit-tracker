@@ -28,14 +28,7 @@ CATALOG = {item["id"]: item for item in REWARD_CATALOG}
 
 def _wallet(db: Session, student: models.Student):
     summary = progress_service.get_achievement_summary(db, student)
-    achievement_xp = int(summary.get("total_xp") or 0)
-    community_xp = sum(
-        amount or 0
-        for (amount,) in db.query(models.StudentXpEvent.xp_amount).filter(
-            models.StudentXpEvent.student_id == student.id
-        ).all()
-    )
-    current_xp = achievement_xp + community_xp
+    current_xp = int(summary.get("total_xp") or 0)
     wallet = db.query(models.StudentRewardWallet).filter(models.StudentRewardWallet.student_id == student.id).first()
     if wallet is None:
         wallet = models.StudentRewardWallet(student_id=student.id, lifetime_xp=current_xp, spent_xp=0)
