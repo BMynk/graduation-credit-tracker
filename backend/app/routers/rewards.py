@@ -22,6 +22,34 @@ REWARD_CATALOG = [
     {"id": "marcel-classic", "name": "Classic Marcel", "description": "Classic Marcel visual theme and concise response style.", "category": "marcel", "cost_xp": 300, "icon": "🤖", "min_level": 1},
     {"id": "marcel-scholar", "name": "Scholar Marcel", "description": "Give Marcel a scholar-themed presentation.", "category": "marcel", "cost_xp": 900, "icon": "📚", "min_level": 3},
     {"id": "marcel-graduation", "name": "Graduation Marcel", "description": "A graduation-themed Marcel cosmetic.", "category": "marcel", "cost_xp": 1600, "icon": "🎓", "min_level": 5},
+
+    # More titles
+    {"id": "title-module-master", "name": "Module Master", "description": "A title for students steadily conquering their modules.", "category": "title", "cost_xp": 900, "icon": "📘", "min_level": 3},
+    {"id": "title-prerequisite-pro", "name": "Prerequisite Pro", "description": "Show off your smart academic planning.", "category": "title", "cost_xp": 1350, "icon": "🧩", "min_level": 4},
+    {"id": "title-credit-commander", "name": "Credit Commander", "description": "A prestige title for serious credit progress.", "category": "title", "cost_xp": 2200, "icon": "⚔️", "min_level": 6},
+    {"id": "title-knowledge-sharer", "name": "Knowledge Sharer", "description": "Celebrate meaningful contributions to the student community.", "category": "title", "cost_xp": 2600, "icon": "🤝", "min_level": 7},
+    {"id": "title-fort-hare-legend", "name": "Fort Hare Legend", "description": "One of the highest prestige titles in GCT.", "category": "title", "cost_xp": 6500, "icon": "🦁", "min_level": 12},
+
+    # More profile themes
+    {"id": "theme-emerald", "name": "Emerald Focus", "description": "A calm green study-inspired Community profile theme.", "category": "theme", "cost_xp": 550, "icon": "🌿", "min_level": 2},
+    {"id": "theme-midnight", "name": "Midnight Scholar", "description": "A deep midnight profile theme for focused scholars.", "category": "theme", "cost_xp": 950, "icon": "🌙", "min_level": 4},
+    {"id": "theme-sunset", "name": "Sunset Campus", "description": "A warm sunset-inspired Community profile theme.", "category": "theme", "cost_xp": 1400, "icon": "🌅", "min_level": 5},
+    {"id": "theme-royal", "name": "Royal Scholar", "description": "A premium royal profile look for advanced students.", "category": "theme", "cost_xp": 2400, "icon": "👑", "min_level": 7},
+    {"id": "theme-legend", "name": "Legendary Gold", "description": "An elite gold-and-dark prestige profile theme.", "category": "theme", "cost_xp": 4500, "icon": "🏆", "min_level": 10},
+
+    # More profile frames
+    {"id": "frame-focus", "name": "Focus Frame", "description": "A clean study-focused Community profile frame.", "category": "frame", "cost_xp": 750, "icon": "🎯", "min_level": 3},
+    {"id": "frame-campus", "name": "Campus Frame", "description": "A polished frame inspired by campus achievement.", "category": "frame", "cost_xp": 1250, "icon": "🏛️", "min_level": 4},
+    {"id": "frame-honours", "name": "Honours Frame", "description": "A premium frame for high-level GCT progression.", "category": "frame", "cost_xp": 2100, "icon": "🏅", "min_level": 6},
+    {"id": "frame-lion", "name": "Lion Pride Frame", "description": "A bold Fort Hare-inspired prestige frame.", "category": "frame", "cost_xp": 3500, "icon": "🦁", "min_level": 8},
+    {"id": "frame-master", "name": "Graduation Master Frame", "description": "An elite animated-style frame for advanced students.", "category": "frame", "cost_xp": 7000, "icon": "🌟", "min_level": 11},
+
+    # More Marcel cosmetics / personalities
+    {"id": "marcel-focus", "name": "Focus Marcel", "description": "A focused Marcel style for concise study-oriented guidance.", "category": "marcel", "cost_xp": 650, "icon": "🎯", "min_level": 2},
+    {"id": "marcel-night", "name": "Midnight Marcel", "description": "A midnight visual style with calm, structured responses.", "category": "marcel", "cost_xp": 1200, "icon": "🌙", "min_level": 4},
+    {"id": "marcel-coach", "name": "Coach Marcel", "description": "A motivating study-coach presentation that keeps academic advice grounded.", "category": "marcel", "cost_xp": 2100, "icon": "📣", "min_level": 6},
+    {"id": "marcel-legend", "name": "Legend Marcel", "description": "A premium Marcel cosmetic for high-level students.", "category": "marcel", "cost_xp": 4200, "icon": "✨", "min_level": 9},
+    {"id": "marcel-lion", "name": "Lion Marcel", "description": "A Fort Hare-inspired prestige Marcel cosmetic.", "category": "marcel", "cost_xp": 6500, "icon": "🦁", "min_level": 12},
 ]
 CATALOG = {item["id"]: item for item in REWARD_CATALOG}
 
