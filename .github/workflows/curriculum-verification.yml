@@ -50,4 +50,4 @@ jobs:
         run: python audit_2026_curriculum.py
 
       - name: Run backend tests
-        run: pytest -q
+        run: PYTHONPATH=. pytest -q
