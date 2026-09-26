@@ -1,7 +1,3 @@
-import os
-os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
-os.environ.setdefault("SECRET_KEY", "test-secret-key-that-is-long-enough-for-tests")
-
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
