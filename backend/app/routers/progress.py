@@ -51,65 +51,40 @@ def get_degree_progress(
     db: Session = Depends(get_db),
 ):
     """
-    Get degree progress with breakdown by category for the visual progress bar.
+    Get degree progress with curriculum-choice-aware compulsory and elective
+    totals for the visual progress bar.
     """
     summary = progress_service.build_progress_summary(db, current_student)
-    
-    # Get compulsory vs elective breakdown
-    compulsory_links = db.query(models.ProgrammeModule).filter(
-        models.ProgrammeModule.programme_id == current_student.programme_id,
-        models.ProgrammeModule.is_compulsory.is_(True)
-    ).all()
-    
-    compulsory_modules = [link.module_id for link in compulsory_links]
-    completed_ids = set(e.module_id for e in db.query(models.Enrolment).filter(
-        models.Enrolment.student_id == current_student.id,
-        models.Enrolment.status == "completed"
-    ).all())
-    
-    compulsory_completed = len([m for m in compulsory_modules if m in completed_ids])
-    compulsory_total = len(compulsory_modules)
-    
-    # Get elective progress
-    elective_links = db.query(models.ProgrammeModule).filter(
-        models.ProgrammeModule.programme_id == current_student.programme_id,
-        models.ProgrammeModule.is_compulsory.is_(False)
-    ).all()
-    elective_total = len(elective_links)
-    elective_completed = len([link for link in elective_links if link.module_id in completed_ids])
-    
-    # Calculate projected graduation
-    distinct_semesters = db.query(models.Enrolment.semester).filter(
-        models.Enrolment.student_id == current_student.id,
-        models.Enrolment.status == "completed"
-    ).distinct().count()
-    
-    projected_graduation = None
-    if distinct_semesters > 0:
-        avg_credits_per_semester = summary["credits_completed"] / distinct_semesters
-        remaining_credits = summary["credits_remaining"]
-        if avg_credits_per_semester > 0:
-            semesters_needed = remaining_credits / avg_credits_per_semester
-            projected_graduation = f"~{round(semesters_needed)} semester(s) remaining"
-    
+    audit = progress_service.build_graduation_audit(db, current_student)
+    breakdown = audit["requirements_breakdown"]
+
+    compulsory = breakdown["compulsory"]
+    elective = breakdown["elective"]
+
+    projected_semesters = audit["projected_semesters_remaining"]
+    projected_graduation = (
+        f"~{projected_semesters} semester(s) remaining"
+        if projected_semesters is not None
+        else None
+    )
+
     return {
         "credits_completed": summary["credits_completed"],
         "credits_required": summary["credits_required"],
         "percentage": summary["percentage_complete"],
         "compulsory": {
-            "completed": compulsory_completed,
-            "total": compulsory_total,
-            "percentage": round((compulsory_completed / compulsory_total) * 100, 1) if compulsory_total else 0
+            "completed": compulsory["completed"],
+            "total": compulsory["total"],
+            "percentage": compulsory["percentage"],
         },
         "elective": {
-            "completed": elective_completed,
-            "total": elective_total,
-            "percentage": round((elective_completed / elective_total) * 100, 1) if elective_total else 0
+            "completed": elective["completed"],
+            "total": elective["total"],
+            "percentage": elective["percentage"],
         },
         "projected_graduation": projected_graduation,
-        "weighted_average": summary["weighted_average"]
+        "weighted_average": summary["weighted_average"],
     }
-
 
 @router.get("/semesters", response_model=List[dict])
 def get_semester_breakdown(
