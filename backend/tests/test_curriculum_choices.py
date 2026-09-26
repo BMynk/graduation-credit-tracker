@@ -13,6 +13,7 @@ from app.routers.planning import _build_planning_modules
 from app.routers.progress import get_degree_progress
 from app.routers.admin import generate_test_academic_record
 from app.services.progress_service import build_graduation_audit, get_eligible_modules
+from app.services.assistant_context import build_student_assistant_context
 
 
 def _session():
@@ -288,5 +289,41 @@ def test_degree_progress_uses_choice_aware_elective_totals():
         # CORE1 remains outstanding; the unused OPT2 alternative must not
         # create an extra projected semester.
         assert progress["projected_graduation"] == "~1 semester(s) remaining"
+    finally:
+        db.close()
+
+
+def test_marcel_context_marks_unused_satisfied_choice_as_not_eligible():
+    db = _session()
+    try:
+        student, core, option_a, option_b = _choice_fixture(db)
+        db.add(models.Enrolment(
+            student_id=student.id,
+            module_id=option_a.id,
+            semester="2026-S1",
+            grade=70,
+            status="completed",
+            attempt=1,
+        ))
+        db.commit()
+
+        context = build_student_assistant_context(db, student)
+        requirement = context["choice_requirements"][0]
+        assert requirement["satisfied"] is True
+        assert requirement["completed_options"] == ["OPT1"]
+
+        eligibility = {
+            item["module"]["code"]: item
+            for item in context["module_eligibility"]
+        }
+        unused = eligibility["OPT2"]
+        assert unused["is_eligible"] is False
+        assert unused["eligibility_status"] == "choice_requirement_already_satisfied"
+        assert unused["choice_requirements"][0]["satisfied"] is True
+
+        eligible_codes = {
+            item["code"] for item in context["eligible_modules"]
+        }
+        assert "OPT2" not in eligible_codes
     finally:
         db.close()
