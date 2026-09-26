@@ -754,11 +754,40 @@ def build_graduation_audit(
 
 def get_eligible_modules(db: Session, student: models.Student) -> List[dict]:
     passed_ids = _passed_module_ids(db, student)
+
+    # Once a prospectus OR/choice requirement is satisfied, the remaining
+    # alternatives in that group should not keep appearing as recommended
+    # modules merely because their prerequisites are met.
+    satisfied_alternative_ids = set()
+    groups = (
+        db.query(models.ProgrammeRequirementGroup)
+        .options(joinedload(models.ProgrammeRequirementGroup.options))
+        .filter(models.ProgrammeRequirementGroup.programme_id == student.programme_id)
+        .all()
+    )
+    for group in groups:
+        completed_options = [
+            option for option in group.options
+            if option.module_id in passed_ids
+        ]
+        completed_credits = sum(
+            option.module.credits
+            for option in completed_options
+            if option.module is not None
+        )
+        if len(completed_options) >= group.min_modules and completed_credits >= group.min_credits:
+            satisfied_alternative_ids.update(
+                option.module_id
+                for option in group.options
+                if option.module_id not in passed_ids
+            )
+
     programme_module_ids = {
         link.module_id
         for link in db.query(models.ProgrammeModule).filter(
             models.ProgrammeModule.programme_id == student.programme_id
         )
+        if link.module_id not in satisfied_alternative_ids
     }
     candidates = (
         db.query(models.Module)
