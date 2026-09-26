@@ -697,10 +697,20 @@ def generate_test_academic_record(
         .filter(models.Enrolment.student_id == student.id)
         .all()
     }
+    completed_module_ids = {
+        row[0]
+        for row in db.query(models.Enrolment.module_id)
+        .filter(
+            models.Enrolment.student_id == student.id,
+            models.Enrolment.status == "completed",
+        )
+        .all()
+    }
 
     # Alternative/elective groups are requirements, not instructions to complete
-    # every option. Prefer already-recorded choices; otherwise add the minimum
-    # deterministic set needed to satisfy each group.
+    # every option. Only completed options satisfy a curriculum choice. A failed,
+    # planned, or in-progress option must not prevent the generator from selecting
+    # another valid option that can actually satisfy the group.
     groups = (
         db.query(models.ProgrammeRequirementGroup)
         .options(
@@ -718,14 +728,18 @@ def generate_test_academic_record(
     selected_choice_ids = set()
     for group in groups:
         options = [o.module for o in group.options if o.module is not None]
-        recorded = [m for m in options if m.id in existing_module_ids]
-        chosen = list(recorded)
+        completed = [m for m in options if m.id in completed_module_ids]
+        chosen = list(completed)
         chosen_ids = {m.id for m in chosen}
         credits = sum(m.credits for m in chosen)
         for module in sorted(options, key=lambda m: m.code):
             if len(chosen) >= group.min_modules and credits >= group.min_credits:
                 break
             if module.id in chosen_ids:
+                continue
+            # Do not overwrite or duplicate a real failed/planned/in-progress
+            # record. Skip it and select another option when one is available.
+            if module.id in existing_module_ids:
                 continue
             chosen.append(module)
             chosen_ids.add(module.id)
