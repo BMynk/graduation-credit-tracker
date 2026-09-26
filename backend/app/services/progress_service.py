@@ -164,6 +164,7 @@ def build_progress_summary(db: Session, student: models.Student) -> dict:
     missing_compulsory = [link.module for link in compulsory_links if link.module_id not in passed_module_ids]
     missing_compulsory.sort(key=lambda m: (m.level, m.code))
 
+    choice_requirements = _curriculum_choice_status(db, student)
     missing_choice_requirements = [
         requirement
         for requirement in choice_requirements
