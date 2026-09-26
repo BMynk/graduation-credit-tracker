@@ -961,6 +961,22 @@ def seed():
                     module = module_by_code.get(actual_code)
                     if module:
                         db.add(models.ProgrammeRequirementOption(group_id=group.id, module_id=module.id))
+                for path_spec in spec.get("paths", []):
+                    path_row = models.ProgrammeRequirementPath(
+                        group_id=group.id,
+                        key=path_spec["key"],
+                        label=path_spec["label"],
+                    )
+                    db.add(path_row)
+                    db.flush()
+                    for code in path_spec["modules"]:
+                        actual_code = ALIAS_CODES.get(code, code)
+                        module = module_by_code.get(actual_code)
+                        if module:
+                            db.add(models.ProgrammeRequirementPathOption(
+                                path_id=path_row.id,
+                                module_id=module.id,
+                            ))
 
         db.flush()
 
