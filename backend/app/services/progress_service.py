@@ -164,7 +164,6 @@ def build_progress_summary(db: Session, student: models.Student) -> dict:
     missing_compulsory = [link.module for link in compulsory_links if link.module_id not in passed_module_ids]
     missing_compulsory.sort(key=lambda m: (m.level, m.code))
 
-    choice_requirements = _curriculum_choice_status(db, student)
     missing_choice_requirements = [
         requirement
         for requirement in choice_requirements
@@ -372,91 +371,143 @@ def build_graduation_audit(
     )
 
     # ---------------------------------------------------------
-    # CREDITS BY LEVEL
+    # CHOICE-AWARE CURRICULUM ACCOUNTING
+    # ---------------------------------------------------------
+
+    choice_requirements = _curriculum_choice_status(db, student)
+    requirement_groups = (
+        db.query(models.ProgrammeRequirementGroup)
+        .options(
+            joinedload(models.ProgrammeRequirementGroup.options)
+            .joinedload(models.ProgrammeRequirementOption.module)
+        )
+        .filter(models.ProgrammeRequirementGroup.programme_id == student.programme_id)
+        .all()
+    )
+    choice_option_ids = {
+        option.module_id
+        for group in requirement_groups
+        for option in group.options
+    }
+
+    # Generic electives are links that are not members of an explicit
+    # prospectus choice group. Choice groups are accounted for by their
+    # required minimum credits rather than by summing every alternative.
+    generic_elective_links = [
+        link for link in elective_links
+        if link.module_id not in choice_option_ids
+    ]
+    completed_generic_elective_links = [
+        link for link in generic_elective_links
+        if link.module_id in completed_ids
+    ]
+    missing_generic_elective_links = [
+        link for link in generic_elective_links
+        if link.module_id not in completed_ids
+    ]
+
+    # Build a representative required curriculum for aggregate credit totals.
+    # Completed choices are used first. Unsatisfied groups then contribute only
+    # enough deterministic alternatives to meet the prospectus minimum.
+    required_choice_links = []
+    link_by_module_id = {link.module_id: link for link in programme_modules}
+    choice_status_by_key = {
+        requirement["key"]: requirement
+        for requirement in choice_requirements
+    }
+    for group in requirement_groups:
+        status_info = choice_status_by_key.get(group.key, {})
+        completed_options = [
+            option for option in group.options
+            if option.module_id in completed_ids
+            and option.module_id in link_by_module_id
+        ]
+        selected_ids = {option.module_id for option in completed_options}
+        selected_credits = sum(
+            option.module.credits
+            for option in completed_options
+            if option.module is not None
+        )
+        modules_needed = max(group.min_modules - len(completed_options), 0)
+        credits_needed = max(group.min_credits - selected_credits, 0)
+
+        candidates = [
+            option for option in group.options
+            if option.module_id not in selected_ids
+            and option.module_id in link_by_module_id
+            and option.module is not None
+        ]
+        candidates.sort(key=lambda option: (option.module.credits, option.module.code))
+
+        added = 0
+        added_credits = 0
+        for option in candidates:
+            if added >= modules_needed and added_credits >= credits_needed:
+                break
+            selected_ids.add(option.module_id)
+            added += 1
+            added_credits += option.module.credits
+
+        required_choice_links.extend(
+            link_by_module_id[module_id]
+            for module_id in selected_ids
+        )
+
+    aggregate_links = (
+        compulsory_links
+        + generic_elective_links
+        + required_choice_links
+    )
+    # A module can appear in more than one requirement group. Count each module
+    # only once in aggregate curriculum totals.
+    aggregate_links = list({
+        link.module_id: link
+        for link in aggregate_links
+        if link.module is not None
+    }.values())
+
+    # ---------------------------------------------------------
+    # CREDITS BY LEVEL / CATEGORY
     # ---------------------------------------------------------
 
     credits_by_level = {}
-
-    for link in programme_modules:
-        module = link.module
-
-        if module is None:
-            continue
-
-        level = module.level
-
-        if level not in credits_by_level:
-            credits_by_level[level] = {
-                "total": 0,
-                "completed": 0,
-            }
-
-        credits_by_level[level]["total"] += (
-            module.credits
-        )
-
-        if module.id in completed_ids:
-            credits_by_level[level][
-                "completed"
-            ] += module.credits
-
-    # ---------------------------------------------------------
-    # CREDITS BY CATEGORY
-    # ---------------------------------------------------------
-
     credits_by_category = {}
 
-    for link in programme_modules:
+    for link in aggregate_links:
         module = link.module
-
-        if module is None:
-            continue
-
+        level = module.level
         category = module.category
 
-        if category not in credits_by_category:
-            credits_by_category[category] = {
-                "total": 0,
-                "completed": 0,
-            }
+        credits_by_level.setdefault(level, {"total": 0, "completed": 0})
+        credits_by_category.setdefault(category, {"total": 0, "completed": 0})
 
-        credits_by_category[category][
-            "total"
-        ] += module.credits
+        credits_by_level[level]["total"] += module.credits
+        credits_by_category[category]["total"] += module.credits
 
         if module.id in completed_ids:
-            credits_by_category[category][
-                "completed"
-            ] += module.credits
+            credits_by_level[level]["completed"] += module.credits
+            credits_by_category[category]["completed"] += module.credits
 
     # ---------------------------------------------------------
     # COMPLETION PERCENTAGES
     # ---------------------------------------------------------
 
     compulsory_percentage = (
-        round(
-            (
-                len(completed_compulsory_links)
-                / len(compulsory_links)
-            )
-            * 100,
-            1,
-        )
-        if compulsory_links
-        else 0
+        round((len(completed_compulsory_links) / len(compulsory_links)) * 100, 1)
+        if compulsory_links else 0
     )
 
+    choice_groups_completed = sum(
+        1 for requirement in choice_requirements
+        if requirement["satisfied"]
+    )
+    elective_units_total = len(generic_elective_links) + len(choice_requirements)
+    elective_units_completed = (
+        len(completed_generic_elective_links) + choice_groups_completed
+    )
     elective_percentage = (
-        round(
-            (
-                len(completed_elective_links)
-                / len(elective_links)
-            )
-            * 100,
-            1,
-        )
-        if elective_links
-        else 0
+        round((elective_units_completed / elective_units_total) * 100, 1)
+        if elective_units_total else 0
     )
 
     # ---------------------------------------------------------
@@ -675,26 +726,18 @@ def build_graduation_audit(
         },
 
         "elective": {
-            "completed":
-                len(completed_elective_links),
-
-            "total":
-                len(elective_links),
-
-            "percentage":
-                elective_percentage,
-
+            "completed": elective_units_completed,
+            "total": elective_units_total,
+            "percentage": elective_percentage,
             "completed_modules": [
                 module_info(link)
-                for link
-                in completed_elective_links
+                for link in completed_generic_elective_links
             ],
-
             "missing_modules": [
                 module_info(link)
-                for link
-                in missing_elective_links
+                for link in missing_generic_elective_links
             ],
+            "choice_requirements": choice_requirements,
         },
 
         "by_level":
