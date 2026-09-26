@@ -691,23 +691,66 @@ def build_graduation_audit(
     choice_option_ids = set()
     outstanding_choice_links = []
 
-    for requirement in missing_choice_requirements:
-        group = next(
-            (
-                group for group in db.query(models.ProgrammeRequirementGroup)
-                .options(joinedload(models.ProgrammeRequirementGroup.options))
-                .filter(
-                    models.ProgrammeRequirementGroup.programme_id == student.programme_id,
-                    models.ProgrammeRequirementGroup.key == requirement["key"],
-                )
-                .all()
-            ),
-            None,
+    groups_by_key = {
+        group.key: group
+        for group in (
+            db.query(models.ProgrammeRequirementGroup)
+            .options(
+                joinedload(models.ProgrammeRequirementGroup.options)
+                .joinedload(models.ProgrammeRequirementOption.module),
+                joinedload(models.ProgrammeRequirementGroup.paths)
+                .joinedload(models.ProgrammeRequirementPath.options)
+                .joinedload(models.ProgrammeRequirementPathOption.module),
+            )
+            .filter(
+                models.ProgrammeRequirementGroup.programme_id
+                == student.programme_id
+            )
+            .all()
         )
+    }
+
+    for requirement in missing_choice_requirements:
+        group = groups_by_key.get(requirement["key"])
         if group is None:
             continue
 
         choice_option_ids.update(option.module_id for option in group.options)
+
+        if group.paths:
+            # Use one complete valid prospectus path for warnings/projection.
+            # Prefer the path with the most already-completed components, then
+            # the lowest remaining credits. Never combine unrelated streams.
+            path_candidates = []
+            for path in group.paths:
+                path_ids = [
+                    option.module_id
+                    for option in path.options
+                    if option.module_id in link_by_module_id
+                ]
+                if not path_ids:
+                    continue
+                missing_ids = [
+                    module_id for module_id in path_ids
+                    if module_id not in completed_ids
+                ]
+                remaining_credits = sum(
+                    link_by_module_id[module_id].module.credits
+                    for module_id in missing_ids
+                )
+                completed_count = len(path_ids) - len(missing_ids)
+                path_candidates.append(
+                    (-completed_count, remaining_credits, path.key, missing_ids)
+                )
+
+            if path_candidates:
+                path_candidates.sort()
+                outstanding_choice_links.extend(
+                    link_by_module_id[module_id]
+                    for module_id in path_candidates[0][3]
+                )
+            continue
+
         completed_count = len(requirement["completed_options"])
         modules_needed = max(group.min_modules - completed_count, 0)
         credits_needed = max(group.min_credits - requirement["completed_credits"], 0)
