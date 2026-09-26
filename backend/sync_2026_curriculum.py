@@ -44,6 +44,26 @@ def sync():
             programme = programmes.get(programme_code)
             if programme is None:
                 continue
+
+            # Remove stale programme-module links only when they are no longer
+            # part of the verified 2026 curriculum. This changes curriculum
+            # metadata, not the student's enrolment/mark history.
+            desired_codes = {
+                ALIAS_CODES.get(raw_code, raw_code)
+                for key in ("compulsory", "elective")
+                for raw_code in groups.get(key, [])
+            }
+            current_links = (
+                db.query(models.ProgrammeModule)
+                .join(models.Module)
+                .filter(models.ProgrammeModule.programme_id == programme.id)
+                .all()
+            )
+            for link in current_links:
+                if link.module.code not in desired_codes:
+                    db.delete(link)
+            db.flush()
+
             choice_codes = {
                 ALIAS_CODES.get(code, code)
                 for spec in REQUIREMENT_GROUPS.get(programme_code, [])
