@@ -11,6 +11,7 @@ from app.security import hash_password
 
 # ---------- PROGRAMMES ----------
 PROGRAMMES = [
+    {"code": "40008", "name": "BSc Botany and Entomology", "faculty": "Science & Agriculture"},
     {"code": "40009", "name": "BSc Botany and Microbiology", "faculty": "Science & Agriculture"},
     {"code": "40011", "name": "BSc Chemistry and Botany", "faculty": "Science & Agriculture"},
     {"code": "40013", "name": "BSc Chemistry and Geology", "faculty": "Science & Agriculture"},
@@ -22,6 +23,24 @@ PROGRAMMES = [
     {"code": "40024", "name": "BSc Mathematics and Physics", "faculty": "Science & Agriculture"},
     {"code": "40025", "name": "BSc Computer Science and Mathematics", "faculty": "Science & Agriculture"},
     {"code": "40029", "name": "BSc Statistics and Geology", "faculty": "Science & Agriculture"},
+    {"code": "40012", "name": "BSc Chemistry Single Major", "faculty": "Science & Agriculture"},
+    {"code": "40018", "name": "BSc Geography and GIS", "faculty": "Science & Agriculture"},
+    {"code": "40020", "name": "BSc GIS and Computer Science", "faculty": "Science & Agriculture"},
+    {"code": "40022", "name": "BSc Geology and GIS", "faculty": "Science & Agriculture"},
+    {"code": "40026", "name": "BSc Mathematics and Chemistry", "faculty": "Science & Agriculture"},
+    {"code": "40027", "name": "BSc Microbiology and Zoology", "faculty": "Science & Agriculture"},
+    {"code": "40028", "name": "BSc Mathematical Statistics and Mathematics", "faculty": "Science & Agriculture"},
+    {"code": "40032", "name": "BSc Entomology and Microbiology", "faculty": "Science & Agriculture"},
+    {"code": "40033", "name": "BSc GIS and Zoology", "faculty": "Science & Agriculture"},
+    {"code": "40034", "name": "BSc GIS and Entomology", "faculty": "Science & Agriculture"},
+    {"code": "40035", "name": "BSc Applied Mathematics and Mathematics", "faculty": "Science & Agriculture"},
+    {"code": "40036", "name": "BSc Applied Mathematics and Statistics", "faculty": "Science & Agriculture"},
+    {"code": "40037", "name": "BSc Applied Mathematics and Physics", "faculty": "Science & Agriculture"},
+    {"code": "40039", "name": "BSc Biochemistry and Microbiology", "faculty": "Science & Agriculture"},
+    {"code": "40040", "name": "BSc Biochemistry and Chemistry", "faculty": "Science & Agriculture"},
+    {"code": "40041", "name": "BSc Biochemistry and Computer Science", "faculty": "Science & Agriculture"},
+    {"code": "40042", "name": "BSc Botany and Zoology", "faculty": "Science & Agriculture"},
+    {"code": "40043", "name": "BSc Chemistry and Physics", "faculty": "Science & Agriculture"},
 ]
 
 # ---------- ALL MODULES ----------
@@ -161,6 +180,30 @@ MODULES = [
     ("BCH215", "Introductory Biochemistry", 16, "core", 2),
     ("BCH224", "Metabolism and Enzymology", 16, "core", 2),
     
+    # Additional prospectus modules used by 2026 BSc combinations
+    ("PAC216", "PAC 216", 16, "core", 2),
+    ("PAC218", "PAC 218", 16, "core", 2),
+    ("PAC225", "PAC 225", 16, "core", 2),
+    ("PAC227", "PAC 227", 16, "core", 2),
+    ("PAC315", "PAC 315", 16, "core", 3),
+    ("PAC317", "PAC 317", 16, "core", 3),
+    ("PAC326", "PAC 326", 16, "core", 3),
+    ("PAC328", "PAC 328", 16, "core", 3),
+    ("GIS314", "GIS 314", 16, "core", 3),
+    ("GIS315", "GIS 315", 16, "core", 3),
+    ("GIS324", "GIS 324", 16, "core", 3),
+    ("GIS325", "GIS 325", 16, "core", 3),
+    ("ZOO314", "ZOO 314", 16, "core", 3),
+    ("ZOO315", "ZOO 315", 16, "core", 3),
+    ("ZOO316", "ZOO 316", 16, "core", 3),
+    ("ZOO324", "ZOO 324", 16, "core", 3),
+    ("ZOO325", "ZOO 325", 16, "core", 3),
+    ("ZOO326", "ZOO 326", 16, "core", 3),
+    ("BCH313", "BCH 313", 16, "core", 3),
+    ("BCH314", "BCH 314", 16, "core", 3),
+    ("BCH323", "BCH 323", 16, "core", 3),
+    ("BCH324", "BCH 324", 16, "core", 3),
+
     # Second Year - Chemistry
     ("PAC211", "Inorganic Chemistry I", 16, "core", 2),
     ("PAC213", "Organic Chemistry I", 16, "core", 2),
@@ -570,9 +613,6 @@ ALIAS_CODES = {
     "CSC212": "COC212",
     "CSC223": "COC223",
     "CSC224": "COC224",
-    "STM212": "STM214",
-    "STM221": "STM223",
-    "STM222": "STM224",
 }
 
 
