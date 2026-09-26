@@ -668,7 +668,7 @@ def generate_test_academic_record(
     current_admin: models.Admin = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
-    """Generate reversible 95% test completions for the designated test student."""
+    """Generate a reversible 95% record that satisfies the configured curriculum."""
     student = db.query(models.Student).filter(models.Student.id == student_id).first()
     if student is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
@@ -680,6 +680,7 @@ def generate_test_academic_record(
 
     links = (
         db.query(models.ProgrammeModule)
+        .options(joinedload(models.ProgrammeModule.module))
         .filter(models.ProgrammeModule.programme_id == student.programme_id)
         .order_by(models.ProgrammeModule.year, models.ProgrammeModule.semester)
         .all()
@@ -690,32 +691,68 @@ def generate_test_academic_record(
             detail="No programme modules are configured for this student.",
         )
 
+    existing_module_ids = {
+        row[0]
+        for row in db.query(models.Enrolment.module_id)
+        .filter(models.Enrolment.student_id == student.id)
+        .all()
+    }
+
+    # Alternative/elective groups are requirements, not instructions to complete
+    # every option. Prefer already-recorded choices; otherwise add the minimum
+    # deterministic set needed to satisfy each group.
+    groups = (
+        db.query(models.ProgrammeRequirementGroup)
+        .options(
+            joinedload(models.ProgrammeRequirementGroup.options)
+            .joinedload(models.ProgrammeRequirementOption.module)
+        )
+        .filter(models.ProgrammeRequirementGroup.programme_id == student.programme_id)
+        .order_by(
+            models.ProgrammeRequirementGroup.year,
+            models.ProgrammeRequirementGroup.semester,
+            models.ProgrammeRequirementGroup.key,
+        )
+        .all()
+    )
+    selected_choice_ids = set()
+    for group in groups:
+        options = [o.module for o in group.options if o.module is not None]
+        recorded = [m for m in options if m.id in existing_module_ids]
+        chosen = list(recorded)
+        chosen_ids = {m.id for m in chosen}
+        credits = sum(m.credits for m in chosen)
+        for module in sorted(options, key=lambda m: m.code):
+            if len(chosen) >= group.min_modules and credits >= group.min_credits:
+                break
+            if module.id in chosen_ids:
+                continue
+            chosen.append(module)
+            chosen_ids.add(module.id)
+            credits += module.credits
+        selected_choice_ids.update(chosen_ids)
+
+    target_links = [
+        link for link in links
+        if link.is_compulsory or link.module_id in selected_choice_ids
+    ]
+
     created = 0
     skipped = 0
-    for link in links:
-        existing = (
-            db.query(models.Enrolment)
-            .filter(
-                models.Enrolment.student_id == student.id,
-                models.Enrolment.module_id == link.module_id,
-            )
-            .first()
-        )
-        if existing:
+    for link in target_links:
+        if link.module_id in existing_module_ids:
             skipped += 1
             continue
-
         semester = f"{TEST_SEMESTER_PREFIX}-Y{link.year}-S{link.semester}"
-        db.add(
-            models.Enrolment(
-                student_id=student.id,
-                module_id=link.module_id,
-                semester=semester,
-                grade=TEST_GRADE,
-                status="completed",
-                attempt=1,
-            )
-        )
+        db.add(models.Enrolment(
+            student_id=student.id,
+            module_id=link.module_id,
+            semester=semester,
+            grade=TEST_GRADE,
+            status="completed",
+            attempt=1,
+        ))
+        existing_module_ids.add(link.module_id)
         created += 1
 
     db.commit()
@@ -725,7 +762,12 @@ def generate_test_academic_record(
         "grade": TEST_GRADE,
         "created": created,
         "skipped_existing": skipped,
-        "message": f"Created {created} reversible test completion(s) at {TEST_GRADE}%. Existing academic records were left unchanged.",
+        "selected_choice_modules": len(selected_choice_ids),
+        "message": (
+            f"Created {created} reversible 95% completion(s) for compulsory modules "
+            "and only the minimum configured curriculum choices. Existing academic "
+            "records were left unchanged."
+        ),
     }
 
 
@@ -760,7 +802,11 @@ def reset_test_academic_record(
     return {
         "student_number": student.student_number,
         "removed": removed,
-        "message": f"Removed {removed} generated test completion(s). Original academic records were preserved.",
+        "message": (
+            f"Removed {removed} generated test completion(s). Original academic "
+            "records were preserved. Previously unlocked achievement/EXP side effects "
+            "are not automatically revoked."
+        ),
     }
 
 
