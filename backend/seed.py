@@ -1007,18 +1007,15 @@ def seed():
             ))
 
         db.commit()
-        print("
-✅ Seed complete!")
-        print("
-📋 Login credentials:")
+        print("\\n✅ Seed complete!")
+        print("\\n📋 Login credentials:")
         print("   Student: 202312345 / tmokoena@example.ufh.ac.za / PIN: 123456")
         print("   Admin:   admin / AdminPass123!")
         print("   (Admin is a super admin)")
 
     except Exception as e:
         db.rollback()
-        print(f"
-❌ Error during seeding: {e}")
+        print(f"\\n❌ Error during seeding: {e}")
         raise
     finally:
         db.close()
