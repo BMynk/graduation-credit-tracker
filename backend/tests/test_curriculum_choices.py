@@ -522,7 +522,7 @@ def test_exact_requirement_path_rejects_mixed_modules():
         db.close()
 
 
-def test_exact_requirement_path_rejects_mixed_mat_alternatives():
+def test_exact_requirement_path_rejects_mixed_mat_alternatives_1():
     db = _session()
     try:
         programme = models.Programme(
@@ -633,7 +633,7 @@ def test_exact_requirement_path_rejects_mixed_mat_alternatives():
         db.close()
 
 
-def test_exact_requirement_path_rejects_mixed_mat_alternatives():
+def test_exact_requirement_path_rejects_mixed_mat_alternatives_2():
     db = _session()
     try:
         programme = models.Programme(
