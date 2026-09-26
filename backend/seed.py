@@ -95,12 +95,12 @@ MODULES = [
     ("CSC324", "Software Engineering", 16, "core", 3),
     
     # Second Year - Mathematics
-    ("MAT212", "Fundamentals of Mathematics", 16, "core", 2),
-    ("MAT213", "Advanced Calculus", 16, "core", 2),
-    ("MAT225", "Linear Algebra", 16, "core", 2),
-    ("MAT226", "Linear Algebra", 16, "core", 2),
-    ("MAT227", "Real Analysis", 16, "core", 2),
-    ("MAT228", "Geometry", 16, "core", 2),
+    ("MAT212", "Fundamentals of Mathematics", 8, "core", 2),
+    ("MAT213", "Advanced Calculus", 8, "core", 2),
+    ("MAT225", "Linear Algebra", 8, "core", 2),
+    ("MAT226", "Linear Algebra", 8, "core", 2),
+    ("MAT227", "Real Analysis", 8, "core", 2),
+    ("MAT228", "Geometry", 8, "core", 2),
     
     # Third Year - Mathematics
     ("MAT312", "Abstract Algebra", 16, "core", 3),
@@ -699,7 +699,96 @@ REQUIREMENT_GROUPS = {
     "40029": [
         {"key": "y2s1-stat", "label": "Choose STM213 or STM212", "year": 2, "semester": 1, "min_modules": 1, "min_credits": 16, "options": ["STM213", "STM212"]},
         {"key": "y2s2-stat", "label": "Choose STM221 or STM222", "year": 2, "semester": 2, "min_modules": 1, "min_credits": 16, "options": ["STM221", "STM222"]},
+    ],,
+    "40015": [
+        {"key":"y2s2-math-choice","label":"Choose MAT227 or MAT228","year":2,"semester":2,"min_modules":1,"min_credits":8,"options":["MAT227","MAT228"]},
     ],
+    "40018": [
+        {"key":"y1s1-elective","label":"Choose 16 first-year elective credits","year":1,"semester":1,"min_modules":1,"min_credits":16,"options":["PHY113","PHY114","GLG111","STA111","MAT112","BOT111","ZOO111","PAC110"]},
+        {"key":"y1s2-elective","label":"Choose 16 first-year elective credits","year":1,"semester":2,"min_modules":1,"min_credits":16,"options":["PHY123","PHY124","GLG121","STA121","MAT123","BOT121","ZOO121","PAC121"]},
+        {"key":"y2s1-elective","label":"Choose 16 second-year elective credits","year":2,"semester":1,"min_modules":1,"min_credits":16,"options":["COC211","COC212","BOT212","BOT213","ZOO213"]},
+        {"key":"y2s2-elective","label":"Choose 16 second-year elective credits","year":2,"semester":2,"min_modules":1,"min_credits":16,"options":["COC223","COC224","BOT222","BOT223","ZOO225"]},
+    ],
+    "40020": [
+        {"key":"y1s1-elective","label":"Choose 32 first-year elective credits","year":1,"semester":1,"min_modules":1,"min_credits":32,"options":["ZOO111","PAC110","GEG111","STA111","MAT112","BOT111","PHY113","PHY114"]},
+        {"key":"y1s2-elective","label":"Choose 32 first-year elective credits","year":1,"semester":2,"min_modules":1,"min_credits":32,"options":["ZOO121","PAC121","GEG121","STA121","MAT123","BOT121","PHY123","PHY124"]},
+        {"key":"y2s1-elective","label":"Choose 16 second-year elective credits","year":2,"semester":1,"min_modules":1,"min_credits":16,"options":["GEG212","BOT212","BOT213","ZOO213"]},
+        {"key":"y2s2-elective","label":"Choose 16 second-year elective credits","year":2,"semester":2,"min_modules":1,"min_credits":16,"options":["GEG221","BOT222","BOT223","ZOO225"]},
+    ],
+    "40022": [
+        {"key":"y1s1-elective","label":"Choose 16 first-year elective credits","year":1,"semester":1,"min_modules":1,"min_credits":16,"options":["PHY113","PHY114","GEG111","STA111","MAT112","BOT111","ZOO111"]},
+        {"key":"y1s2-elective","label":"Choose 16 first-year elective credits","year":1,"semester":2,"min_modules":1,"min_credits":16,"options":["PHY123","PHY124","GEG121","STA121","MAT123","BOT121","ZOO121"]},
+    ],
+    "40026": [
+        {"key":"y2s2-math-choice","label":"Choose MAT227 or MAT228","year":2,"semester":2,"min_modules":1,"min_credits":8,"options":["MAT227","MAT228"]},
+        {"key":"y2s1-elective","label":"Choose MAP212 or PHY213 + PHY214","year":2,"semester":1,"min_modules":1,"min_credits":16,"options":["MAP212","PHY213","PHY214"]},
+        {"key":"y2s2-elective","label":"Choose MAP222 or PHY223 + PHY224","year":2,"semester":2,"min_modules":1,"min_credits":16,"options":["MAP222","PHY223","PHY224"]},
+        {"key":"y3s1-math-choice","label":"Choose MAT313 or MAT314","year":3,"semester":1,"min_modules":1,"min_credits":16,"options":["MAT313","MAT314"]},
+        {"key":"y3s2-math-choice","label":"Choose MAT324 or MAT325","year":3,"semester":2,"min_modules":1,"min_credits":16,"options":["MAT324","MAT325"]},
+    ],
+    "40028": [
+        {"key":"y2s1-stat-choice","label":"Choose STM213 or STM214","year":2,"semester":1,"min_modules":1,"min_credits":16,"options":["STM213","STM214"]},
+        {"key":"y2s2-stat-choice","label":"Choose STM223 or STM224","year":2,"semester":2,"min_modules":1,"min_credits":16,"options":["STM223","STM224"]},
+        {"key":"y2s2-math-choice","label":"Choose MAT227 or MAT228","year":2,"semester":2,"min_modules":1,"min_credits":8,"options":["MAT227","MAT228"]},
+        {"key":"y2s1-elective","label":"Choose 16 second-year elective credits","year":2,"semester":1,"min_modules":1,"min_credits":16,"options":["COC211","COC212","PHY213","PHY214","MAP212"]},
+        {"key":"y2s2-elective","label":"Choose 16 second-year elective credits","year":2,"semester":2,"min_modules":1,"min_credits":16,"options":["COC223","COC224","PHY223","PHY224","MAP222"]},
+        {"key":"y3s1-math-choice","label":"Choose MAT313 or MAT314","year":3,"semester":1,"min_modules":1,"min_credits":16,"options":["MAT313","MAT314"]},
+        {"key":"y3s2-math-choice","label":"Choose MAT324 or MAT325","year":3,"semester":2,"min_modules":1,"min_credits":16,"options":["MAT324","MAT325"]},
+    ],
+    "40033": [
+        {"key":"y1s1-elective","label":"Choose 16 first-year elective credits","year":1,"semester":1,"min_modules":1,"min_credits":16,"options":["PHY111","PHY112","STA111","MAT111","BOT111","CSC113"]},
+        {"key":"y1s2-elective","label":"Choose 16 first-year elective credits","year":1,"semester":2,"min_modules":1,"min_credits":16,"options":["PHY121","PHY122","STA121","MAT121","BOT121","CSC121"]},
+        {"key":"y2s1-elective","label":"Choose 16 second-year elective credits","year":2,"semester":1,"min_modules":1,"min_credits":16,"options":["COC211","COC212","MAT212","MAT213","PHY213","PHY214","GEG212","BOT212","BOT213","STM213","STM214"]},
+        {"key":"y2s2-elective","label":"Choose 16 second-year elective credits","year":2,"semester":2,"min_modules":1,"min_credits":16,"options":["COC223","COC224","MAT226","MAT227","PHY223","PHY224","GEG221","BOT222","BOT223","STM223","STM224"]},
+    ],
+    "40034": [
+        {"key":"y1s1-elective","label":"Choose 16 first-year elective credits","year":1,"semester":1,"min_modules":1,"min_credits":16,"options":["PHY111","PHY112","STA111","MAT111","BOT111","CSC113"]},
+        {"key":"y1s2-elective","label":"Choose 16 first-year elective credits","year":1,"semester":2,"min_modules":1,"min_credits":16,"options":["PHY121","PHY122","STA121","MAT121","BOT121","CSC121"]},
+        {"key":"y2s1-elective","label":"Choose 16 second-year elective credits","year":2,"semester":1,"min_modules":1,"min_credits":16,"options":["COC211","COC212","MAT212","MAT213","PHY213","PHY214","GEG212","BOT212","BOT213","STM213","STM214"]},
+        {"key":"y2s2-elective","label":"Choose 16 second-year elective credits","year":2,"semester":2,"min_modules":1,"min_credits":16,"options":["COC223","COC224","MAT226","MAT227","PHY223","PHY224","GEG221","BOT222","BOT223","STM223","STM224"]},
+    ],
+    "40035": [
+        {"key":"y1s1-stream","label":"Choose STA111 or MNU111","year":1,"semester":1,"min_modules":1,"min_credits":16,"options":["STA111","MNU111"]},
+        {"key":"y1s2-stream","label":"Choose STA121 or MNU121 + MNU122","year":1,"semester":2,"min_modules":1,"min_credits":16,"options":["STA121","MNU121","MNU122"]},
+        {"key":"y2s2-math-choice","label":"Choose MAT227 or MAT228","year":2,"semester":2,"min_modules":1,"min_credits":8,"options":["MAT227","MAT228"]},
+        {"key":"y2s1-elective","label":"Choose 16 second-year elective credits","year":2,"semester":1,"min_modules":1,"min_credits":16,"options":["COC211","COC212","PHY213","PHY214","STM213","STM214"]},
+        {"key":"y2s2-elective","label":"Choose 16 second-year elective credits","year":2,"semester":2,"min_modules":1,"min_credits":16,"options":["COC223","COC224","PHY223","PHY224","STM223","STM224"]},
+        {"key":"y3s1-math-choice","label":"Choose MAT313 or MAT314","year":3,"semester":1,"min_modules":1,"min_credits":16,"options":["MAT313","MAT314"]},
+        {"key":"y3s2-math-choice","label":"Choose MAT324 or MAT325","year":3,"semester":2,"min_modules":1,"min_credits":16,"options":["MAT324","MAT325"]},
+    ],
+    "40036": [
+        {"key":"y2s1-stat-choice","label":"Choose STM213 or STM214","year":2,"semester":1,"min_modules":1,"min_credits":16,"options":["STM213","STM214"]},
+        {"key":"y2s2-stat-choice","label":"Choose STM223 or STM224","year":2,"semester":2,"min_modules":1,"min_credits":16,"options":["STM223","STM224"]},
+        {"key":"y2s1-elective","label":"Choose 16 second-year elective credits","year":2,"semester":1,"min_modules":1,"min_credits":16,"options":["COC211","COC212","MAT212","MAT213","PHY213","PHY214"]},
+        {"key":"y2s2-elective","label":"Choose 16 second-year elective credits","year":2,"semester":2,"min_modules":1,"min_credits":16,"options":["COC223","COC224","MAT226","MAT227","MAT228","PHY223","PHY224"]},
+    ],
+    "40037": [
+        {"key":"y1s1-stream","label":"Choose STA111 or MNU111","year":1,"semester":1,"min_modules":1,"min_credits":16,"options":["STA111","MNU111"]},
+        {"key":"y1s2-stream","label":"Choose STA121 or MNU121 + MNU122","year":1,"semester":2,"min_modules":1,"min_credits":16,"options":["STA121","MNU121","MNU122"]},
+        {"key":"y2s1-elective","label":"Choose 16 second-year elective credits","year":2,"semester":1,"min_modules":1,"min_credits":16,"options":["COC211","COC212","MAT212","MAT213","STM213","STM214"]},
+        {"key":"y2s2-elective","label":"Choose 16 second-year elective credits","year":2,"semester":2,"min_modules":1,"min_credits":16,"options":["COC223","COC224","MAT226","MAT227","MAT228","STM223","STM224"]},
+    ],
+    "40039": [
+        {"key":"y2s1-electives","label":"Choose 32 second-year elective credits","year":2,"semester":1,"min_modules":1,"min_credits":32,"options":["PAC211","PAC215","BOT212","BOT213","ZOO213"]},
+        {"key":"y2s2-electives","label":"Choose 32 second-year elective credits","year":2,"semester":2,"min_modules":1,"min_credits":32,"options":["PAC222","PAC224","BOT222","BOT223","ZOO224","ZOO225"]},
+    ],
+    "40040": [
+        {"key":"y2s1-elective","label":"Choose 16 second-year elective credits","year":2,"semester":1,"min_modules":1,"min_credits":16,"options":["BOT212","BOT213","MIC213","ZOO213"]},
+        {"key":"y2s2-elective","label":"Choose 16 second-year elective credits","year":2,"semester":2,"min_modules":1,"min_credits":16,"options":["BOT222","BOT223","MIC223","ZOO224","ZOO225"]},
+    ],
+    "40041": [
+        {"key":"y1s1-elective","label":"Choose BOT111 or ZOO111","year":1,"semester":1,"min_modules":1,"min_credits":16,"options":["BOT111","ZOO111"]},
+        {"key":"y1s2-elective","label":"Choose BOT121 or ZOO121","year":1,"semester":2,"min_modules":1,"min_credits":16,"options":["BOT121","ZOO121"]},
+        {"key":"y2s2-math-choice","label":"Choose MAT227 or MAT228","year":2,"semester":2,"min_modules":1,"min_credits":8,"options":["MAT227","MAT228"]},
+        {"key":"y2s1-elective","label":"Choose Botany or Zoology elective stream","year":2,"semester":1,"min_modules":1,"min_credits":16,"options":["BOT212","BOT213","ZOO213"]},
+        {"key":"y2s2-elective","label":"Choose Botany or Zoology elective stream","year":2,"semester":2,"min_modules":1,"min_credits":16,"options":["BOT222","BOT223","ZOO224","ZOO225"]},
+    ],
+    "40043": [
+        {"key":"y1s1-elective","label":"Choose CSC113 or GLG111","year":1,"semester":1,"min_modules":1,"min_credits":16,"options":["CSC113","GLG111"]},
+        {"key":"y1s2-elective","label":"Choose CSC121 or GLG121","year":1,"semester":2,"min_modules":1,"min_credits":16,"options":["CSC121","GLG121"]},
+        {"key":"y2s1-elective","label":"Choose 16 second-year elective credits","year":2,"semester":1,"min_modules":1,"min_credits":16,"options":["COC211","COC212","MAT212","MAT213","GLG212"]},
+        {"key":"y2s2-elective","label":"Choose 16 second-year elective credits","year":2,"semester":2,"min_modules":1,"min_credits":16,"options":["COC223","COC224","MAT226","MAT227","MAT228","GLG222"]},
+    ]
 }
 
 
