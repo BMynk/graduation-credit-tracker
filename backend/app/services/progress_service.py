@@ -2361,6 +2361,66 @@ def calculate_achievements(
     return set(achievements)
 
 
+def check_and_notify_achievements(
+    db: Session,
+    student: models.Student,
+) -> list[str]:
+    """
+    Persist newly unlocked achievements and notify the student once.
+
+    Achievement eligibility remains derived from calculate_achievements().
+    StudentAchievement is the durable record used to prevent duplicate
+    unlock notifications when marks are recorded more than once.
+    """
+    unlocked_ids = calculate_achievements(db, student)
+    existing_ids = {
+        row.achievement_id
+        for row in db.query(StudentAchievement).filter(
+            StudentAchievement.student_id == student.id
+        ).all()
+    }
+
+    newly_unlocked = [
+        achievement_id
+        for achievement_id in unlocked_ids
+        if achievement_id not in existing_ids
+    ]
+
+    if not newly_unlocked:
+        return []
+
+    rows = []
+    for achievement_id in newly_unlocked:
+        row = StudentAchievement(
+            student_id=student.id,
+            achievement_id=achievement_id,
+            notified=False,
+        )
+        db.add(row)
+        rows.append(row)
+
+    # Persist unlocks before attempting email. This makes the operation
+    # idempotent even when email delivery is unavailable or fails.
+    db.commit()
+
+    for row in rows:
+        definition = ACHIEVEMENT_DEFINITIONS.get(row.achievement_id)
+        if definition is None:
+            continue
+
+        try:
+            send_achievement_unlocked_email(student, definition)
+        except Exception:
+            # A notification failure must not undo an official mark or
+            # cause the achievement to be awarded repeatedly.
+            continue
+
+        row.notified = True
+
+    db.commit()
+    return newly_unlocked
+
+
 def get_achievement_summary(
     db: Session,
     student: models.Student,
