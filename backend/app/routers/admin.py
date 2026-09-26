@@ -770,7 +770,6 @@ def generate_test_academic_record(
         created += 1
 
     db.commit()
-    progress_service.check_and_notify_achievements(db, student)
     return {
         "student_number": student.student_number,
         "grade": TEST_GRADE,
