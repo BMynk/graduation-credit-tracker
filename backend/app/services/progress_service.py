@@ -956,6 +956,10 @@ def get_eligible_modules(db: Session, student: models.Student) -> List[dict]:
     # alternatives in that group should not keep appearing as recommended
     # modules merely because their prerequisites are met.
     satisfied_alternative_ids = set()
+    choice_status = {
+        requirement["key"]: requirement
+        for requirement in _curriculum_choice_status(db, student)
+    }
     groups = (
         db.query(models.ProgrammeRequirementGroup)
         .options(joinedload(models.ProgrammeRequirementGroup.options))
@@ -963,16 +967,7 @@ def get_eligible_modules(db: Session, student: models.Student) -> List[dict]:
         .all()
     )
     for group in groups:
-        completed_options = [
-            option for option in group.options
-            if option.module_id in passed_ids
-        ]
-        completed_credits = sum(
-            option.module.credits
-            for option in completed_options
-            if option.module is not None
-        )
-        if len(completed_options) >= group.min_modules and completed_credits >= group.min_credits:
+        if choice_status.get(group.key, {}).get("satisfied"):
             satisfied_alternative_ids.update(
                 option.module_id
                 for option in group.options
