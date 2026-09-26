@@ -564,9 +564,71 @@ def build_graduation_audit(
 
     prerequisite_warnings = []
 
+    # Non-compulsory ProgrammeModule links can be alternatives in a
+    # prospectus choice group. Do not treat every unused alternative as
+    # individually outstanding. For an unsatisfied group, include only
+    # enough alternatives to represent its minimum remaining credit/module
+    # requirement in projections and prerequisite warnings.
+    link_by_module_id = {link.module_id: link for link in programme_modules}
+    choice_option_ids = set()
+    outstanding_choice_links = []
+
+    for requirement in missing_choice_requirements:
+        group = next(
+            (
+                group for group in db.query(models.ProgrammeRequirementGroup)
+                .options(joinedload(models.ProgrammeRequirementGroup.options))
+                .filter(
+                    models.ProgrammeRequirementGroup.programme_id == student.programme_id,
+                    models.ProgrammeRequirementGroup.key == requirement["key"],
+                )
+                .all()
+            ),
+            None,
+        )
+        if group is None:
+            continue
+
+        choice_option_ids.update(option.module_id for option in group.options)
+        completed_count = len(requirement["completed_options"])
+        modules_needed = max(group.min_modules - completed_count, 0)
+        credits_needed = max(group.min_credits - requirement["completed_credits"], 0)
+
+        candidates = [
+            link_by_module_id[option.module_id]
+            for option in group.options
+            if option.module_id not in completed_ids
+            and option.module_id in link_by_module_id
+        ]
+        candidates.sort(key=lambda link: (link.module.credits, link.module.code))
+
+        selected = []
+        selected_credits = 0
+        for link in candidates:
+            if len(selected) >= modules_needed and selected_credits >= credits_needed:
+                break
+            selected.append(link)
+            selected_credits += link.module.credits
+        outstanding_choice_links.extend(selected)
+
+    # Include choice options from satisfied groups too, so their unused
+    # alternatives are excluded from generic elective accounting.
+    for group in (
+        db.query(models.ProgrammeRequirementGroup)
+        .options(joinedload(models.ProgrammeRequirementGroup.options))
+        .filter(models.ProgrammeRequirementGroup.programme_id == student.programme_id)
+        .all()
+    ):
+        choice_option_ids.update(option.module_id for option in group.options)
+
+    generic_missing_elective_links = [
+        link for link in missing_elective_links
+        if link.module_id not in choice_option_ids
+    ]
     outstanding_links = (
         missing_compulsory_links
-        + missing_elective_links
+        + generic_missing_elective_links
+        + outstanding_choice_links
     )
 
     for link in outstanding_links:
@@ -719,7 +781,7 @@ def build_graduation_audit(
     # a semester. Each curriculum semester therefore contributes at
     # least one future semester when it still contains requirements;
     # overloaded curriculum semesters require additional semesters.
-    MAX_CREDITS_PER_SEMESTER = 80
+    MAX_CREDITS_PER_SEMESTER = 60
     outstanding_by_curriculum_semester = defaultdict(int)
 
     for link in outstanding_links:
