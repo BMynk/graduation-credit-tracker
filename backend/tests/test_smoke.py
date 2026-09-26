@@ -48,9 +48,9 @@ def setup_db():
         os.remove("test_credit_tracker.db")
 
 
-def register_and_login(student_number="S1", password="TestPass123!"):
+def register_and_login(student_number="S1", password="123456"):
     """Create a test student directly in the throwaway DB, then exercise real PIN login."""
-    email = f"{student_number.lower()}@example.test"
+    email = f"{student_number.lower()}@example.com"
     db = SessionLocal()
     programme = db.query(models.Programme).filter(models.Programme.code == "TEST01").first()
     student = models.Student(
@@ -86,7 +86,7 @@ def test_wrong_password_rejected():
     register_and_login("S101")
     resp = client.post(
         "/auth/login",
-        json={"student_number": "S101", "email": "s101@example.test", "pin": "wrong"},
+        json={"student_number": "S101", "email": "s101@example.com", "pin": "wrong"},
     )
     assert resp.status_code == 401
 
