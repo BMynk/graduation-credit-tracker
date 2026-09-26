@@ -702,7 +702,7 @@ REQUIREMENT_GROUPS = {
     "40029": [
         {"key": "y2s1-stat", "label": "Choose STM213 or STM212", "year": 2, "semester": 1, "min_modules": 1, "min_credits": 16, "options": ["STM213", "STM212"]},
         {"key": "y2s2-stat", "label": "Choose STM221 or STM222", "year": 2, "semester": 2, "min_modules": 1, "min_credits": 16, "options": ["STM221", "STM222"]},
-    ],,
+    ],
     "40015": [
         {"key":"y2s2-math-choice","label":"Choose MAT227 or MAT228","year":2,"semester":2,"min_modules":1,"min_credits":8,"options":["MAT227","MAT228"]},
     ],
