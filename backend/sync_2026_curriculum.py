@@ -44,6 +44,11 @@ def sync():
             programme = programmes.get(programme_code)
             if programme is None:
                 continue
+            choice_codes = {
+                ALIAS_CODES.get(code, code)
+                for spec in REQUIREMENT_GROUPS.get(programme_code, [])
+                for code in spec["options"]
+            }
             desired = {}
             for compulsory, key in ((True, "compulsory"), (False, "elective")):
                 for raw_code in groups.get(key, []):
@@ -52,7 +57,7 @@ def sync():
                     if module is None:
                         continue
                     year, semester = curriculum_position(module)
-                    desired[module.id] = (compulsory, year, semester)
+                    desired[module.id] = (compulsory and code not in choice_codes, year, semester)
             for module_id, (compulsory, year, semester) in desired.items():
                 link = db.query(models.ProgrammeModule).filter(
                     models.ProgrammeModule.programme_id == programme.id,
