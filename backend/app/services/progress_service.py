@@ -445,6 +445,45 @@ def build_graduation_audit(
     }
     for group in requirement_groups:
         status_info = choice_status_by_key.get(group.key, {})
+
+        if group.paths:
+            # Exact-path groups represent whole prospectus streams. Pick a
+            # satisfied path when available; otherwise use the path closest
+            # to the student's completed modules as the representative
+            # remaining requirement. Never construct a mixed stream.
+            path_candidates = []
+            for path in group.paths:
+                path_ids = {
+                    option.module_id
+                    for option in path.options
+                    if option.module_id in link_by_module_id
+                }
+                if not path_ids:
+                    continue
+                completed_count = len(path_ids & completed_ids)
+                path_credits = sum(
+                    link_by_module_id[module_id].module.credits
+                    for module_id in path_ids
+                )
+                path_candidates.append(
+                    (path_ids <= completed_ids, completed_count, path_credits, path.key, path_ids)
+                )
+            if path_candidates:
+                path_candidates.sort(
+                    key=lambda item: (
+                        not item[0],
+                        -item[1],
+                        item[2],
+                        item[3],
+                    )
+                )
+                selected_ids = path_candidates[0][4]
+                required_choice_links.extend(
+                    link_by_module_id[module_id]
+                    for module_id in selected_ids
+                )
+            continue
+
         completed_options = [
             option for option in group.options
             if option.module_id in completed_ids
