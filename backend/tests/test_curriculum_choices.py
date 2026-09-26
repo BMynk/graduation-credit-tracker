@@ -10,6 +10,7 @@ from sqlalchemy.pool import StaticPool
 from app import models
 from app.database import Base
 from app.routers.planning import _build_planning_modules
+from app.routers.admin import generate_test_academic_record
 from app.services.progress_service import build_graduation_audit, get_eligible_modules
 
 
@@ -163,5 +164,56 @@ def test_unsatisfied_group_projects_only_minimum_choice_requirement():
         # CORE1 (16) plus one 16-credit choice is 32 credits in Y1S1,
         # so alternatives must not inflate the projection.
         assert audit["projected_semesters_remaining"] == 1
+    finally:
+        db.close()
+
+
+def test_95_percent_generator_does_not_treat_failed_choice_as_satisfied():
+    db = _session()
+    try:
+        student, core, option_a, option_b = _choice_fixture(db)
+        student.student_number = "202355290"
+        db.add(models.Enrolment(
+            student_id=student.id,
+            module_id=option_a.id,
+            semester="2026-S1",
+            grade=35,
+            status="failed",
+            attempt=1,
+        ))
+        db.commit()
+
+        result = generate_test_academic_record(
+            student_id=student.id,
+            current_admin=None,
+            db=db,
+        )
+
+        failed_option = (
+            db.query(models.Enrolment)
+            .filter(
+                models.Enrolment.student_id == student.id,
+                models.Enrolment.module_id == option_a.id,
+            )
+            .order_by(models.Enrolment.id)
+            .all()
+        )
+        generated_option = (
+            db.query(models.Enrolment)
+            .filter(
+                models.Enrolment.student_id == student.id,
+                models.Enrolment.module_id == option_b.id,
+                models.Enrolment.status == "completed",
+            )
+            .first()
+        )
+
+        assert len(failed_option) == 1
+        assert failed_option[0].status == "failed"
+        assert failed_option[0].grade == 35
+        assert generated_option is not None
+        assert generated_option.grade == 95
+        assert generated_option.semester.startswith("TEST-")
+        assert result["created"] == 2  # CORE1 plus OPT2
     finally:
         db.close()
