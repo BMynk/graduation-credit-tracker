@@ -49,16 +49,27 @@ def setup_db():
 
 
 def register_and_login(student_number="S1", password="TestPass123!"):
-    client.post(
-        "/auth/register",
-        json={
-            "name": "Test Student",
-            "student_number": student_number,
-            "password": password,
-            "programme_code": "TEST01",
-        },
+    """Create a test student directly in the throwaway DB, then exercise real PIN login."""
+    email = f"{student_number.lower()}@example.test"
+    db = SessionLocal()
+    programme = db.query(models.Programme).filter(models.Programme.code == "TEST01").first()
+    student = models.Student(
+        name="Test Student",
+        student_number=student_number,
+        email=email,
+        programme_id=programme.id,
+        pin_hash=hash_password(password),
+        is_active=True,
     )
-    resp = client.post("/auth/login", json={"student_number": student_number, "password": password})
+    db.add(student)
+    db.commit()
+    db.close()
+
+    resp = client.post(
+        "/auth/login",
+        json={"student_number": student_number, "email": email, "pin": password},
+    )
+    assert resp.status_code == 200, resp.text
     return resp.json()["access_token"]
 
 
@@ -73,7 +84,10 @@ def test_register_and_login():
 
 def test_wrong_password_rejected():
     register_and_login("S101")
-    resp = client.post("/auth/login", json={"student_number": "S101", "password": "wrong"})
+    resp = client.post(
+        "/auth/login",
+        json={"student_number": "S101", "email": "s101@example.test", "pin": "wrong"},
+    )
     assert resp.status_code == 401
 
 
