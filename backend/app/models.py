@@ -308,9 +308,64 @@ class ProgrammeRequirementGroup(Base):
         back_populates="group",
         cascade="all, delete-orphan",
     )
+    paths = relationship(
+        "ProgrammeRequirementPath",
+        back_populates="group",
+        cascade="all, delete-orphan",
+    )
 
     __table_args__ = (
         UniqueConstraint("programme_id", "key", name="uq_programme_requirement_group"),
+    )
+
+
+class ProgrammeRequirementPath(Base):
+    """One valid module combination for a curriculum choice group."""
+
+    __tablename__ = "programme_requirement_paths"
+
+    id = Column(Integer, primary_key=True, index=True)
+    group_id = Column(
+        Integer,
+        ForeignKey("programme_requirement_groups.id"),
+        nullable=False,
+        index=True,
+    )
+    key = Column(String(120), nullable=False)
+    label = Column(String(255), nullable=False)
+
+    group = relationship(
+        "ProgrammeRequirementGroup",
+        back_populates="paths",
+    )
+    options = relationship(
+        "ProgrammeRequirementPathOption",
+        back_populates="path",
+        cascade="all, delete-orphan",
+    )
+
+    __table_args__ = (
+        UniqueConstraint("group_id", "key", name="uq_programme_requirement_path"),
+    )
+
+
+class ProgrammeRequirementPathOption(Base):
+    __tablename__ = "programme_requirement_path_options"
+
+    id = Column(Integer, primary_key=True, index=True)
+    path_id = Column(
+        Integer,
+        ForeignKey("programme_requirement_paths.id"),
+        nullable=False,
+        index=True,
+    )
+    module_id = Column(Integer, ForeignKey("modules.id"), nullable=False, index=True)
+
+    path = relationship("ProgrammeRequirementPath", back_populates="options")
+    module = relationship("Module")
+
+    __table_args__ = (
+        UniqueConstraint("path_id", "module_id", name="uq_requirement_path_module"),
     )
 
 
