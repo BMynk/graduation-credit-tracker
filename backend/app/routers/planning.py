@@ -235,6 +235,10 @@ def _build_planning_modules(
     # Once a prospectus choice/OR group is satisfied, unused alternatives
     # are no longer outstanding planner recommendations.
     satisfied_choice_alternative_ids = set()
+    choice_status = {
+        requirement["key"]: requirement
+        for requirement in progress_service._curriculum_choice_status(db, student)
+    }
     requirement_groups = (
         db.query(models.ProgrammeRequirementGroup)
         .options(
@@ -245,19 +249,7 @@ def _build_planning_modules(
         .all()
     )
     for group in requirement_groups:
-        completed_options = [
-            option for option in group.options
-            if option.module_id in passed_ids
-        ]
-        completed_credits = sum(
-            option.module.credits
-            for option in completed_options
-            if option.module is not None
-        )
-        if (
-            len(completed_options) >= group.min_modules
-            and completed_credits >= group.min_credits
-        ):
+        if choice_status.get(group.key, {}).get("satisfied"):
             satisfied_choice_alternative_ids.update(
                 option.module_id
                 for option in group.options
