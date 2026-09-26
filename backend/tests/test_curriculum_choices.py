@@ -626,7 +626,7 @@ def test_exact_requirement_path_rejects_mixed_mat_alternatives_1():
         ))
         db.commit()
 
-        status = progress_service._curriculum_choice_status(db, student)[0]
+        status = _curriculum_choice_status(db, student)[0]
         assert status["satisfied"] is True
         assert any(path["satisfied"] for path in status["paths"])
     finally:
