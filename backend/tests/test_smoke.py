@@ -16,7 +16,7 @@ from app.main import app
 from app.rate_limit import limiter
 from app import models
 from app.database import SessionLocal
-from app.security import hash_password
+from app.security import hash_password, verify_password
 
 limiter.enabled = False  # don't let the login rate limit interfere with test runs
 
@@ -63,6 +63,11 @@ def register_and_login(student_number="S1", password="123456"):
     )
     db.add(student)
     db.commit()
+    db.refresh(student)
+    assert student.student_number == student_number
+    assert student.email == email
+    assert student.is_active is True
+    assert verify_password(password, student.pin_hash)
     db.close()
 
     resp = client.post(
