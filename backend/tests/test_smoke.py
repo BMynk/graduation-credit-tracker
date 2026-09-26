@@ -17,6 +17,7 @@ from app.rate_limit import limiter
 from app import models
 from app.database import SessionLocal
 from app.security import hash_password, verify_password
+from app.services import progress_service
 
 limiter.enabled = False  # don't let the login rate limit interfere with test runs
 
@@ -91,7 +92,7 @@ def test_wrong_password_rejected():
     register_and_login("S101")
     resp = client.post(
         "/auth/login",
-        json={"student_number": "S101", "email": "s101@example.com", "pin": "wrong"},
+        json={"student_number": "S101", "email": "s101@example.com", "pin": "000000"},
     )
     assert resp.status_code == 401
 
@@ -101,90 +102,85 @@ def test_unauthenticated_request_rejected():
     assert resp.status_code == 401
 
 
-def test_prerequisite_enforced():
-    token = register_and_login("S102")
-    headers = {"Authorization": f"Bearer {token}"}
-    resp = client.post(
-        "/progress/complete-module",
-        json={"module_code": "M2", "semester": "2025-S1", "grade": 80},
-        headers=headers,
+def _record_enrolment(student_number, module_code, semester, grade, status_value, attempt=1):
+    """Insert admin-managed academic history directly into the isolated test DB."""
+    db = SessionLocal()
+    student = db.query(models.Student).filter(models.Student.student_number == student_number).first()
+    module = db.query(models.Module).filter(models.Module.code == module_code).first()
+    enrolment = models.Enrolment(
+        student_id=student.id,
+        module_id=module.id,
+        semester=semester,
+        grade=grade,
+        status=status_value,
+        attempt=attempt,
     )
-    assert resp.status_code == 409
-    assert "missing_prerequisites" in resp.json()["detail"]
+    db.add(enrolment)
+    db.commit()
+    db.refresh(enrolment)
+    enrolment_id = enrolment.id
+    db.close()
+    return enrolment_id
 
 
-def test_completion_and_retake_flow():
+def test_prerequisite_eligibility():
+    register_and_login("S102")
+    db = SessionLocal()
+    student = db.query(models.Student).filter(models.Student.student_number == "S102").first()
+    m2 = db.query(models.Module).filter(models.Module.code == "M2").first()
+
+    missing = progress_service.check_prerequisites_met(db, student, m2)
+    assert "M1" in missing
+
+    m1 = db.query(models.Module).filter(models.Module.code == "M1").first()
+    db.add(models.Enrolment(
+        student_id=student.id,
+        module_id=m1.id,
+        semester="2025-S1",
+        grade=65,
+        status="completed",
+        attempt=1,
+    ))
+    db.commit()
+    missing = progress_service.check_prerequisites_met(db, student, m2)
+    db.close()
+    assert missing == []
+
+
+def test_completion_and_retake_summary():
     token = register_and_login("S103")
     headers = {"Authorization": f"Bearer {token}"}
 
-    # Fail M1
-    resp = client.post(
-        "/progress/complete-module",
-        json={"module_code": "M1", "semester": "2025-S1", "grade": 30},
-        headers=headers,
-    )
-    assert resp.status_code == 201
-    assert resp.json()["status"] == "failed"
-
+    _record_enrolment("S103", "M1", "2025-S1", 30, "failed", 1)
     summary = client.get("/progress/summary", headers=headers).json()
     assert summary["modules_failed_pending_retake"] == 1
     assert summary["credits_completed"] == 0
 
-    # Retake and pass
-    resp = client.post(
-        "/progress/complete-module",
-        json={"module_code": "M1", "semester": "2025-S2", "grade": 65},
-        headers=headers,
-    )
-    assert resp.status_code == 201
-    assert resp.json()["status"] == "completed"
-    assert resp.json()["attempt"] == 2
-
+    _record_enrolment("S103", "M1", "2025-S2", 65, "completed", 2)
     summary = client.get("/progress/summary", headers=headers).json()
     assert summary["modules_failed_pending_retake"] == 0
     assert summary["credits_completed"] == 20
-
-    # Now M2's prerequisite is satisfied
-    resp = client.post(
-        "/progress/complete-module",
-        json={"module_code": "M2", "semester": "2025-S2", "grade": 90},
-        headers=headers,
-    )
-    assert resp.status_code == 201
-
-    # Duplicate completion of an already-passed module is rejected
-    resp = client.post(
-        "/progress/complete-module",
-        json={"module_code": "M2", "semester": "2026-S1", "grade": 95},
-        headers=headers,
-    )
-    assert resp.status_code == 409
 
 
 def test_students_cannot_see_each_others_data():
     token_a = register_and_login("S104")
     token_b = register_and_login("S105")
 
-    client.post(
-        "/progress/complete-module",
-        json={"module_code": "M1", "semester": "2025-S1", "grade": 80},
-        headers={"Authorization": f"Bearer {token_a}"},
-    )
+    _record_enrolment("S104", "M1", "2025-S1", 80, "completed", 1)
 
     summary_b = client.get("/progress/summary", headers={"Authorization": f"Bearer {token_b}"}).json()
     assert summary_b["credits_completed"] == 0  # student B unaffected by student A's completion
 
 
-def test_cannot_delete_completed_enrolment():
+def test_completed_history_is_read_only_through_progress_api():
     token = register_and_login("S106")
     headers = {"Authorization": f"Bearer {token}"}
-    client.post(
-        "/progress/complete-module",
-        json={"module_code": "M1", "semester": "2025-S1", "grade": 80},
-        headers=headers,
-    )
-    history = client.get("/progress/history", headers=headers).json()
-    enrolment_id = history[0]["id"]
+    enrolment_id = _record_enrolment("S106", "M1", "2025-S1", 80, "completed", 1)
 
+    history = client.get("/progress/history", headers=headers)
+    assert history.status_code == 200
+    assert any(item["id"] == enrolment_id and item["status"] == "completed" for item in history.json())
+
+    # Student progress API intentionally exposes no DELETE enrolment route.
     resp = client.delete(f"/progress/enrolments/{enrolment_id}", headers=headers)
-    assert resp.status_code == 409
+    assert resp.status_code == 405
