@@ -520,3 +520,114 @@ def test_exact_requirement_path_rejects_mixed_modules():
         )
     finally:
         db.close()
+
+
+def test_exact_requirement_path_rejects_mixed_mat_alternatives():
+    db = _session()
+    try:
+        programme = models.Programme(
+            code="PATH01",
+            name="Path Test",
+            faculty="Science & Agriculture",
+            total_credits_required=16,
+        )
+        db.add(programme)
+        db.flush()
+
+        modules = {}
+        for code in ("MAT226", "MAT227", "MAT228"):
+            module = models.Module(
+                code=code,
+                name=code,
+                credits=8,
+                category="core",
+                level=2,
+            )
+            db.add(module)
+            db.flush()
+            modules[code] = module
+            db.add(models.ProgrammeModule(
+                programme_id=programme.id,
+                module_id=module.id,
+                is_compulsory=False,
+                year=2,
+                semester=2,
+            ))
+
+        group = models.ProgrammeRequirementGroup(
+            programme_id=programme.id,
+            key="math-stream",
+            label="MAT226 + (MAT227 or MAT228)",
+            year=2,
+            semester=2,
+            min_modules=2,
+            min_credits=16,
+        )
+        db.add(group)
+        db.flush()
+        for module in modules.values():
+            db.add(models.ProgrammeRequirementOption(
+                group_id=group.id,
+                module_id=module.id,
+            ))
+
+        for key, codes in (
+            ("mat227", ("MAT226", "MAT227")),
+            ("mat228", ("MAT226", "MAT228")),
+        ):
+            path = models.ProgrammeRequirementPath(
+                group_id=group.id,
+                key=key,
+                label=" + ".join(codes),
+            )
+            db.add(path)
+            db.flush()
+            for code in codes:
+                db.add(models.ProgrammeRequirementPathOption(
+                    path_id=path.id,
+                    module_id=modules[code].id,
+                ))
+
+        student = models.Student(
+            name="Path Student",
+            student_number="202399991",
+            email="path@student.ufh.ac.za",
+            programme_id=programme.id,
+            current_year=2,
+            target_average=60,
+        )
+        db.add(student)
+        db.flush()
+
+        # MAT227 + MAT228 reaches 16 credits but is not a valid prospectus path
+        # because MAT226 is mandatory in both valid Mathematics combinations.
+        for code in ("MAT227", "MAT228"):
+            db.add(models.Enrolment(
+                student_id=student.id,
+                module_id=modules[code].id,
+                semester="2026-S2",
+                grade=70,
+                status="completed",
+                attempt=1,
+            ))
+        db.commit()
+
+        status = progress_service._curriculum_choice_status(db, student)[0]
+        assert status["satisfied"] is False
+        assert not any(path["satisfied"] for path in status["paths"])
+
+        db.add(models.Enrolment(
+            student_id=student.id,
+            module_id=modules["MAT226"].id,
+            semester="2026-S2",
+            grade=70,
+            status="completed",
+            attempt=1,
+        ))
+        db.commit()
+
+        status = progress_service._curriculum_choice_status(db, student)[0]
+        assert status["satisfied"] is True
+        assert any(path["satisfied"] for path in status["paths"])
+    finally:
+        db.close()
