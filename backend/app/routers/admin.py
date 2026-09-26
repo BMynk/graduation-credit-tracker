@@ -715,7 +715,10 @@ def generate_test_academic_record(
         db.query(models.ProgrammeRequirementGroup)
         .options(
             joinedload(models.ProgrammeRequirementGroup.options)
-            .joinedload(models.ProgrammeRequirementOption.module)
+            .joinedload(models.ProgrammeRequirementOption.module),
+            joinedload(models.ProgrammeRequirementGroup.paths)
+            .joinedload(models.ProgrammeRequirementPath.options)
+            .joinedload(models.ProgrammeRequirementPathOption.module),
         )
         .filter(models.ProgrammeRequirementGroup.programme_id == student.programme_id)
         .order_by(
@@ -727,6 +730,45 @@ def generate_test_academic_record(
     )
     selected_choice_ids = set()
     for group in groups:
+        if group.paths:
+            valid_paths = []
+            for path in group.paths:
+                path_modules = [
+                    option.module
+                    for option in path.options
+                    if option.module is not None
+                ]
+                if not path_modules:
+                    continue
+                blocked = [
+                    module for module in path_modules
+                    if module.id in existing_module_ids
+                    and module.id not in completed_module_ids
+                ]
+                if blocked:
+                    continue
+                completed_count = sum(
+                    module.id in completed_module_ids
+                    for module in path_modules
+                )
+                valid_paths.append((completed_count, path.key, path_modules))
+
+            if not valid_paths:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=(
+                        f"Cannot satisfy curriculum choice '{group.label}' "
+                        "without overwriting an existing failed, planned, or "
+                        "in-progress academic record."
+                    ),
+                )
+
+            valid_paths.sort(key=lambda item: (-item[0], item[1]))
+            selected_choice_ids.update(
+                module.id for module in valid_paths[0][2]
+            )
+            continue
+
         options = [o.module for o in group.options if o.module is not None]
         completed = [m for m in options if m.id in completed_module_ids]
         chosen = list(completed)
@@ -744,6 +786,16 @@ def generate_test_academic_record(
             chosen.append(module)
             chosen_ids.add(module.id)
             credits += module.credits
+
+        if len(chosen) < group.min_modules or credits < group.min_credits:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Cannot satisfy curriculum choice '{group.label}' "
+                    "without overwriting an existing failed, planned, or "
+                    "in-progress academic record."
+                ),
+            )
         selected_choice_ids.update(chosen_ids)
 
     target_links = [
