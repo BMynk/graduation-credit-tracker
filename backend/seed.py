@@ -870,6 +870,11 @@ def seed():
 
         for programme_code, groups in PROGRAMME_MODULES.items():
             programme = programme_by_code.get(programme_code)
+            choice_codes = {
+                ALIAS_CODES.get(code, code)
+                for spec in REQUIREMENT_GROUPS.get(programme_code, [])
+                for code in spec["options"]
+            }
             if not programme:
                 print(f"  Warning: Programme {programme_code} not found")
                 continue
@@ -890,7 +895,7 @@ def seed():
                 db.add(models.ProgrammeModule(
                     programme=programme,
                     module=module,
-                    is_compulsory=True,
+                    is_compulsory=(actual_code not in choice_codes),
                     year=year,
                     semester=semester,
                 ))
