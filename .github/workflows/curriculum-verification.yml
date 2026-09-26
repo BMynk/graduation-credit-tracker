@@ -9,6 +9,8 @@ on:
       - "backend/app/services/progress_service.py"
       - "backend/app/services/assistant_context.py"
       - "backend/app/routers/admin.py"
+      - "backend/app/routers/planning.py"
+      - "backend/tests/test_curriculum_choices.py"
       - "backend/sync_2026_curriculum.py"
       - ".github/workflows/curriculum-verification.yml"
   workflow_dispatch:
