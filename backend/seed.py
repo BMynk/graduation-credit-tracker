@@ -78,6 +78,7 @@ MODULES = [
     # Second Year - Mathematics
     ("MAT212", "Fundamentals of Mathematics", 16, "core", 2),
     ("MAT213", "Advanced Calculus", 16, "core", 2),
+    ("MAT225", "Linear Algebra", 16, "core", 2),
     ("MAT226", "Linear Algebra", 16, "core", 2),
     ("MAT227", "Real Analysis", 16, "core", 2),
     ("MAT228", "Geometry", 16, "core", 2),
@@ -163,6 +164,7 @@ MODULES = [
     # Second Year - Chemistry
     ("PAC211", "Inorganic Chemistry I", 16, "core", 2),
     ("PAC213", "Organic Chemistry I", 16, "core", 2),
+    ("PAC215", "Organic Chemistry I", 16, "core", 2),
     ("PAC222", "Analytical Chemistry I", 16, "core", 2),
     ("PAC223", "Physical Chemistry I", 16, "core", 2),
     ("PAC224", "Physical Chemistry II", 16, "core", 2),
@@ -283,10 +285,10 @@ PREREQUISITES = {
     "COC313": ["CSC211"],
     "COC323": ["CSC212"],
     "COC324": ["CSC211"],
-    "CSC312": ["CSC212"],
-    "CSC313": ["CSC211"],
-    "CSC323": ["CSC212"],
-    "CSC324": ["CSC211"],
+    "CSC312": ["COC212"],
+    "CSC313": ["COC211"],
+    "CSC323": ["COC212"],
+    "CSC324": ["COC211"],
     
     # Mathematics
     "MAT212": ["MAT111", "MAT121"],
@@ -330,6 +332,20 @@ PREREQUISITES = {
     "PHY322": ["PHY223", "PHY224"],
 }
 
+# ---------- CURRICULUM POSITION ----------
+# UFH module codes encode the normal semester in the tens digit:
+# x1x = Semester 1 and x2x = Semester 2.  The module level supplies
+# the curriculum year for these three-year BSc combinations.
+def curriculum_position(module):
+    code = module.code
+    semester = 1
+    if len(code) >= 2 and code[-2].isdigit():
+        semester_digit = int(code[-2])
+        if semester_digit in (1, 2):
+            semester = semester_digit
+    return module.level, semester
+
+
 # ---------- PROGRAMME MODULES ----------
 PROGRAMME_MODULES = {
     # BSc Botany and Microbiology (40009) - Fully prescribed
@@ -350,8 +366,8 @@ PROGRAMME_MODULES = {
         "compulsory": [
             "BOT111", "PAC110", "MAT112", "ZOO111",
             "BOT121", "PAC121", "MAT123", "ZOO121",
-            "BOT212", "BOT213", "PAC211", "PAC213",
-            "BOT222", "BOT223", "PAC222", "PAC223",
+            "BOT212", "BOT213", "PAC211", "PAC215",
+            "BOT222", "BOT223", "PAC222", "PAC224",
             "BOT312", "BOT313", "PAC311", "PAC312",
             "BOT322", "BOT324", "PAC321", "PAC323",
         ],
@@ -366,8 +382,8 @@ PROGRAMME_MODULES = {
         "compulsory": [
             "PAC110", "GLG111", "MAT112", "PHY111", "PHY112",
             "PAC121", "GLG121", "MAT123", "PHY121", "PHY122",
-            "PAC211", "PAC213", "GLG212", "GLG213",
-            "PAC222", "PAC223", "GLG222", "GLG223",
+            "PAC211", "PAC215", "GLG212", "GLG213",
+            "PAC222", "PAC224", "GLG222", "GLG223",
             "PAC311", "PAC312", "GLG312", "GLG313",
             "PAC321", "PAC323", "GLG322", "GLG323",
         ],
@@ -399,8 +415,8 @@ PROGRAMME_MODULES = {
             "CSC121", "MAT121", "PHY121", "PHY122", "STA121",
             "COC211", "COC212", "PHY213", "PHY214", "MAT212", "MAT213", "DCS211", "DCS212",
             "COC223", "COC224", "PHY223", "PHY224", "MAT226", "MAT227", "MAT228", "DCS222", "DCS224",
-            "COC312", "COC313", "PHY311", "PHY312",
-            "COC323", "COC324", "PHY321", "PHY322",
+            "CSC312", "CSC313", "PHY311", "PHY312",
+            "CSC323", "CSC324", "PHY321", "PHY322",
         ],
         "elective": [],
     },
@@ -473,10 +489,13 @@ PROGRAMME_MODULES = {
             "CSC121", "MAT121", "PHY121", "PHY122", "STA121",
             "COC211", "COC212", "MAT212", "MAT213", "DCS211", "DCS212",
             "COC223", "COC224", "MAT226", "MAT227", "MAT228", "DCS222", "DCS224",
-            "CSC312", "CSC313", "MAP311", "MAP312",
-            "CSC323", "CSC324", "MAT312", "MAT313",
+            "CSC312", "CSC313", "MAT312",
+            "CSC323", "CSC324", "MAT323",
         ],
-        "elective": [],
+        "elective": [
+            "MAT313", "MAT314",
+            "MAT324", "MAT325",
+        ],
     },
     
     # BSc Statistics and Geology (40029)
@@ -500,17 +519,9 @@ ALIAS_CODES = {
     "CSC212": "COC212",
     "CSC223": "COC223",
     "CSC224": "COC224",
-    "CSC312": "COC312",
-    "CSC313": "COC313",
-    "CSC323": "COC323",
-    "CSC324": "COC324",
-    "MAT225": "MAT228",
     "STM212": "STM214",
     "STM221": "STM223",
     "STM222": "STM224",
-    "GEG221": "GEG222",
-    "PAC215": "PAC213",
-    "PAC311": "PAC323",
 }
 
 
@@ -598,10 +609,13 @@ def seed():
                 if pair in added_pairs:
                     continue
 
+                year, semester = curriculum_position(module)
                 db.add(models.ProgrammeModule(
                     programme=programme,
                     module=module,
-                    is_compulsory=True
+                    is_compulsory=True,
+                    year=year,
+                    semester=semester,
                 ))
                 added_pairs.add(pair)
 
@@ -617,10 +631,13 @@ def seed():
                 if pair in added_pairs:
                     continue
 
+                year, semester = curriculum_position(module)
                 db.add(models.ProgrammeModule(
                     programme=programme,
                     module=module,
-                    is_compulsory=False
+                    is_compulsory=False,
+                    year=year,
+                    semester=semester,
                 ))
                 added_pairs.add(pair)
 
