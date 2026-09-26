@@ -12,7 +12,7 @@ from app.database import Base
 from app.routers.planning import _build_planning_modules
 from app.routers.progress import get_degree_progress
 from app.routers.admin import generate_test_academic_record
-from app.services.progress_service import build_graduation_audit, get_eligible_modules
+from app.services.progress_service import build_graduation_audit, get_eligible_modules, check_and_notify_achievements
 from app.services.assistant_context import build_student_assistant_context
 
 
@@ -325,5 +325,81 @@ def test_marcel_context_marks_unused_satisfied_choice_as_not_eligible():
             item["code"] for item in context["eligible_modules"]
         }
         assert "OPT2" not in eligible_codes
+    finally:
+        db.close()
+
+
+def test_achievement_unlock_persistence_is_idempotent(monkeypatch):
+    db = _session()
+    try:
+        student, core, option_a, option_b = _choice_fixture(db)
+        db.add(models.Enrolment(
+            student_id=student.id,
+            module_id=core.id,
+            semester="2026-S1",
+            grade=70,
+            status="completed",
+            attempt=1,
+        ))
+        db.commit()
+
+        sent = []
+        monkeypatch.setattr(
+            "app.services.progress_service.send_achievement_unlocked_email",
+            lambda student, achievement: sent.append(achievement["id"]),
+        )
+
+        first = check_and_notify_achievements(db, student)
+        assert "first_steps" in first
+        assert len(sent) == len(first)
+
+        rows = db.query(models.StudentAchievement).filter(
+            models.StudentAchievement.student_id == student.id
+        ).all()
+        assert {row.achievement_id for row in rows} == set(first)
+        assert all(row.notified for row in rows)
+
+        sent.clear()
+        second = check_and_notify_achievements(db, student)
+        assert second == []
+        assert sent == []
+    finally:
+        db.close()
+
+
+def test_achievement_email_failure_does_not_lose_unlock(monkeypatch):
+    db = _session()
+    try:
+        student, core, option_a, option_b = _choice_fixture(db)
+        db.add(models.Enrolment(
+            student_id=student.id,
+            module_id=core.id,
+            semester="2026-S1",
+            grade=70,
+            status="completed",
+            attempt=1,
+        ))
+        db.commit()
+
+        def fail_email(student, achievement):
+            raise RuntimeError("email unavailable")
+
+        monkeypatch.setattr(
+            "app.services.progress_service.send_achievement_unlocked_email",
+            fail_email,
+        )
+
+        unlocked = check_and_notify_achievements(db, student)
+        assert "first_steps" in unlocked
+
+        rows = db.query(models.StudentAchievement).filter(
+            models.StudentAchievement.student_id == student.id
+        ).all()
+        assert {row.achievement_id for row in rows} == set(unlocked)
+        assert all(row.notified is False for row in rows)
+
+        # The persisted unlock prevents duplicate awarding even though
+        # notification delivery failed.
+        assert check_and_notify_achievements(db, student) == []
     finally:
         db.close()
