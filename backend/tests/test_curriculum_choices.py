@@ -217,3 +217,43 @@ def test_95_percent_generator_does_not_treat_failed_choice_as_satisfied():
         assert result["created"] == 2  # CORE1 plus OPT2
     finally:
         db.close()
+
+
+def test_audit_totals_do_not_count_every_choice_alternative():
+    db = _session()
+    try:
+        student, core, option_a, option_b = _choice_fixture(db)
+        audit = build_graduation_audit(db, student)
+        breakdown = audit["requirements_breakdown"]
+
+        # The degree requires CORE1 (16) plus one 16-credit choice, not both
+        # OPT1 and OPT2. Aggregate curriculum totals must therefore stay at 32.
+        assert sum(
+            item["total"] for item in breakdown["by_level"].values()
+        ) == 32
+        assert sum(
+            item["total"] for item in breakdown["by_category"].values()
+        ) == 32
+        assert breakdown["elective"]["total"] == 1
+        assert breakdown["elective"]["completed"] == 0
+
+        db.add(models.Enrolment(
+            student_id=student.id,
+            module_id=option_a.id,
+            semester="2026-S1",
+            grade=70,
+            status="completed",
+            attempt=1,
+        ))
+        db.commit()
+
+        audit = build_graduation_audit(db, student)
+        breakdown = audit["requirements_breakdown"]
+        assert sum(
+            item["total"] for item in breakdown["by_level"].values()
+        ) == 32
+        assert breakdown["elective"]["total"] == 1
+        assert breakdown["elective"]["completed"] == 1
+        assert breakdown["elective"]["percentage"] == 100.0
+    finally:
+        db.close()
