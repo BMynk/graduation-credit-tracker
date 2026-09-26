@@ -164,6 +164,13 @@ def build_progress_summary(db: Session, student: models.Student) -> dict:
     missing_compulsory = [link.module for link in compulsory_links if link.module_id not in passed_module_ids]
     missing_compulsory.sort(key=lambda m: (m.level, m.code))
 
+    choice_requirements = _curriculum_choice_status(db, student)
+    missing_choice_requirements = [
+        requirement
+        for requirement in choice_requirements
+        if not requirement["satisfied"]
+    ]
+
     return {
         "programme": programme,
         "current_year": student.current_year,
@@ -176,6 +183,8 @@ def build_progress_summary(db: Session, student: models.Student) -> dict:
         "modules_failed_pending_retake": len(pending_failed),
         "category_breakdown": dict(category_breakdown),
         "missing_compulsory_modules": missing_compulsory,
+        "choice_requirements": choice_requirements,
+        "missing_choice_requirements": missing_choice_requirements,
         "failed_modules": failed_modules,
     }
 
@@ -475,6 +484,22 @@ def build_graduation_audit(
             ]
         )
 
+    choice_requirements = _curriculum_choice_status(db, student)
+    missing_choice_requirements = [
+        requirement
+        for requirement in choice_requirements
+        if not requirement["satisfied"]
+    ]
+    if missing_choice_requirements:
+        on_track = False
+        reasons.append(
+            f"Missing {len(missing_choice_requirements)} curriculum choice requirement(s)"
+        )
+        urgent_items.extend(
+            requirement["label"]
+            for requirement in missing_choice_requirements[:3]
+        )
+
     # ---------------------------------------------------------
     # FAILED MODULES BLOCKING MAJOR
     # ---------------------------------------------------------
@@ -748,7 +773,7 @@ def build_graduation_audit(
             summary,
 
         "choice_requirements":
-            _curriculum_choice_status(db, student),
+            choice_requirements,
     }
 
 
