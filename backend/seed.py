@@ -417,8 +417,8 @@ PROGRAMME_MODULES = {
             "CSC121", "MAT121", "PHY121", "PHY122", "STA121",
             "COC211", "COC212", "PHY213", "PHY214", "MAT212", "MAT213", "DCS211", "DCS212",
             "COC223", "COC224", "PHY223", "PHY224", "MAT226", "MAT227", "MAT228", "DCS222", "DCS224",
-            "CSC312", "CSC313", "PHY311", "PHY312",
-            "CSC323", "CSC324", "PHY321", "PHY322",
+            "COC312", "COC313", "PHY311", "PHY312",
+            "COC323", "COC324", "PHY321", "PHY322",
         ],
         "elective": [],
     },
@@ -513,6 +513,55 @@ PROGRAMME_MODULES = {
         "elective": [],
     },
 }
+
+# ---------- CURRICULUM CHOICE GROUPS ----------
+# These encode the prospectus' OR/selection rules.  Options remain linked to
+# ProgrammeModule for planning visibility, while graduation logic can evaluate
+# the group instead of treating every option as compulsory.
+REQUIREMENT_GROUPS = {
+    "40011": [
+        {"key": "y2s1-elective", "label": "Choose 16 credits: BCH215, MIC213 or ZOO213", "year": 2, "semester": 1, "min_modules": 1, "min_credits": 16, "options": ["BCH215", "MIC213", "ZOO213"]},
+        {"key": "y2s2-elective", "label": "Choose 16 credits: BCH224, MIC223, ZOO224 or ZOO225", "year": 2, "semester": 2, "min_modules": 1, "min_credits": 16, "options": ["BCH224", "MIC223", "ZOO224", "ZOO225"]},
+    ],
+    "40014": [
+        {"key": "y1s1-stream", "label": "Choose STA111 or MNU111", "year": 1, "semester": 1, "min_modules": 1, "min_credits": 16, "options": ["STA111", "MNU111"]},
+        {"key": "y1s2-stream", "label": "Choose STA121 or MNU121 + MNU122", "year": 1, "semester": 2, "min_modules": 1, "min_credits": 16, "options": ["STA121", "MNU121", "MNU122"]},
+        {"key": "y2s1-elective", "label": "Choose 16 credits from Mathematics or Mathematical Statistics", "year": 2, "semester": 1, "min_modules": 1, "min_credits": 16, "options": ["MAT212", "MAT213", "STM213", "STM214"]},
+        {"key": "y2s2-elective", "label": "Choose 16 credits from Mathematics or Mathematical Statistics", "year": 2, "semester": 2, "min_modules": 1, "min_credits": 16, "options": ["MAT226", "MAT227", "STM223", "STM224"]},
+    ],
+    "40016": [
+        {"key": "y2s1-stat", "label": "Choose STM213 or STM214", "year": 2, "semester": 1, "min_modules": 1, "min_credits": 16, "options": ["STM213", "STM214"]},
+        {"key": "y2s2-stat", "label": "Choose STM223 or STM224", "year": 2, "semester": 2, "min_modules": 1, "min_credits": 16, "options": ["STM223", "STM224"]},
+        {"key": "y2s1-elective", "label": "Choose 16 elective credits", "year": 2, "semester": 1, "min_modules": 1, "min_credits": 16, "options": ["MAT212", "MAT213", "PHY213", "PHY214", "MAP212"]},
+        {"key": "y2s2-elective", "label": "Choose 16 elective credits", "year": 2, "semester": 2, "min_modules": 1, "min_credits": 16, "options": ["MAT226", "MAT225", "MAT228", "PHY223", "PHY224", "MAP222"]},
+    ],
+    "40017": [
+        {"key": "y2s1-elective", "label": "Choose GIS212 or GSS211", "year": 2, "semester": 1, "min_modules": 1, "min_credits": 16, "options": ["GIS212", "GSS211"]},
+        {"key": "y2s2-elective", "label": "Choose GIS222 or GSS221", "year": 2, "semester": 2, "min_modules": 1, "min_credits": 16, "options": ["GIS222", "GSS221"]},
+    ],
+    "40023": [
+        {"key": "y2s2-math-choice", "label": "Choose MAT227 or MAT228", "year": 2, "semester": 2, "min_modules": 1, "min_credits": 8, "options": ["MAT227", "MAT228"]},
+    ],
+    "40024": [
+        {"key": "y2s2-math-choice", "label": "Choose MAT227 or MAT228", "year": 2, "semester": 2, "min_modules": 1, "min_credits": 8, "options": ["MAT227", "MAT228"]},
+        {"key": "y3s1-math-choice", "label": "Choose MAT313 or MAT314", "year": 3, "semester": 1, "min_modules": 1, "min_credits": 16, "options": ["MAT313", "MAT314"]},
+        {"key": "y3s2-math-choice", "label": "Choose MAT324 or MAT325", "year": 3, "semester": 2, "min_modules": 1, "min_credits": 16, "options": ["MAT324", "MAT325"]},
+    ],
+    "40025": [
+        {"key": "y1s1-stream", "label": "Choose STA111 or MNU111", "year": 1, "semester": 1, "min_modules": 1, "min_credits": 16, "options": ["STA111", "MNU111"]},
+        {"key": "y1s2-stream", "label": "Choose STA121 or MNU121 + MNU122", "year": 1, "semester": 2, "min_modules": 1, "min_credits": 16, "options": ["STA121", "MNU121", "MNU122"]},
+        {"key": "y2s2-math-choice", "label": "Choose MAT227 or MAT228", "year": 2, "semester": 2, "min_modules": 1, "min_credits": 8, "options": ["MAT227", "MAT228"]},
+        {"key": "y2s1-elective", "label": "Choose 16 elective credits", "year": 2, "semester": 1, "min_modules": 1, "min_credits": 16, "options": ["MAP212", "PHY213", "PHY214", "STM213", "STM214"]},
+        {"key": "y2s2-elective", "label": "Choose 16 elective credits", "year": 2, "semester": 2, "min_modules": 1, "min_credits": 16, "options": ["MAP222", "PHY223", "PHY224", "STM223", "STM224"]},
+        {"key": "y3s1-math-choice", "label": "Choose MAT313 or MAT314", "year": 3, "semester": 1, "min_modules": 1, "min_credits": 16, "options": ["MAT313", "MAT314"]},
+        {"key": "y3s2-math-choice", "label": "Choose MAT324 or MAT325", "year": 3, "semester": 2, "min_modules": 1, "min_credits": 16, "options": ["MAT324", "MAT325"]},
+    ],
+    "40029": [
+        {"key": "y2s1-stat", "label": "Choose STM213 or STM212", "year": 2, "semester": 1, "min_modules": 1, "min_credits": 16, "options": ["STM213", "STM212"]},
+        {"key": "y2s2-stat", "label": "Choose STM221 or STM222", "year": 2, "semester": 2, "min_modules": 1, "min_credits": 16, "options": ["STM221", "STM222"]},
+    ],
+}
+
 
 # ---------- ALIASES ----------
 # Maps old/alternative codes to the actual module codes in the database
@@ -642,6 +691,32 @@ def seed():
                     semester=semester,
                 ))
                 added_pairs.add(pair)
+
+        db.flush()
+
+        # ---------- Link Curriculum Choice Groups ----------
+        print("Linking curriculum choice groups...")
+        for programme_code, groups in REQUIREMENT_GROUPS.items():
+            programme = programme_by_code.get(programme_code)
+            if not programme:
+                continue
+            for spec in groups:
+                group = models.ProgrammeRequirementGroup(
+                    programme_id=programme.id,
+                    key=spec["key"],
+                    label=spec["label"],
+                    year=spec["year"],
+                    semester=spec["semester"],
+                    min_modules=spec["min_modules"],
+                    min_credits=spec["min_credits"],
+                )
+                db.add(group)
+                db.flush()
+                for code in spec["options"]:
+                    actual_code = ALIAS_CODES.get(code, code)
+                    module = module_by_code.get(actual_code)
+                    if module:
+                        db.add(models.ProgrammeRequirementOption(group_id=group.id, module_id=module.id))
 
         db.flush()
 
