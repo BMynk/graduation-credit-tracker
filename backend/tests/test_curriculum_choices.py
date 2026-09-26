@@ -10,6 +10,7 @@ from sqlalchemy.pool import StaticPool
 from app import models
 from app.database import Base
 from app.routers.planning import _build_planning_modules
+from app.routers.progress import get_degree_progress
 from app.routers.admin import generate_test_academic_record
 from app.services.progress_service import build_graduation_audit, get_eligible_modules
 
@@ -255,5 +256,37 @@ def test_audit_totals_do_not_count_every_choice_alternative():
         assert breakdown["elective"]["total"] == 1
         assert breakdown["elective"]["completed"] == 1
         assert breakdown["elective"]["percentage"] == 100.0
+    finally:
+        db.close()
+
+
+def test_degree_progress_uses_choice_aware_elective_totals():
+    db = _session()
+    try:
+        student, core, option_a, option_b = _choice_fixture(db)
+
+        progress = get_degree_progress(current_student=student, db=db)
+        assert progress["elective"]["total"] == 1
+        assert progress["elective"]["completed"] == 0
+        assert progress["elective"]["percentage"] == 0
+        assert progress["projected_graduation"] == "~1 semester(s) remaining"
+
+        db.add(models.Enrolment(
+            student_id=student.id,
+            module_id=option_a.id,
+            semester="2026-S1",
+            grade=70,
+            status="completed",
+            attempt=1,
+        ))
+        db.commit()
+
+        progress = get_degree_progress(current_student=student, db=db)
+        assert progress["elective"]["total"] == 1
+        assert progress["elective"]["completed"] == 1
+        assert progress["elective"]["percentage"] == 100.0
+        # CORE1 remains outstanding; the unused OPT2 alternative must not
+        # create an extra projected semester.
+        assert progress["projected_graduation"] == "~1 semester(s) remaining"
     finally:
         db.close()
