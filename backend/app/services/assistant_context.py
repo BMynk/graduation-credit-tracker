@@ -463,6 +463,14 @@ def build_student_assistant_context(
             ),
         }
 
+    # ------------------------------------------------------
+    # Prospectus curriculum choices / elective requirements
+    # ------------------------------------------------------
+    choice_requirements = progress_service._curriculum_choice_status(
+        db,
+        student,
+    )
+
     # ======================================================
     # Final verified student context
     # ======================================================
@@ -533,6 +541,10 @@ def build_student_assistant_context(
 
         "missing_compulsory_modules": (
             missing_compulsory
+        ),
+
+        "choice_requirements": (
+            choice_requirements
         ),
 
         # --------------------------------------------------
