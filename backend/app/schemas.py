@@ -445,6 +445,8 @@ class GraduationAudit(BaseModel):
 
     summary: ProgressSummary
 
+    choice_requirements: List[dict] = []
+
     # Full programme roadmap:
     #
     # {
