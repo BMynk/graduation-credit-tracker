@@ -12,7 +12,7 @@ from app.database import Base
 from app.routers.planning import _build_planning_modules
 from app.routers.progress import get_degree_progress
 from app.routers.admin import generate_test_academic_record
-from app.services.progress_service import build_graduation_audit, get_eligible_modules, check_and_notify_achievements
+from app.services.progress_service import build_graduation_audit, get_eligible_modules, check_and_notify_achievements, _curriculum_choice_status
 from app.services.assistant_context import build_student_assistant_context
 
 
@@ -401,5 +401,122 @@ def test_achievement_email_failure_does_not_lose_unlock(monkeypatch):
         # The persisted unlock prevents duplicate awarding even though
         # notification delivery failed.
         assert check_and_notify_achievements(db, student) == []
+    finally:
+        db.close()
+
+
+def test_exact_requirement_path_rejects_mixed_modules():
+    db = _session()
+    try:
+        programme = models.Programme(
+            code="PATH",
+            name="Path Programme",
+            total_credits_required=16,
+        )
+        db.add(programme)
+        db.flush()
+
+        modules = {}
+        for code in ("COC223", "COC224", "MAT226", "MAT227", "MAT228"):
+            module = models.Module(code=code, name=code, credits=8, level=2)
+            db.add(module)
+            db.flush()
+            modules[code] = module
+            db.add(models.ProgrammeModule(
+                programme_id=programme.id,
+                module_id=module.id,
+                year=2,
+                semester=2,
+                is_compulsory=False,
+            ))
+
+        group = models.ProgrammeRequirementGroup(
+            programme_id=programme.id,
+            key="y2s2-elective",
+            label="Choose COC pair or MAT226 + (MAT227 or MAT228)",
+            year=2,
+            semester=2,
+            min_modules=2,
+            min_credits=16,
+        )
+        db.add(group)
+        db.flush()
+        for module in modules.values():
+            db.add(models.ProgrammeRequirementOption(
+                group_id=group.id,
+                module_id=module.id,
+            ))
+
+        for key, codes in (
+            ("coc", ("COC223", "COC224")),
+            ("mat227", ("MAT226", "MAT227")),
+            ("mat228", ("MAT226", "MAT228")),
+        ):
+            path = models.ProgrammeRequirementPath(
+                group_id=group.id,
+                key=key,
+                label=" + ".join(codes),
+            )
+            db.add(path)
+            db.flush()
+            for code in codes:
+                db.add(models.ProgrammeRequirementPathOption(
+                    path_id=path.id,
+                    module_id=modules[code].id,
+                ))
+
+        student = models.Student(
+            name="Path Student",
+            student_number="PATH001",
+            email="path@example.ufh.ac.za",
+            programme_id=programme.id,
+            current_year=2,
+        )
+        db.add(student)
+        db.flush()
+
+        # These are 16 credits, but they mix two different prospectus streams.
+        db.add_all([
+            models.Enrolment(
+                student_id=student.id,
+                module_id=modules["COC223"].id,
+                semester="2026-S2",
+                grade=70,
+                status="completed",
+                attempt=1,
+            ),
+            models.Enrolment(
+                student_id=student.id,
+                module_id=modules["MAT227"].id,
+                semester="2026-S2",
+                grade=70,
+                status="completed",
+                attempt=1,
+            ),
+        ])
+        db.commit()
+
+        status_info = _curriculum_choice_status(db, student)[0]
+        assert status_info["completed_credits"] == 16
+        assert status_info["satisfied"] is False
+        assert not any(path["satisfied"] for path in status_info["paths"])
+
+        # MAT226 + MAT227 is one exact valid path.
+        db.add(models.Enrolment(
+            student_id=student.id,
+            module_id=modules["MAT226"].id,
+            semester="2026-S2",
+            grade=70,
+            status="completed",
+            attempt=1,
+        ))
+        db.commit()
+
+        status_info = _curriculum_choice_status(db, student)[0]
+        assert status_info["satisfied"] is True
+        assert any(
+            path["key"] == "mat227" and path["satisfied"]
+            for path in status_info["paths"]
+        )
     finally:
         db.close()
