@@ -145,6 +145,49 @@ def get_curriculum(
     )
 
 
+@router.get("/{code}/requirements")
+def get_programme_requirements(code: str, db: Session = Depends(get_db)):
+    """Return explicit prospectus choice groups for a programme."""
+    programme = db.query(models.Programme).filter(models.Programme.code == code).first()
+    if programme is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown programme code '{code}'")
+
+    groups = (
+        db.query(models.ProgrammeRequirementGroup)
+        .options(
+            joinedload(models.ProgrammeRequirementGroup.options)
+            .joinedload(models.ProgrammeRequirementOption.module)
+        )
+        .filter(models.ProgrammeRequirementGroup.programme_id == programme.id)
+        .order_by(
+            models.ProgrammeRequirementGroup.year,
+            models.ProgrammeRequirementGroup.semester,
+            models.ProgrammeRequirementGroup.key,
+        )
+        .all()
+    )
+    return [
+        {
+            "key": group.key,
+            "label": group.label,
+            "year": group.year,
+            "semester": group.semester,
+            "min_modules": group.min_modules,
+            "min_credits": group.min_credits,
+            "options": [
+                {
+                    "code": option.module.code,
+                    "name": option.module.name,
+                    "credits": option.module.credits,
+                }
+                for option in group.options
+                if option.module is not None
+            ],
+        }
+        for group in groups
+    ]
+
+
 # ============================================================
 # PROGRAMME-MODULE MANAGEMENT
 # ADMIN ONLY

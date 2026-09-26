@@ -1,0 +1,55 @@
+name: Curriculum verification
+
+on:
+  pull_request:
+    paths:
+      - "backend/seed.py"
+      - "backend/audit_2026_curriculum.py"
+      - "backend/app/models.py"
+      - "backend/app/services/progress_service.py"
+      - "backend/app/services/assistant_context.py"
+      - "backend/app/routers/admin.py"
+      - "backend/app/routers/planning.py"
+      - "backend/tests/test_curriculum_choices.py"
+      - "backend/sync_2026_curriculum.py"
+      - ".github/workflows/curriculum-verification.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-curriculum:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Compile curriculum Python files
+        run: |
+          python -m py_compile seed.py
+          python -m py_compile audit_2026_curriculum.py
+          python -m py_compile sync_2026_curriculum.py
+          python -m py_compile app/services/progress_service.py
+          python -m py_compile app/services/assistant_context.py
+          python -m py_compile app/routers/admin.py
+
+      - name: Run curriculum consistency audit
+        run: python audit_2026_curriculum.py
+
+      - name: Run backend tests
+        run: PYTHONPATH=. pytest -q

@@ -180,6 +180,20 @@ def _build_module_eligibility(
     result = []
 
     # ------------------------------------------------------
+    # Curriculum choice state
+    # ------------------------------------------------------
+
+    choice_requirements = progress_service._curriculum_choice_status(
+        db,
+        student,
+    )
+    choice_by_module_code = {}
+    for requirement in choice_requirements:
+        option_codes = set(requirement.get("options") or [])
+        for code in option_codes:
+            choice_by_module_code.setdefault(code, []).append(requirement)
+
+    # ------------------------------------------------------
     # Determine eligibility
     # ------------------------------------------------------
 
@@ -221,6 +235,17 @@ def _build_module_eligibility(
 
         prerequisites_met = (
             len(missing_prerequisites) == 0
+        )
+
+        module_choice_requirements = choice_by_module_code.get(module.code, [])
+        satisfied_choice_requirements = [
+            requirement
+            for requirement in module_choice_requirements
+            if requirement.get("satisfied")
+        ]
+        is_unused_satisfied_choice = (
+            not is_completed
+            and bool(satisfied_choice_requirements)
         )
 
         # --------------------------------------------------
@@ -267,6 +292,25 @@ def _build_module_eligibility(
 
             is_eligible = False
 
+        elif is_unused_satisfied_choice:
+
+            eligibility_status = (
+                "choice_requirement_already_satisfied"
+            )
+
+            labels = [
+                requirement.get("label")
+                for requirement in satisfied_choice_requirements
+                if requirement.get("label")
+            ]
+            reason = (
+                "This module is an unused alternative in an "
+                "already satisfied curriculum choice requirement"
+                + (": " + "; ".join(labels) if labels else ".")
+            )
+
+            is_eligible = False
+
         elif not prerequisites_met:
 
             eligibility_status = (
@@ -308,6 +352,10 @@ def _build_module_eligibility(
 
                 "is_compulsory": (
                     link.is_compulsory
+                ),
+
+                "choice_requirements": (
+                    module_choice_requirements
                 ),
 
                 "prerequisites": (
@@ -463,6 +511,14 @@ def build_student_assistant_context(
             ),
         }
 
+    # ------------------------------------------------------
+    # Prospectus curriculum choices / elective requirements
+    # ------------------------------------------------------
+    choice_requirements = progress_service._curriculum_choice_status(
+        db,
+        student,
+    )
+
     # ======================================================
     # Final verified student context
     # ======================================================
@@ -533,6 +589,10 @@ def build_student_assistant_context(
 
         "missing_compulsory_modules": (
             missing_compulsory
+        ),
+
+        "choice_requirements": (
+            choice_requirements
         ),
 
         # --------------------------------------------------

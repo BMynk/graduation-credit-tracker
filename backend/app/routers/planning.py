@@ -232,6 +232,30 @@ def _build_planning_modules(
         student,
     )
 
+    # Once a prospectus choice/OR group is satisfied, unused alternatives
+    # are no longer outstanding planner recommendations.
+    satisfied_choice_alternative_ids = set()
+    choice_status = {
+        requirement["key"]: requirement
+        for requirement in progress_service._curriculum_choice_status(db, student)
+    }
+    requirement_groups = (
+        db.query(models.ProgrammeRequirementGroup)
+        .options(
+            joinedload(models.ProgrammeRequirementGroup.options)
+            .joinedload(models.ProgrammeRequirementOption.module)
+        )
+        .filter(models.ProgrammeRequirementGroup.programme_id == student.programme_id)
+        .all()
+    )
+    for group in requirement_groups:
+        if choice_status.get(group.key, {}).get("satisfied"):
+            satisfied_choice_alternative_ids.update(
+                option.module_id
+                for option in group.options
+                if option.module_id not in passed_ids
+            )
+
     student_year = student.current_year
 
     result: List[ModulePlanItem] = []
@@ -294,6 +318,9 @@ def _build_planning_modules(
 
         if is_completed:
             reason = "Already completed"
+
+        elif module.id in satisfied_choice_alternative_ids:
+            reason = "Curriculum choice requirement already satisfied"
 
         elif is_enrolled:
             reason = (

@@ -369,6 +369,13 @@ When answering questions about this student's academic record:
   supports that conclusion.
 - Use module_eligibility when explaining prerequisite or
   eligibility decisions.
+- Use choice_requirements when explaining prospectus OR/elective
+  requirements. A satisfied choice requirement means its unused
+  alternatives are not individually outstanding requirements.
+- If module_eligibility marks a module as
+  choice_requirement_already_satisfied, do not recommend it as a
+  required or currently eligible next module merely because its
+  prerequisites are met.
 - Do not claim a compulsory module is outstanding unless it
   appears in missing_compulsory_modules.
 - Do not claim a module requires a retake unless the verified

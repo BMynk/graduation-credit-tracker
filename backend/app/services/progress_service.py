@@ -164,6 +164,13 @@ def build_progress_summary(db: Session, student: models.Student) -> dict:
     missing_compulsory = [link.module for link in compulsory_links if link.module_id not in passed_module_ids]
     missing_compulsory.sort(key=lambda m: (m.level, m.code))
 
+    choice_requirements = _curriculum_choice_status(db, student)
+    missing_choice_requirements = [
+        requirement
+        for requirement in choice_requirements
+        if not requirement["satisfied"]
+    ]
+
     return {
         "programme": programme,
         "current_year": student.current_year,
@@ -176,8 +183,80 @@ def build_progress_summary(db: Session, student: models.Student) -> dict:
         "modules_failed_pending_retake": len(pending_failed),
         "category_breakdown": dict(category_breakdown),
         "missing_compulsory_modules": missing_compulsory,
+        "choice_requirements": choice_requirements,
+        "missing_choice_requirements": missing_choice_requirements,
         "failed_modules": failed_modules,
     }
+
+
+def _curriculum_choice_status(db: Session, student: models.Student) -> list[dict]:
+    """Evaluate prospectus OR/selection groups against passed modules."""
+    passed_ids = _passed_module_ids(db, student)
+    groups = (
+        db.query(models.ProgrammeRequirementGroup)
+        .options(
+            joinedload(models.ProgrammeRequirementGroup.options)
+            .joinedload(models.ProgrammeRequirementOption.module),
+            joinedload(models.ProgrammeRequirementGroup.paths)
+            .joinedload(models.ProgrammeRequirementPath.options)
+            .joinedload(models.ProgrammeRequirementPathOption.module),
+        )
+        .filter(models.ProgrammeRequirementGroup.programme_id == student.programme_id)
+        .all()
+    )
+    results = []
+    for group in groups:
+        completed = [
+            option.module
+            for option in group.options
+            if option.module is not None and option.module_id in passed_ids
+        ]
+        completed_credits = sum(module.credits for module in completed)
+
+        path_statuses = []
+        for path in group.paths:
+            path_modules = [
+                option.module
+                for option in path.options
+                if option.module is not None
+            ]
+            path_satisfied = bool(path_modules) and all(
+                module.id in passed_ids
+                for module in path_modules
+            )
+            path_statuses.append({
+                "key": path.key,
+                "label": path.label,
+                "modules": [module.code for module in path_modules],
+                "satisfied": path_satisfied,
+            })
+
+        satisfied = (
+            any(path["satisfied"] for path in path_statuses)
+            if path_statuses
+            else (
+                len(completed) >= group.min_modules
+                and completed_credits >= group.min_credits
+            )
+        )
+        results.append({
+            "key": group.key,
+            "label": group.label,
+            "year": group.year,
+            "semester": group.semester,
+            "min_modules": group.min_modules,
+            "min_credits": group.min_credits,
+            "satisfied": satisfied,
+            "completed_credits": completed_credits,
+            "completed_options": [module.code for module in completed],
+            "options": [
+                option.module.code
+                for option in group.options
+                if option.module is not None
+            ],
+            "paths": path_statuses,
+        })
+    return results
 
 
 def build_graduation_audit(
@@ -320,91 +399,182 @@ def build_graduation_audit(
     )
 
     # ---------------------------------------------------------
-    # CREDITS BY LEVEL
+    # CHOICE-AWARE CURRICULUM ACCOUNTING
+    # ---------------------------------------------------------
+
+    choice_requirements = _curriculum_choice_status(db, student)
+    requirement_groups = (
+        db.query(models.ProgrammeRequirementGroup)
+        .options(
+            joinedload(models.ProgrammeRequirementGroup.options)
+            .joinedload(models.ProgrammeRequirementOption.module)
+        )
+        .filter(models.ProgrammeRequirementGroup.programme_id == student.programme_id)
+        .all()
+    )
+    choice_option_ids = {
+        option.module_id
+        for group in requirement_groups
+        for option in group.options
+    }
+
+    # Generic electives are links that are not members of an explicit
+    # prospectus choice group. Choice groups are accounted for by their
+    # required minimum credits rather than by summing every alternative.
+    generic_elective_links = [
+        link for link in elective_links
+        if link.module_id not in choice_option_ids
+    ]
+    completed_generic_elective_links = [
+        link for link in generic_elective_links
+        if link.module_id in completed_ids
+    ]
+    missing_generic_elective_links = [
+        link for link in generic_elective_links
+        if link.module_id not in completed_ids
+    ]
+
+    # Build a representative required curriculum for aggregate credit totals.
+    # Completed choices are used first. Unsatisfied groups then contribute only
+    # enough deterministic alternatives to meet the prospectus minimum.
+    required_choice_links = []
+    link_by_module_id = {link.module_id: link for link in programme_modules}
+    choice_status_by_key = {
+        requirement["key"]: requirement
+        for requirement in choice_requirements
+    }
+    for group in requirement_groups:
+        status_info = choice_status_by_key.get(group.key, {})
+
+        if group.paths:
+            # Exact-path groups represent whole prospectus streams. Pick a
+            # satisfied path when available; otherwise use the path closest
+            # to the student's completed modules as the representative
+            # remaining requirement. Never construct a mixed stream.
+            path_candidates = []
+            for path in group.paths:
+                path_ids = {
+                    option.module_id
+                    for option in path.options
+                    if option.module_id in link_by_module_id
+                }
+                if not path_ids:
+                    continue
+                completed_count = len(path_ids & completed_ids)
+                path_credits = sum(
+                    link_by_module_id[module_id].module.credits
+                    for module_id in path_ids
+                )
+                path_candidates.append(
+                    (path_ids <= completed_ids, completed_count, path_credits, path.key, path_ids)
+                )
+            if path_candidates:
+                path_candidates.sort(
+                    key=lambda item: (
+                        not item[0],
+                        -item[1],
+                        item[2],
+                        item[3],
+                    )
+                )
+                selected_ids = path_candidates[0][4]
+                required_choice_links.extend(
+                    link_by_module_id[module_id]
+                    for module_id in selected_ids
+                )
+            continue
+
+        completed_options = [
+            option for option in group.options
+            if option.module_id in completed_ids
+            and option.module_id in link_by_module_id
+        ]
+        selected_ids = {option.module_id for option in completed_options}
+        selected_credits = sum(
+            option.module.credits
+            for option in completed_options
+            if option.module is not None
+        )
+        modules_needed = max(group.min_modules - len(completed_options), 0)
+        credits_needed = max(group.min_credits - selected_credits, 0)
+
+        candidates = [
+            option for option in group.options
+            if option.module_id not in selected_ids
+            and option.module_id in link_by_module_id
+            and option.module is not None
+        ]
+        candidates.sort(key=lambda option: (option.module.credits, option.module.code))
+
+        added = 0
+        added_credits = 0
+        for option in candidates:
+            if added >= modules_needed and added_credits >= credits_needed:
+                break
+            selected_ids.add(option.module_id)
+            added += 1
+            added_credits += option.module.credits
+
+        required_choice_links.extend(
+            link_by_module_id[module_id]
+            for module_id in selected_ids
+        )
+
+    aggregate_links = (
+        compulsory_links
+        + generic_elective_links
+        + required_choice_links
+    )
+    # A module can appear in more than one requirement group. Count each module
+    # only once in aggregate curriculum totals.
+    aggregate_links = list({
+        link.module_id: link
+        for link in aggregate_links
+        if link.module is not None
+    }.values())
+
+    # ---------------------------------------------------------
+    # CREDITS BY LEVEL / CATEGORY
     # ---------------------------------------------------------
 
     credits_by_level = {}
-
-    for link in programme_modules:
-        module = link.module
-
-        if module is None:
-            continue
-
-        level = module.level
-
-        if level not in credits_by_level:
-            credits_by_level[level] = {
-                "total": 0,
-                "completed": 0,
-            }
-
-        credits_by_level[level]["total"] += (
-            module.credits
-        )
-
-        if module.id in completed_ids:
-            credits_by_level[level][
-                "completed"
-            ] += module.credits
-
-    # ---------------------------------------------------------
-    # CREDITS BY CATEGORY
-    # ---------------------------------------------------------
-
     credits_by_category = {}
 
-    for link in programme_modules:
+    for link in aggregate_links:
         module = link.module
-
-        if module is None:
-            continue
-
+        level = module.level
         category = module.category
 
-        if category not in credits_by_category:
-            credits_by_category[category] = {
-                "total": 0,
-                "completed": 0,
-            }
+        credits_by_level.setdefault(level, {"total": 0, "completed": 0})
+        credits_by_category.setdefault(category, {"total": 0, "completed": 0})
 
-        credits_by_category[category][
-            "total"
-        ] += module.credits
+        credits_by_level[level]["total"] += module.credits
+        credits_by_category[category]["total"] += module.credits
 
         if module.id in completed_ids:
-            credits_by_category[category][
-                "completed"
-            ] += module.credits
+            credits_by_level[level]["completed"] += module.credits
+            credits_by_category[category]["completed"] += module.credits
 
     # ---------------------------------------------------------
     # COMPLETION PERCENTAGES
     # ---------------------------------------------------------
 
     compulsory_percentage = (
-        round(
-            (
-                len(completed_compulsory_links)
-                / len(compulsory_links)
-            )
-            * 100,
-            1,
-        )
-        if compulsory_links
-        else 0
+        round((len(completed_compulsory_links) / len(compulsory_links)) * 100, 1)
+        if compulsory_links else 0
     )
 
+    choice_groups_completed = sum(
+        1 for requirement in choice_requirements
+        if requirement["satisfied"]
+    )
+    elective_units_total = len(generic_elective_links) + len(choice_requirements)
+    elective_units_completed = (
+        len(completed_generic_elective_links) + choice_groups_completed
+    )
     elective_percentage = (
-        round(
-            (
-                len(completed_elective_links)
-                / len(elective_links)
-            )
-            * 100,
-            1,
-        )
-        if elective_links
-        else 0
+        round((elective_units_completed / elective_units_total) * 100, 1)
+        if elective_units_total else 0
     )
 
     # ---------------------------------------------------------
@@ -430,6 +600,22 @@ def build_graduation_audit(
                 for link
                 in missing_compulsory_links[:5]
             ]
+        )
+
+    choice_requirements = _curriculum_choice_status(db, student)
+    missing_choice_requirements = [
+        requirement
+        for requirement in choice_requirements
+        if not requirement["satisfied"]
+    ]
+    if missing_choice_requirements:
+        on_track = False
+        reasons.append(
+            f"Missing {len(missing_choice_requirements)} curriculum choice requirement(s)"
+        )
+        urgent_items.extend(
+            requirement["label"]
+            for requirement in missing_choice_requirements[:3]
         )
 
     # ---------------------------------------------------------
@@ -496,9 +682,114 @@ def build_graduation_audit(
 
     prerequisite_warnings = []
 
+    # Non-compulsory ProgrammeModule links can be alternatives in a
+    # prospectus choice group. Do not treat every unused alternative as
+    # individually outstanding. For an unsatisfied group, include only
+    # enough alternatives to represent its minimum remaining credit/module
+    # requirement in projections and prerequisite warnings.
+    link_by_module_id = {link.module_id: link for link in programme_modules}
+    choice_option_ids = set()
+    outstanding_choice_links = []
+
+    groups_by_key = {
+        group.key: group
+        for group in (
+            db.query(models.ProgrammeRequirementGroup)
+            .options(
+                joinedload(models.ProgrammeRequirementGroup.options)
+                .joinedload(models.ProgrammeRequirementOption.module),
+                joinedload(models.ProgrammeRequirementGroup.paths)
+                .joinedload(models.ProgrammeRequirementPath.options)
+                .joinedload(models.ProgrammeRequirementPathOption.module),
+            )
+            .filter(
+                models.ProgrammeRequirementGroup.programme_id
+                == student.programme_id
+            )
+            .all()
+        )
+    }
+
+    for requirement in missing_choice_requirements:
+        group = groups_by_key.get(requirement["key"])
+        if group is None:
+            continue
+
+        choice_option_ids.update(option.module_id for option in group.options)
+
+        if group.paths:
+            # Use one complete valid prospectus path for warnings/projection.
+            # Prefer the path with the most already-completed components, then
+            # the lowest remaining credits. Never combine unrelated streams.
+            path_candidates = []
+            for path in group.paths:
+                path_ids = [
+                    option.module_id
+                    for option in path.options
+                    if option.module_id in link_by_module_id
+                ]
+                if not path_ids:
+                    continue
+                missing_ids = [
+                    module_id for module_id in path_ids
+                    if module_id not in completed_ids
+                ]
+                remaining_credits = sum(
+                    link_by_module_id[module_id].module.credits
+                    for module_id in missing_ids
+                )
+                completed_count = len(path_ids) - len(missing_ids)
+                path_candidates.append(
+                    (-completed_count, remaining_credits, path.key, missing_ids)
+                )
+
+            if path_candidates:
+                path_candidates.sort()
+                outstanding_choice_links.extend(
+                    link_by_module_id[module_id]
+                    for module_id in path_candidates[0][3]
+                )
+            continue
+
+        completed_count = len(requirement["completed_options"])
+        modules_needed = max(group.min_modules - completed_count, 0)
+        credits_needed = max(group.min_credits - requirement["completed_credits"], 0)
+
+        candidates = [
+            link_by_module_id[option.module_id]
+            for option in group.options
+            if option.module_id not in completed_ids
+            and option.module_id in link_by_module_id
+        ]
+        candidates.sort(key=lambda link: (link.module.credits, link.module.code))
+
+        selected = []
+        selected_credits = 0
+        for link in candidates:
+            if len(selected) >= modules_needed and selected_credits >= credits_needed:
+                break
+            selected.append(link)
+            selected_credits += link.module.credits
+        outstanding_choice_links.extend(selected)
+
+    # Include choice options from satisfied groups too, so their unused
+    # alternatives are excluded from generic elective accounting.
+    for group in (
+        db.query(models.ProgrammeRequirementGroup)
+        .options(joinedload(models.ProgrammeRequirementGroup.options))
+        .filter(models.ProgrammeRequirementGroup.programme_id == student.programme_id)
+        .all()
+    ):
+        choice_option_ids.update(option.module_id for option in group.options)
+
+    generic_missing_elective_links = [
+        link for link in missing_elective_links
+        if link.module_id not in choice_option_ids
+    ]
     outstanding_links = (
         missing_compulsory_links
-        + missing_elective_links
+        + generic_missing_elective_links
+        + outstanding_choice_links
     )
 
     for link in outstanding_links:
@@ -545,26 +836,18 @@ def build_graduation_audit(
         },
 
         "elective": {
-            "completed":
-                len(completed_elective_links),
-
-            "total":
-                len(elective_links),
-
-            "percentage":
-                elective_percentage,
-
+            "completed": elective_units_completed,
+            "total": elective_units_total,
+            "percentage": elective_percentage,
             "completed_modules": [
                 module_info(link)
-                for link
-                in completed_elective_links
+                for link in completed_generic_elective_links
             ],
-
             "missing_modules": [
                 module_info(link)
-                for link
-                in missing_elective_links
+                for link in missing_generic_elective_links
             ],
+            "choice_requirements": choice_requirements,
         },
 
         "by_level":
@@ -651,7 +934,7 @@ def build_graduation_audit(
     # a semester. Each curriculum semester therefore contributes at
     # least one future semester when it still contains requirements;
     # overloaded curriculum semesters require additional semesters.
-    MAX_CREDITS_PER_SEMESTER = 80
+    MAX_CREDITS_PER_SEMESTER = 60
     outstanding_by_curriculum_semester = defaultdict(int)
 
     for link in outstanding_links:
@@ -703,16 +986,43 @@ def build_graduation_audit(
 
         "summary":
             summary,
+
+        "choice_requirements":
+            choice_requirements,
     }
 
 
 def get_eligible_modules(db: Session, student: models.Student) -> List[dict]:
     passed_ids = _passed_module_ids(db, student)
+
+    # Once a prospectus OR/choice requirement is satisfied, the remaining
+    # alternatives in that group should not keep appearing as recommended
+    # modules merely because their prerequisites are met.
+    satisfied_alternative_ids = set()
+    choice_status = {
+        requirement["key"]: requirement
+        for requirement in _curriculum_choice_status(db, student)
+    }
+    groups = (
+        db.query(models.ProgrammeRequirementGroup)
+        .options(joinedload(models.ProgrammeRequirementGroup.options))
+        .filter(models.ProgrammeRequirementGroup.programme_id == student.programme_id)
+        .all()
+    )
+    for group in groups:
+        if choice_status.get(group.key, {}).get("satisfied"):
+            satisfied_alternative_ids.update(
+                option.module_id
+                for option in group.options
+                if option.module_id not in passed_ids
+            )
+
     programme_module_ids = {
         link.module_id
         for link in db.query(models.ProgrammeModule).filter(
             models.ProgrammeModule.programme_id == student.programme_id
         )
+        if link.module_id not in satisfied_alternative_ids
     }
     candidates = (
         db.query(models.Module)
@@ -2153,6 +2463,66 @@ def calculate_achievements(
         )
 
     return set(achievements)
+
+
+def check_and_notify_achievements(
+    db: Session,
+    student: models.Student,
+) -> list[str]:
+    """
+    Persist newly unlocked achievements and notify the student once.
+
+    Achievement eligibility remains derived from calculate_achievements().
+    StudentAchievement is the durable record used to prevent duplicate
+    unlock notifications when marks are recorded more than once.
+    """
+    unlocked_ids = calculate_achievements(db, student)
+    existing_ids = {
+        row.achievement_id
+        for row in db.query(StudentAchievement).filter(
+            StudentAchievement.student_id == student.id
+        ).all()
+    }
+
+    newly_unlocked = [
+        achievement_id
+        for achievement_id in unlocked_ids
+        if achievement_id not in existing_ids
+    ]
+
+    if not newly_unlocked:
+        return []
+
+    rows = []
+    for achievement_id in newly_unlocked:
+        row = StudentAchievement(
+            student_id=student.id,
+            achievement_id=achievement_id,
+            notified=False,
+        )
+        db.add(row)
+        rows.append(row)
+
+    # Persist unlocks before attempting email. This makes the operation
+    # idempotent even when email delivery is unavailable or fails.
+    db.commit()
+
+    for row in rows:
+        definition = ACHIEVEMENT_DEFINITIONS.get(row.achievement_id)
+        if definition is None:
+            continue
+
+        try:
+            send_achievement_unlocked_email(student, definition)
+        except Exception:
+            # A notification failure must not undo an official mark or
+            # cause the achievement to be awarded repeatedly.
+            continue
+
+        row.notified = True
+
+    db.commit()
+    return newly_unlocked
 
 
 def get_achievement_summary(
