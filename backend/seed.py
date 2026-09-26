@@ -246,6 +246,7 @@ PREREQUISITES = {
     # Chemistry
     "PAC211": ["PAC110", "PAC121", "MAT111", "MAT112", "MAT121", "MAT123"],
     "PAC213": ["PAC110", "PAC121"],
+    "PAC215": ["PAC110", "PAC121"],
     "PAC222": ["PAC211"],
     "PAC223": ["PAC211", "PAC213"],
     "PAC224": ["PAC211", "PAC213"],
@@ -293,6 +294,7 @@ PREREQUISITES = {
     # Mathematics
     "MAT212": ["MAT111", "MAT121"],
     "MAT213": ["MAT111", "MAT121"],
+    "MAT225": ["MAT212"],
     "MAT226": ["MAT212"],
     "MAT227": ["MAT213", "MAT212"],
     "MAT228": ["MAT111", "MAT121"],
@@ -488,7 +490,7 @@ PROGRAMME_MODULES = {
             "CSC113", "MAT111", "PHY111", "PHY112", "STA111",
             "CSC121", "MAT121", "PHY121", "PHY122", "STA121",
             "COC211", "COC212", "MAT212", "MAT213", "DCS211", "DCS212",
-            "COC223", "COC224", "MAT226", "MAT227", "MAT228", "DCS222", "DCS224",
+            "COC223", "COC224", "MAT225", "MAT227", "MAT228", "DCS222", "DCS224",
             "CSC312", "CSC313", "MAT312",
             "CSC323", "CSC324", "MAT323",
         ],
