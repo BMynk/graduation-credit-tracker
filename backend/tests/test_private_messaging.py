@@ -2,7 +2,7 @@ import os
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-that-is-long-enough-for-tests")
 
-from fastapi.testclient import TestClient
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -21,7 +21,14 @@ def override_db():
     finally:
         db.close()
 
-app.dependency_overrides[get_db] = override_db
+@pytest.fixture(autouse=True)
+def isolated_db_override():
+    """Keep this module's in-memory DB override from leaking into other test modules."""
+    app.dependency_overrides[get_db] = override_db
+    try:
+        yield
+    finally:
+        app.dependency_overrides.pop(get_db, None)
 
 def test_private_chat_tables_are_created():
     Base.metadata.create_all(bind=engine)
