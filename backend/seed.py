@@ -550,16 +550,21 @@ PROGRAMME_MODULES = {
     },
     
     # BSc Statistics and Geology (40029)
+    # The 2026 programme table prints the legacy Statistics codes
+    # STM212 / STM221 / STM222 alongside the current STM213 code.
+    # The module-description section identifies STM214 as old STM212,
+    # STM223 as old STM221, and STM224 as old STM222. Model the current
+    # module identities while preserving the programme table's OR structure.
     "40029": {
         "compulsory": [
             "STA111", "GLG111", "GIS111", "PAC110",
             "STA121", "GLG121", "GIS121", "PAC121",
-            "STM213", "STM214", "GLG212", "GLG213", "GIS212",
-            "STM223", "STM224", "GLG222", "GLG223", "GIS222",
+            "GLG212", "GLG213", "GIS212",
+            "GLG222", "GLG223", "GIS222",
             "STM312", "STM313", "GLG312", "GLG313",
             "STM322", "STM323", "GLG322", "GLG323",
         ],
-        "elective": ["STM212", "STM221", "STM222"],
+        "elective": ["STM213", "STM214", "STM223", "STM224"],
     },
 
     # BSc Botany and Entomology (40008)
@@ -705,8 +710,8 @@ REQUIREMENT_GROUPS = {
         {"key": "y3s2-math-choice", "label": "Choose MAT324 or MAT325", "year": 3, "semester": 2, "min_modules": 1, "min_credits": 16, "options": ["MAT324", "MAT325"]},
     ],
     "40029": [
-        {"key": "y2s1-stat", "label": "Choose STM213 or STM212", "year": 2, "semester": 1, "min_modules": 1, "min_credits": 16, "options": ["STM213", "STM212"]},
-        {"key": "y2s2-stat", "label": "Choose STM221 or STM222", "year": 2, "semester": 2, "min_modules": 1, "min_credits": 16, "options": ["STM221", "STM222"]},
+        {"key": "y2s1-stat", "label": "Choose STM213 or STM214 (programme table: STM213 or old STM212)", "year": 2, "semester": 1, "min_modules": 1, "min_credits": 16, "options": ["STM213", "STM214"]},
+        {"key": "y2s2-stat", "label": "Continue the selected Statistics stream with STM223 or STM224 (programme table: old STM221 or old STM222)", "year": 2, "semester": 2, "min_modules": 1, "min_credits": 16, "options": ["STM223", "STM224"]},
     ],
     "40015": [
         {"key":"y2s2-math-choice","label":"Choose MAT227 or MAT228","year":2,"semester":2,"min_modules":1,"min_credits":8,"options":["MAT227","MAT228"]},
