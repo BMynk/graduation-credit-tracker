@@ -112,6 +112,21 @@ def sync():
                     module = modules.get(ALIAS_CODES.get(raw_code, raw_code))
                     if module is not None:
                         db.add(models.ProgrammeRequirementOption(group_id=group.id, module_id=module.id))
+                for path_spec in spec.get("paths", []):
+                    path_row = models.ProgrammeRequirementPath(
+                        group_id=group.id,
+                        key=path_spec["key"],
+                        label=path_spec["label"],
+                    )
+                    db.add(path_row)
+                    db.flush()
+                    for raw_code in path_spec["modules"]:
+                        module = modules.get(ALIAS_CODES.get(raw_code, raw_code))
+                        if module is not None:
+                            db.add(models.ProgrammeRequirementPathOption(
+                                path_id=path_row.id,
+                                module_id=module.id,
+                            ))
 
         db.commit()
         print(f"2026 curriculum sync complete: {len(programmes)} programmes, {len(modules)} modules.")
