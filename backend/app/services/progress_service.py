@@ -196,7 +196,10 @@ def _curriculum_choice_status(db: Session, student: models.Student) -> list[dict
         db.query(models.ProgrammeRequirementGroup)
         .options(
             joinedload(models.ProgrammeRequirementGroup.options)
-            .joinedload(models.ProgrammeRequirementOption.module)
+            .joinedload(models.ProgrammeRequirementOption.module),
+            joinedload(models.ProgrammeRequirementGroup.paths)
+            .joinedload(models.ProgrammeRequirementPath.options)
+            .joinedload(models.ProgrammeRequirementPathOption.module),
         )
         .filter(models.ProgrammeRequirementGroup.programme_id == student.programme_id)
         .all()
@@ -209,9 +212,32 @@ def _curriculum_choice_status(db: Session, student: models.Student) -> list[dict
             if option.module is not None and option.module_id in passed_ids
         ]
         completed_credits = sum(module.credits for module in completed)
+
+        path_statuses = []
+        for path in group.paths:
+            path_modules = [
+                option.module
+                for option in path.options
+                if option.module is not None
+            ]
+            path_satisfied = bool(path_modules) and all(
+                module.id in passed_ids
+                for module in path_modules
+            )
+            path_statuses.append({
+                "key": path.key,
+                "label": path.label,
+                "modules": [module.code for module in path_modules],
+                "satisfied": path_satisfied,
+            })
+
         satisfied = (
-            len(completed) >= group.min_modules
-            and completed_credits >= group.min_credits
+            any(path["satisfied"] for path in path_statuses)
+            if path_statuses
+            else (
+                len(completed) >= group.min_modules
+                and completed_credits >= group.min_credits
+            )
         )
         results.append({
             "key": group.key,
@@ -228,6 +254,7 @@ def _curriculum_choice_status(db: Session, student: models.Student) -> list[dict
                 for option in group.options
                 if option.module is not None
             ],
+            "paths": path_statuses,
         })
     return results
 
