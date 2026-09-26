@@ -180,6 +180,49 @@ def build_progress_summary(db: Session, student: models.Student) -> dict:
     }
 
 
+def _curriculum_choice_status(db: Session, student: models.Student) -> list[dict]:
+    """Evaluate prospectus OR/selection groups against passed modules."""
+    passed_ids = _passed_module_ids(db, student)
+    groups = (
+        db.query(models.ProgrammeRequirementGroup)
+        .options(
+            joinedload(models.ProgrammeRequirementGroup.options)
+            .joinedload(models.ProgrammeRequirementOption.module)
+        )
+        .filter(models.ProgrammeRequirementGroup.programme_id == student.programme_id)
+        .all()
+    )
+    results = []
+    for group in groups:
+        completed = [
+            option.module
+            for option in group.options
+            if option.module is not None and option.module_id in passed_ids
+        ]
+        completed_credits = sum(module.credits for module in completed)
+        satisfied = (
+            len(completed) >= group.min_modules
+            and completed_credits >= group.min_credits
+        )
+        results.append({
+            "key": group.key,
+            "label": group.label,
+            "year": group.year,
+            "semester": group.semester,
+            "min_modules": group.min_modules,
+            "min_credits": group.min_credits,
+            "satisfied": satisfied,
+            "completed_credits": completed_credits,
+            "completed_options": [module.code for module in completed],
+            "options": [
+                option.module.code
+                for option in group.options
+                if option.module is not None
+            ],
+        })
+    return results
+
+
 def build_graduation_audit(
     db: Session,
     student: models.Student,
@@ -703,6 +746,9 @@ def build_graduation_audit(
 
         "summary":
             summary,
+
+        "choice_requirements":
+            _curriculum_choice_status(db, student),
     }
 
 
