@@ -554,7 +554,7 @@ PROGRAMME_MODULES = {
             "STM322", "STM323", "GLG322", "GLG323",
         ],
         "elective": [],
-    },,
+    },
 
     # BSc Botany and Entomology (40008)
     "40008": {
