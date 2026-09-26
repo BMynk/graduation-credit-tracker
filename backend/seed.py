@@ -349,9 +349,12 @@ PREREQUISITES = {
     "MAT325": ["MAT314"],
     
     # Statistics
-    "STM212": ["MAT111", "MAT121"],\n    "STM213": ["MAT111", "MAT121"],
+    "STM212": ["MAT111", "MAT121"],
+    "STM213": ["MAT111", "MAT121"],
     "STM214": ["STA121"],
-    "STM221": ["STM212"],\n    "STM222": ["STM212"],\n    "STM223": ["STM213"],
+    "STM221": ["STM212"],
+    "STM222": ["STM212"],
+    "STM223": ["STM213"],
     "STM224": ["STM214"],
     "STM312": ["STM223", "STM224"],
     "STM313": ["STM223", "STM224"],
@@ -1004,15 +1007,18 @@ def seed():
             ))
 
         db.commit()
-        print("\n✅ Seed complete!")
-        print("\n📋 Login credentials:")
+        print("
+✅ Seed complete!")
+        print("
+📋 Login credentials:")
         print("   Student: 202312345 / tmokoena@example.ufh.ac.za / PIN: 123456")
         print("   Admin:   admin / AdminPass123!")
         print("   (Admin is a super admin)")
 
     except Exception as e:
         db.rollback()
-        print(f"\n❌ Error during seeding: {e}")
+        print(f"
+❌ Error during seeding: {e}")
         raise
     finally:
         db.close()
