@@ -536,7 +536,7 @@ PROGRAMME_MODULES = {
             "CSC113", "MAT111", "PHY111", "PHY112", "STA111",
             "CSC121", "MAT121", "PHY121", "PHY122", "STA121",
             "COC211", "COC212", "MAT212", "MAT213", "DCS211", "DCS212",
-            "COC223", "COC224", "MAT225", "MAT227", "MAT228", "DCS222", "DCS224",
+            "COC223", "COC224", "MAT225", "MAT227", "MAT228", "DCS223", "DCS224",
             "CSC312", "CSC313", "MAT312",
             "CSC323", "CSC324", "MAT323",
         ],
