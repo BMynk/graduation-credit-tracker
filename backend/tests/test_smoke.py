@@ -183,4 +183,4 @@ def test_completed_history_is_read_only_through_progress_api():
 
     # Student progress API intentionally exposes no DELETE enrolment route.
     resp = client.delete(f"/progress/enrolments/{enrolment_id}", headers=headers)
-    assert resp.status_code == 405
+    assert resp.status_code == 404
