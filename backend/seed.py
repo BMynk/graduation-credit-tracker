@@ -541,6 +541,9 @@ PROGRAMME_MODULES = {
             "CSC323", "CSC324", "MAT323",
         ],
         "elective": [
+            "MNU111", "MNU121", "MNU122",
+            "MAP212", "PHY213", "PHY214", "STM213", "STM214",
+            "MAP222", "PHY223", "PHY224", "STM223", "STM224",
             "MAT313", "MAT314",
             "MAT324", "MAT325",
         ],
@@ -556,7 +559,7 @@ PROGRAMME_MODULES = {
             "STM312", "STM313", "GLG312", "GLG313",
             "STM322", "STM323", "GLG322", "GLG323",
         ],
-        "elective": [],
+        "elective": ["STM212", "STM221", "STM222"],
     },
 
     # BSc Botany and Entomology (40008)
@@ -686,6 +689,8 @@ REQUIREMENT_GROUPS = {
         {"key": "y2s2-math-choice", "label": "Choose MAT227 or MAT228", "year": 2, "semester": 2, "min_modules": 1, "min_credits": 8, "options": ["MAT227", "MAT228"]},
     ],
     "40024": [
+        {"key": "y2s1-elective", "label": "Choose 16 elective credits", "year": 2, "semester": 1, "min_modules": 1, "min_credits": 16, "options": ["COC211", "COC212", "MAP212", "STM213", "STM214"]},
+        {"key": "y2s2-elective", "label": "Choose 16 elective credits", "year": 2, "semester": 2, "min_modules": 1, "min_credits": 16, "options": ["COC223", "COC224", "MAP222", "STM223", "STM224"]},
         {"key": "y2s2-math-choice", "label": "Choose MAT227 or MAT228", "year": 2, "semester": 2, "min_modules": 1, "min_credits": 8, "options": ["MAT227", "MAT228"]},
         {"key": "y3s1-math-choice", "label": "Choose MAT313 or MAT314", "year": 3, "semester": 1, "min_modules": 1, "min_credits": 16, "options": ["MAT313", "MAT314"]},
         {"key": "y3s2-math-choice", "label": "Choose MAT324 or MAT325", "year": 3, "semester": 2, "min_modules": 1, "min_credits": 16, "options": ["MAT324", "MAT325"]},
