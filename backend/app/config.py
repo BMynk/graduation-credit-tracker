@@ -9,7 +9,17 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
-    model_config = SettingsConfigDict(\n        env_file=".env",\n        env_file_encoding="utf-8",\n        case_sensitive=False,\n    )\n\n    # Runtime environment\n    environment: str = "development"\n\n    # Database\n    database_url: str = "sqlite:///./credit_tracker.db"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+    )
+
+    # Runtime environment
+    environment: str = "development"
+
+    # Database
+    database_url: str = "sqlite:///./credit_tracker.db"
 
     # JWT
     secret_key: str = "change-this-secret-key-in-production"
