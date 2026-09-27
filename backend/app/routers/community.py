@@ -649,10 +649,11 @@ def private_messages(
         db.query(models.PrivateMessage)
         .options(joinedload(models.PrivateMessage.sender))
         .filter(models.PrivateMessage.conversation_id == conversation_id)
-        .order_by(models.PrivateMessage.id.asc())
+        .order_by(models.PrivateMessage.id.desc())
         .limit(200)
         .all()
     )
+    rows.reverse()
     return [
         schemas.PrivateMessageOut(
             id=m.id, conversation_id=m.conversation_id, sender=_author(m.sender),
@@ -779,6 +780,7 @@ def mark_notifications_read(
                 (models.PrivateConversation.student_one_id == current_student.id)
                 | (models.PrivateConversation.student_two_id == current_student.id)
             ),
+            models.PrivateConversation.is_active.is_(True),
         )
         .all()
     )
