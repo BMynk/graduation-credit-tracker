@@ -25,8 +25,7 @@ def _student_with_programme(db, year=1):
     programme = models.Programme(
         code="TEST40000",
         name="Planner Test",
-        total_credits=384,
-        duration_years=3,
+        total_credits_required=384,
     )
     db.add(programme)
     db.flush()
