@@ -167,21 +167,15 @@ function AdminLogin({ onLoggedIn, onBack }) {
             <button
               type="button"
               onClick={onBack}
-              className="group flex w-fit items-center gap-3 text-left"
+              className="group w-fit text-left"
             >
-              <div className="w-[250px] shrink-0 rounded-2xl bg-white px-5 py-4 shadow-lg shadow-blue-950/30">
-                <UfhLogo className="w-full" />
-              </div>
+              <p className="text-[15px] font-semibold tracking-tight text-white">
+                Graduation Credit Tracker
+              </p>
 
-              <div>
-                <p className="text-[15px] font-semibold tracking-tight text-white">
-                  Graduation Credit Tracker
-                </p>
-
-                <p className="text-[11px] font-medium text-zinc-500">
-                  Administration platform
-                </p>
-              </div>
+              <p className="mt-1 text-[11px] font-medium text-zinc-500">
+                Administration platform
+              </p>
             </button>
 
             {/* Main content */}
