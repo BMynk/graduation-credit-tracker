@@ -41,5 +41,28 @@ def ensure_admin_token_version_column(engine: Engine) -> bool:
     return True
 
 
+def ensure_student_token_version_column(engine: Engine) -> bool:
+    """Ensure legacy students tables have the token_version column."""
+    inspector = inspect(engine)
+    if "students" not in inspector.get_table_names():
+        return False
+
+    columns = {column["name"] for column in inspector.get_columns("students")}
+    if "token_version" in columns:
+        return False
+
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "ALTER TABLE students "
+                "ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0"
+            )
+        )
+
+    logger.info("Added students.token_version compatibility column")
+    return True
+
+
 def run_schema_migrations(engine: Engine) -> None:
     ensure_admin_token_version_column(engine)
+    ensure_student_token_version_column(engine)
