@@ -149,3 +149,88 @@ def test_planner_rejects_wrong_semester_and_preserves_existing_plan():
         assert rows[0].module_id == existing.id
     finally:
         db.close()
+
+
+def test_saved_plan_can_be_reopened_and_edited_in_same_semester():
+    db = SessionLocal()
+    try:
+        student, programme = _student_with_programme(db)
+        module_a = _module(db, programme, "EDT111", semester=1)
+        module_b = _module(db, programme, "EDT112", semester=1)
+        module_c = _module(db, programme, "EDT113", semester=1)
+        db.commit()
+
+        first = planning.PlanRequest(
+            module_codes=[module_a.code, module_b.code],
+            semester="2026-S1",
+        )
+        planning.save_plan(first, current_student=student, db=db)
+
+        reopened = planning.get_planning_modules(
+            semester="2026-S1",
+            current_student=student,
+            db=db,
+        )
+        reopened_map = {item.code: item for item in reopened}
+        assert reopened_map[module_a.code].planned_semesters == ["2026-S1"]
+        assert reopened_map[module_a.code].is_eligible is True
+        assert reopened_map[module_b.code].is_eligible is True
+
+        edited = planning.PlanRequest(
+            module_codes=[module_a.code, module_c.code],
+            semester="2026-S1",
+        )
+        analysed = planning.generate_plan(
+            edited,
+            current_student=student,
+            db=db,
+        )
+        assert analysed.is_valid is True
+
+        planning.save_plan(edited, current_student=student, db=db)
+
+        rows = (
+            db.query(models.Enrolment)
+            .filter(
+                models.Enrolment.student_id == student.id,
+                models.Enrolment.semester == "2026-S1",
+                models.Enrolment.status == "planned",
+            )
+            .all()
+        )
+        saved_codes = {
+            db.query(models.Module).filter(models.Module.id == row.module_id).one().code
+            for row in rows
+        }
+        assert saved_codes == {"EDT111", "EDT113"}
+        assert len(rows) == 2
+    finally:
+        db.close()
+
+
+def test_module_planned_in_other_semester_remains_unavailable():
+    db = SessionLocal()
+    try:
+        student, programme = _student_with_programme(db)
+        module = _module(db, programme, "OTH111", semester=1)
+        db.add(models.Enrolment(
+            student_id=student.id,
+            module_id=module.id,
+            semester="2025-S1",
+            grade=None,
+            status="planned",
+            attempt=1,
+        ))
+        db.commit()
+
+        items = planning.get_planning_modules(
+            semester="2026-S1",
+            current_student=student,
+            db=db,
+        )
+        item = next(value for value in items if value.code == module.code)
+        assert item.planned_semesters == ["2025-S1"]
+        assert item.is_eligible is False
+        assert "Already planned" in item.reason
+    finally:
+        db.close()
