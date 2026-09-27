@@ -212,13 +212,20 @@ def _build_module_eligibility(
             for prereq in module.prerequisites
         ]
 
+        missing_codes = set(
+            progress_service.missing_prerequisite_codes(
+                module,
+                completed_ids,
+            )
+        )
+
         missing_prerequisites = [
             {
                 "code": prereq.code,
                 "name": prereq.name,
             }
             for prereq in module.prerequisites
-            if prereq.id not in completed_ids
+            if prereq.code in missing_codes
         ]
 
         is_completed = (
