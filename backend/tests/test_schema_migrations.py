@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.pool import StaticPool
 
-from app.migrations import ensure_admin_token_version_column
+from app.migrations import ensure_admin_token_version_column, ensure_student_token_version_column
 
 
 def _legacy_engine():
@@ -73,3 +73,49 @@ def test_admin_token_version_migration_is_idempotent():
         for column in inspect(engine).get_columns("admins")
     ]
     assert columns.count("token_version") == 1
+
+
+def test_legacy_student_table_gets_token_version_idempotently():
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                CREATE TABLE students (
+                    id INTEGER PRIMARY KEY,
+                    name VARCHAR NOT NULL,
+                    student_number VARCHAR NOT NULL UNIQUE,
+                    email VARCHAR NOT NULL UNIQUE,
+                    pin_hash VARCHAR
+                )
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                INSERT INTO students
+                    (id, name, student_number, email, pin_hash)
+                VALUES
+                    (1, 'Legacy Student', 'S001', 'legacy@example.edu', 'hash')
+                """
+            )
+        )
+
+    assert ensure_student_token_version_column(engine) is True
+    assert ensure_student_token_version_column(engine) is False
+
+    with engine.connect() as connection:
+        row = connection.execute(
+            text(
+                "SELECT student_number, token_version "
+                "FROM students WHERE id = 1"
+            )
+        ).mappings().one()
+
+    assert row["student_number"] == "S001"
+    assert row["token_version"] == 0
