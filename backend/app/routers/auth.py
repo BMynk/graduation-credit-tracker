@@ -1,10 +1,13 @@
 # app/routers/auth.py
 
 import jwt
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app import models, schemas
+from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_student
 from app.email_service import send_pin_reset_email
@@ -306,6 +309,53 @@ def refresh(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=(
                 "Invalid or expired refresh token"
+            ),
+        )
+
+    # --------------------------------------------------------
+    # Admin impersonation refresh tokens must stay impersonation
+    # tokens. Never turn them into ordinary student credentials.
+    # Community/private messaging relies on these claims to block
+    # administrators from student-private areas.
+    # --------------------------------------------------------
+
+    if role == "student" and (
+        decoded.get("is_impersonation")
+        or decoded.get("impersonated_by") is not None
+    ):
+        now = datetime.now(timezone.utc)
+        impersonated_by = decoded.get("impersonated_by")
+        impersonated_by_name = decoded.get("impersonated_by_name")
+
+        common_claims = {
+            "sub": str(subject_id),
+            "role": "student",
+            "impersonated_by": impersonated_by,
+            "impersonated_by_name": impersonated_by_name,
+            "is_impersonation": True,
+            "iat": now,
+        }
+        access_payload = {
+            **common_claims,
+            "type": "access",
+            "exp": now + timedelta(minutes=settings.access_token_expire_minutes),
+        }
+        refresh_payload = {
+            **common_claims,
+            "type": "refresh",
+            "exp": now + timedelta(days=settings.refresh_token_expire_days),
+        }
+
+        return schemas.TokenPair(
+            access_token=jwt.encode(
+                access_payload,
+                settings.secret_key,
+                algorithm=settings.algorithm,
+            ),
+            refresh_token=jwt.encode(
+                refresh_payload,
+                settings.secret_key,
+                algorithm=settings.algorithm,
             ),
         )
 
