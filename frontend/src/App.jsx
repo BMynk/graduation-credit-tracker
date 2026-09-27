@@ -716,6 +716,11 @@ function StudentLogin({ onLoggedIn, onBack }) {
 
           <div className="w-full max-w-[460px]">
 
+            {/* Desktop UFH brand — keep the existing phone layout unchanged */}
+            <div className="mb-8 hidden justify-center lg:flex">
+              <UfhLogo className="w-[270px] max-w-full mix-blend-multiply" />
+            </div>
+
             {/* Mobile brand */}
             <div className="mb-10 flex flex-col items-start gap-3 lg:hidden">
               <div className="flex w-full justify-center">
