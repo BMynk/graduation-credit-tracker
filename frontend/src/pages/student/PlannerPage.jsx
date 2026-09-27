@@ -793,19 +793,31 @@ export default function PlannerPage({
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    loadModules();
-  }, []);
+    loadModules(semester);
+  }, [semester]);
 
-  async function loadModules() {
+  async function loadModules(targetSemester = semester) {
     try {
       setLoading(true);
       setError("");
 
       const data =
-        await api.getPlanningModules();
+        await api.getPlanningModules(
+          targetSemester.trim(),
+        );
 
-      setModules(
-        Array.isArray(data) ? data : [],
+      const nextModules =
+        Array.isArray(data) ? data : [];
+
+      setModules(nextModules);
+      setSelectedCodes(
+        nextModules
+          .filter((module) =>
+            module.planned_semesters?.includes(
+              targetSemester.trim().toUpperCase(),
+            ),
+          )
+          .map((module) => module.code),
       );
     } catch (err) {
       setError(
@@ -871,7 +883,7 @@ export default function PlannerPage({
       };
     }
 
-    if (totalCredits > 60) {
+    if (totalCredits > 64) {
       return {
         label: "Above recommended load",
         tone: "danger",
@@ -1100,7 +1112,7 @@ export default function PlannerPage({
           `Plan saved for ${semester}.`,
       );
 
-      await loadModules();
+      await loadModules(semester);
     } catch (err) {
       setError(
         err?.message ||
@@ -1239,7 +1251,6 @@ export default function PlannerPage({
                       event.target.value,
                     );
                     setPlan(null);
-                    setSelectedCodes([]);
                     setSuccess("");
                     setError("");
                   }}
