@@ -778,3 +778,28 @@ def test_40043_uses_exact_prospectus_paths():
         ("MAT226", "MAT228"),
         ("GLG222",),
     }
+
+
+def test_statistics_or_prerequisite_accepts_either_alternative():
+    from app.data.prerequisite_rules import ANY_OF_PREREQUISITES
+    from app.services.progress_service import missing_prerequisite_codes
+
+    assert ANY_OF_PREREQUISITES["STM312"] == {"STM223", "STM224"}
+    assert ANY_OF_PREREQUISITES["STM313"] == {"STM223", "STM224"}
+
+    class Prerequisite:
+        def __init__(self, module_id, code):
+            self.id = module_id
+            self.code = code
+
+    class Module:
+        code = "STM312"
+        prerequisites = [
+            Prerequisite(223, "STM223"),
+            Prerequisite(224, "STM224"),
+        ]
+
+    module = Module()
+    assert missing_prerequisite_codes(module, set()) == ["STM223", "STM224"]
+    assert missing_prerequisite_codes(module, {223}) == []
+    assert missing_prerequisite_codes(module, {224}) == []
