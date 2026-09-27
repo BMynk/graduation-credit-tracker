@@ -747,3 +747,34 @@ def test_exact_requirement_path_rejects_mixed_mat_alternatives_2():
         assert any(path["satisfied"] for path in requirement["paths"])
     finally:
         db.close()
+
+
+def test_2026_geology_prerequisites_match_prospectus():
+    from seed import PREREQUISITES
+
+    expected = ["GLG212", "GLG213", "PAC121"]
+    assert PREREQUISITES["GLG322"] == expected
+    assert PREREQUISITES["GLG323"] == expected
+
+
+def test_40043_uses_exact_prospectus_paths():
+    from seed import REQUIREMENT_GROUPS
+
+    groups = REQUIREMENT_GROUPS["40043"]
+    assert len(groups) == 4
+    assert all(group.get("paths") for group in groups)
+
+    y2s1 = next(group for group in groups if group["key"] == "y2s1-elective")
+    assert {tuple(path["modules"]) for path in y2s1["paths"]} == {
+        ("COC211", "COC212"),
+        ("MAT212", "MAT213"),
+        ("GLG212",),
+    }
+
+    y2s2 = next(group for group in groups if group["key"] == "y2s2-elective")
+    assert {tuple(path["modules"]) for path in y2s2["paths"]} == {
+        ("COC223", "COC224"),
+        ("MAT226", "MAT227"),
+        ("MAT226", "MAT228"),
+        ("GLG222",),
+    }
