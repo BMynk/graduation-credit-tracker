@@ -1,10 +1,12 @@
 import ast
+import sys
 from pathlib import Path
 
 from pydantic import ValidationError
 
 ROOT = Path(__file__).resolve().parents[1]
 BACKEND = ROOT / "backend"
+sys.path.insert(0, str(BACKEND))
 
 def route_paths(source_path):
     tree = ast.parse(source_path.read_text(encoding="utf-8"))
