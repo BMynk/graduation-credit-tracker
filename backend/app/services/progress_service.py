@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 from app import models
 from app.config import settings
 from app.exceptions import DuplicateModuleCompletionError, PrerequisiteNotMetError
+from app.data.prerequisite_rules import ANY_OF_PREREQUISITES
 
 
 def _passed_module_ids(db: Session, student: models.Student) -> set:
@@ -21,11 +22,25 @@ def _passed_module_ids(db: Session, student: models.Student) -> set:
     return {r[0] for r in rows}
 
 
-def check_prerequisites_met(db: Session, student: models.Student, module: models.Module) -> List[str]:
+def missing_prerequisite_codes(module: models.Module, passed_ids: set) -> List[str]:
+    """Return unmet prerequisite codes, including prospectus any-of rules."""
     if not module.prerequisites:
         return []
+
+    any_of = ANY_OF_PREREQUISITES.get(module.code)
+    if any_of:
+        relevant = [p for p in module.prerequisites if p.code in any_of]
+        if any(p.id in passed_ids for p in relevant):
+            return []
+        # Returning every alternative makes the OR requirement visible to callers.
+        return sorted(p.code for p in relevant)
+
+    return sorted(p.code for p in module.prerequisites if p.id not in passed_ids)
+
+
+def check_prerequisites_met(db: Session, student: models.Student, module: models.Module) -> List[str]:
     passed_ids = _passed_module_ids(db, student)
-    return [p.code for p in module.prerequisites if p.id not in passed_ids]
+    return missing_prerequisite_codes(module, passed_ids)
 
 
 def _save_completion(db, student, module, semester, grade) -> models.Enrolment:
@@ -1032,7 +1047,7 @@ def get_eligible_modules(db: Session, student: models.Student) -> List[dict]:
     )
     eligible = []
     for module in candidates:
-        missing = [p.code for p in module.prerequisites if p.id not in passed_ids]
+        missing = missing_prerequisite_codes(module, passed_ids)
         if not missing:
             reason = "Prerequisites satisfied" if module.prerequisites else "No prerequisites required"
             eligible.append({"module": module, "reason": reason})
