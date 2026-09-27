@@ -78,6 +78,15 @@ class Admin(Base):
         nullable=False,
     )
 
+    # Incremented whenever the admin password changes. JWTs carry the
+    # version that was current when they were issued, so older sessions
+    # can be rejected immediately after a password change/reset.
+    token_version = Column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+
     is_active = Column(
         Boolean,
         default=True,
