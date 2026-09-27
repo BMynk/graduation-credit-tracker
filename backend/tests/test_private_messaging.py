@@ -132,13 +132,8 @@ def test_read_all_does_not_mark_messages_from_inactive_conversations():
     db = TestingSession()
     try:
         one, two, active = _private_fixture(db, "R")
-        inactive = models.PrivateConversation(
-            student_one_id=active.student_one_id,
-            student_two_id=active.student_two_id,
-            is_active=False,
-        )
-        # The pair is unique, so reuse the original conversation as inactive and
-        # create a second student pair for the active control.
+        # Reuse the first conversation as the inactive thread and create a
+        # second student pair for the active control.
         active.is_active = False
         db.flush()
         inactive_message = models.PrivateMessage(
