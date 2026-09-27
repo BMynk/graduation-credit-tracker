@@ -2,14 +2,14 @@
 
 from typing import List
 
-from pydantic_settings import BaseSettings
+from pydantic import model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
-    # Database
-    database_url: str = "sqlite:///./credit_tracker.db"
+    model_config = SettingsConfigDict(\n        env_file=".env",\n        env_file_encoding="utf-8",\n        case_sensitive=False,\n    )\n\n    # Runtime environment\n    environment: str = "development"\n\n    # Database\n    database_url: str = "sqlite:///./credit_tracker.db"
 
     # JWT
     secret_key: str = "change-this-secret-key-in-production"
@@ -72,10 +72,25 @@ class Settings(BaseSettings):
             if origin.strip()
         ]
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
+    @model_validator(mode="after")
+    def validate_production_security(self):
+        """Refuse unsafe development defaults when explicitly running in production."""
+        if self.environment.strip().lower() == "production":
+            if self.secret_key == "change-this-secret-key-in-production" or len(self.secret_key) < 32:
+                raise ValueError(
+                    "Production requires SECRET_KEY to be a non-default value of at least 32 characters"
+                )
+            if self.email_dev_mode:
+                raise ValueError(
+                    "Production requires EMAIL_DEV_MODE=false so PINs are not written to development logs"
+                )
+            if not self.cors_origins_list:
+                raise ValueError("Production requires at least one CORS origin")
+            if any(origin in {"*"} or "localhost" in origin or "127.0.0.1" in origin for origin in self.cors_origins_list):
+                raise ValueError(
+                    "Production CORS_ORIGINS must contain only explicit non-localhost origins"
+                )
+        return self
 
 
 # Create a single global settings instance
