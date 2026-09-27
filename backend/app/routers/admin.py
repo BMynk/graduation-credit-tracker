@@ -395,6 +395,7 @@ def regenerate_pin(
 
         # Email succeeded, so it is now safe to replace the old PIN.
         student.pin_hash = hash_password(new_pin)
+        student.token_version += 1
 
         db.commit()
         db.refresh(student)
