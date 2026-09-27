@@ -522,9 +522,9 @@ getModuleDetail: (
   // Semester Planner
   // ==========================================================
 
-  getPlanningModules: () =>
+  getPlanningModules: (semester) =>
     request(
-      "/planning/planning-modules"
+      `/planning/planning-modules${semester ? `?semester=${encodeURIComponent(semester)}` : ""}`
     ),
 
 

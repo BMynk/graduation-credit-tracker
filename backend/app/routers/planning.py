@@ -47,6 +47,7 @@ class ModulePlanItem(BaseModel):
     is_failed: bool
     is_retake: bool
     is_enrolled: bool
+    planned_semesters: List[str] = []
 
     # Eligibility
     is_eligible: bool
@@ -177,6 +178,7 @@ def _semester_number(semester: str) -> int:
 def _build_planning_modules(
     db: Session,
     student: models.Student,
+    target_semester: Optional[str] = None,
 ) -> List[ModulePlanItem]:
     """
     Build the authoritative planner module list.
@@ -226,6 +228,17 @@ def _build_planning_modules(
         db,
         student,
     )
+
+    planned_by_module = {}
+    for enrolment in (
+        db.query(models.Enrolment)
+        .filter(
+            models.Enrolment.student_id == student.id,
+            models.Enrolment.status == "planned",
+        )
+        .all()
+    ):
+        planned_by_module.setdefault(enrolment.module_id, []).append(enrolment.semester)
 
     passed_ids = _passed_module_ids(
         db,
@@ -280,6 +293,15 @@ def _build_planning_modules(
         is_enrolled = (
             module.id in enrolled_ids
         )
+        planned_semesters = sorted(
+            semester
+            for semester in planned_by_module.get(module.id, [])
+            if semester
+        )
+        planned_in_target = (
+            target_semester is not None
+            and target_semester in planned_semesters
+        )
 
         is_previous_year = (
             curriculum_year < student_year
@@ -321,10 +343,14 @@ def _build_planning_modules(
         elif module.id in satisfied_choice_alternative_ids:
             reason = "Curriculum choice requirement already satisfied"
 
-        elif is_enrolled:
+        elif is_enrolled and not planned_in_target:
             reason = (
                 "Already planned or currently in progress"
             )
+
+        elif planned_in_target:
+            is_eligible = True
+            reason = f"Already saved in {target_semester}"
 
         elif is_future_year:
             reason = (
@@ -406,6 +432,7 @@ def _build_planning_modules(
                 ),
 
                 is_enrolled=is_enrolled,
+                planned_semesters=planned_semesters,
 
                 is_eligible=is_eligible,
                 reason=reason,
@@ -439,10 +466,12 @@ def _build_planning_modules(
 def _planning_module_map(
     db: Session,
     student: models.Student,
+    target_semester: Optional[str] = None,
 ):
     modules = _build_planning_modules(
         db,
         student,
+        target_semester=target_semester,
     )
 
     return {
@@ -520,6 +549,7 @@ def graduation_audit(
     response_model=List[ModulePlanItem],
 )
 def get_planning_modules(
+    semester: Optional[str] = None,
     current_student: models.Student = Depends(
         get_current_student
     ),
@@ -541,9 +571,15 @@ def get_planning_modules(
     to build the grouped Planner interface.
     """
 
+    target_semester = (
+        _validate_semester_value(semester)
+        if semester
+        else None
+    )
     return _build_planning_modules(
         db,
         current_student,
+        target_semester=target_semester,
     )
 
 
@@ -578,6 +614,7 @@ def generate_plan(
         _build_planning_modules(
             db,
             current_student,
+            target_semester=semester,
         )
     )
 
@@ -801,6 +838,7 @@ def save_plan(
     module_map = _planning_module_map(
         db,
         current_student,
+        target_semester=semester,
     )
 
     requested_codes = list(
