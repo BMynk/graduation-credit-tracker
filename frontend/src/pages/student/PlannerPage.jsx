@@ -1434,7 +1434,7 @@ export default function PlannerPage({
                     </span>
 
                     <span className="text-xs text-zinc-400">
-                      / 60
+                      / 64
                     </span>
                   </div>
                 </div>
@@ -1449,15 +1449,15 @@ export default function PlannerPage({
               <div className="mt-4">
                 <Progress
                   value={Math.min(
-                    (totalCredits / 60) * 100,
+                    (totalCredits / 64) * 100,
                     100,
                   )}
                 />
               </div>
 
               <div className="mt-3 flex justify-between text-[11px] text-zinc-400">
-                <span>Recommended: 45</span>
-                <span>Maximum: 60</span>
+                <span>Normal curriculum load: 64</span>
+                <span>Planner maximum: 64</span>
               </div>
             </div>
 

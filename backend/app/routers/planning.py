@@ -157,7 +157,7 @@ def _validate_semester_value(
 
     semester = semester.strip().upper()
 
-    if not re.fullmatch(r"\\d{4}-S[12]", semester):
+    if not re.fullmatch(r"\d{4}-S[12]", semester):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
@@ -677,19 +677,19 @@ def generate_plan(
 
     is_valid = True
 
-    if total_credits > 60:
+    if total_credits > 64:
         warnings.append(
             f"Total credits ({total_credits}) "
             f"exceeds the recommended maximum "
-            f"of 60."
+            f"of 64."
         )
         is_valid = False
 
     if total_credits < 45:
         warnings.append(
-            f"Total credits ({total_credits}) are below the typical "
-            f"45-credit planning guide. A lighter valid semester may "
-            f"still be appropriate depending on your curriculum."
+            f"Total credits ({total_credits}) are below the normal "
+            f"64-credit curriculum load. A lighter valid semester may "
+            f"still be appropriate depending on your remaining requirements."
         )
 
     # Invalid selections should also make the plan invalid.
@@ -866,14 +866,14 @@ def save_plan(
         for module in valid_modules
     )
 
-    if total_credits > 60:
+    if total_credits > 64:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={
                 "message": (
                     f"Plan contains {total_credits} "
                     f"credits. The maximum allowed "
-                    f"for this planner is 60."
+                    f"for this planner is 64."
                 ),
             },
         )
