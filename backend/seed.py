@@ -305,8 +305,8 @@ PREREQUISITES = {
     "GLG223": ["GLG111", "GLG121"],
     "GLG312": ["GLG212", "PAC110"],
     "GLG313": ["GLG213", "PAC110"],
-    "GLG322": [],
-    "GLG323": [],
+    "GLG322": ["GLG212", "GLG213", "PAC121"],
+    "GLG323": ["GLG212", "GLG213", "PAC121"],
     
     # Geography
     "GEG212": ["GEG111", "GEG121"],
@@ -802,12 +802,6 @@ REQUIREMENT_GROUPS = {
         {"key":"y2s1-elective","label":"Choose Botany or Zoology elective stream","year":2,"semester":1,"min_modules":1,"min_credits":16,"options":["BOT212","BOT213","ZOO213"]},
         {"key":"y2s2-elective","label":"Choose Botany or Zoology elective stream","year":2,"semester":2,"min_modules":1,"min_credits":16,"options":["BOT222","BOT223","ZOO224","ZOO225"]},
     ],
-    "40043": [
-        {"key":"y1s1-elective","label":"Choose CSC113 or GLG111","year":1,"semester":1,"min_modules":1,"min_credits":16,"options":["CSC113","GLG111"]},
-        {"key":"y1s2-elective","label":"Choose CSC121 or GLG121","year":1,"semester":2,"min_modules":1,"min_credits":16,"options":["CSC121","GLG121"]},
-        {"key":"y2s1-elective","label":"Choose 16 second-year elective credits","year":2,"semester":1,"min_modules":1,"min_credits":16,"options":["COC211","COC212","MAT212","MAT213","GLG212"]},
-        {"key":"y2s2-elective","label":"Choose 16 second-year elective credits","year":2,"semester":2,"min_modules":1,"min_credits":16,"options":["COC223","COC224","MAT226","MAT227","MAT228","GLG222"]},
-    ]
 }
 
 
