@@ -302,6 +302,10 @@ function RolePicker({ onPick }) {
               </div>
             </div>
 
+            <div className="mb-5 text-center text-xl font-bold tracking-[0.18em] text-zinc-950 dark:text-white">
+              VUYO
+            </div>
+
             <motion.div
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
