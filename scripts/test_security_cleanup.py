@@ -1,8 +1,12 @@
 import ast
+import sys
 from pathlib import Path
+
+from pydantic import ValidationError
 
 ROOT = Path(__file__).resolve().parents[1]
 BACKEND = ROOT / "backend"
+sys.path.insert(0, str(BACKEND))
 
 def route_paths(source_path):
     tree = ast.parse(source_path.read_text(encoding="utf-8"))
@@ -25,6 +29,20 @@ def route_paths(source_path):
     return paths
 
 def main():
+    # Every admin password creation/reset path must enforce the same minimum.
+    from app.schemas import AdminCreate, AdminPasswordReset
+
+    for factory, payload in (
+        (AdminCreate, {"name": "Test Admin", "username": "testadmin", "password": "short123", "is_super_admin": False}),
+        (AdminPasswordReset, {"new_password": "short123"}),
+    ):
+        try:
+            factory(**payload)
+        except ValidationError:
+            pass
+        else:
+            raise AssertionError("Admin passwords shorter than 12 characters must be rejected")
+
     admin_paths = route_paths(BACKEND / "app" / "routers" / "admin.py")
     management_paths = route_paths(BACKEND / "app" / "routers" / "admin_management.py")
 

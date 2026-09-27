@@ -149,7 +149,7 @@ class AdminStudentCreatedOut(AdminStudentOut):
 class AdminCreate(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     username: str = Field(min_length=3, max_length=50)
-    password: str = Field(min_length=8, max_length=100)
+    password: str = Field(min_length=12, max_length=100)
     is_super_admin: bool = False
 
 
@@ -160,7 +160,7 @@ class AdminUpdate(BaseModel):
 
 
 class AdminPasswordReset(BaseModel):
-    new_password: str = Field(min_length=8, max_length=100)
+    new_password: str = Field(min_length=12, max_length=100)
 
 
 class AdminPasswordChange(BaseModel):
