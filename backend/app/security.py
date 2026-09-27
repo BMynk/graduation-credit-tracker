@@ -23,7 +23,7 @@ def generate_pin() -> str:
     return f"{secrets.randbelow(1_000_000):06d}"
 
 
-def _create_token(subject_id: int, role: str, expires_delta: timedelta, token_type: str) -> str:
+def _create_token(subject_id: int, role: str, expires_delta: timedelta, token_type: str, token_version: int | None = None) -> str:
     now = datetime.now(timezone.utc)
     payload = {
         "sub": str(subject_id),
@@ -32,15 +32,17 @@ def _create_token(subject_id: int, role: str, expires_delta: timedelta, token_ty
         "iat": now,
         "exp": now + expires_delta,
     }
+    if token_version is not None:
+        payload["token_version"] = token_version
     return jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
 
 
-def create_access_token(subject_id: int, role: str) -> str:
-    return _create_token(subject_id, role, timedelta(minutes=settings.access_token_expire_minutes), "access")
+def create_access_token(subject_id: int, role: str, token_version: int | None = None) -> str:
+    return _create_token(subject_id, role, timedelta(minutes=settings.access_token_expire_minutes), "access", token_version)
 
 
-def create_refresh_token(subject_id: int, role: str) -> str:
-    return _create_token(subject_id, role, timedelta(days=settings.refresh_token_expire_days), "refresh")
+def create_refresh_token(subject_id: int, role: str, token_version: int | None = None) -> str:
+    return _create_token(subject_id, role, timedelta(days=settings.refresh_token_expire_days), "refresh", token_version)
 
 
 def decode_token(token: str) -> dict:

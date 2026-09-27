@@ -77,10 +77,12 @@ def admin_login(
         access_token=create_access_token(
             admin.id,
             "admin",
+            admin.token_version,
         ),
         refresh_token=create_refresh_token(
             admin.id,
             "admin",
+            admin.token_version,
         ),
     )
 

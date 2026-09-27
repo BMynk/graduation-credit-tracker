@@ -363,14 +363,25 @@ def refresh(
     # Generate fresh token pair
     # --------------------------------------------------------
 
+    token_version = None
+    if role == "admin":
+        if decoded.get("token_version") != entity.token_version:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired refresh token",
+            )
+        token_version = entity.token_version
+
     return schemas.TokenPair(
         access_token=create_access_token(
             subject_id,
             role,
+            token_version,
         ),
         refresh_token=create_refresh_token(
             subject_id,
             role,
+            token_version,
         ),
     )
 
