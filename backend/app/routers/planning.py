@@ -297,13 +297,12 @@ def _build_planning_modules(
         # PREREQUISITES
         # ----------------------------------------------------
 
-        missing_prerequisites = []
-
-        for prerequisite in module.prerequisites:
-            if prerequisite.id not in passed_ids:
-                missing_prerequisites.append(
-                    prerequisite.code
-                )
+        missing_prerequisites = (
+            progress_service.missing_prerequisite_codes(
+                module,
+                passed_ids,
+            )
+        )
 
         prerequisites_met = (
             len(missing_prerequisites) == 0
