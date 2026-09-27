@@ -305,6 +305,7 @@ def change_password(
         )
 
     current_admin.hashed_password = hash_password(payload.new_password)
+    current_admin.token_version += 1
     db.commit()
     return {
         "message": "Password updated successfully. Sign in again on your other devices."
@@ -323,6 +324,7 @@ def reset_admin_password(
     
     admin = _get_admin_or_404(db, admin_id)
     admin.hashed_password = hash_password(payload.new_password)
+    admin.token_version += 1
     db.commit()
     
     return {"message": f"Password updated for {admin.username}"}
