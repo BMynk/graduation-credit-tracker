@@ -810,17 +810,18 @@ def build_graduation_audit(
     for link in outstanding_links:
         module = link.module
 
-        for prerequisite in module.prerequisites:
-            if prerequisite.id not in completed_ids:
-                prerequisite_warnings.append(
-                    {
-                        "module": module.code,
-                        "missing_prereq":
-                            prerequisite.code,
-                        "year": link.year,
-                        "semester": link.semester,
-                    }
-                )
+        for missing_code in missing_prerequisite_codes(
+            module,
+            completed_ids,
+        ):
+            prerequisite_warnings.append(
+                {
+                    "module": module.code,
+                    "missing_prereq": missing_code,
+                    "year": link.year,
+                    "semester": link.semester,
+                }
+            )
 
     # ---------------------------------------------------------
     # REQUIREMENTS BREAKDOWN
@@ -945,11 +946,12 @@ def build_graduation_audit(
         )
 
     # Project from the actual outstanding curriculum. GCT has two
-    # semesters per academic year and permits at most 80 credits in
-    # a semester. Each curriculum semester therefore contributes at
-    # least one future semester when it still contains requirements;
-    # overloaded curriculum semesters require additional semesters.
-    MAX_CREDITS_PER_SEMESTER = 60
+    # semesters per academic year. Use the normal 64-credit curriculum
+    # load shown throughout the 2026 BSc programme tables as the projection
+    # capacity. Each curriculum semester contributes at least one future
+    # semester when it still contains requirements; only a load above that
+    # normal curriculum amount requires an additional projected semester.
+    MAX_CREDITS_PER_SEMESTER = 64
     outstanding_by_curriculum_semester = defaultdict(int)
 
     for link in outstanding_links:
