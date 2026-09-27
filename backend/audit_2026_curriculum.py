@@ -82,6 +82,19 @@ def main():
             if option_credits < group["min_credits"]:
                 errors.append(f"{programme_code}/{group['key']}: options cannot meet credit minimum")
 
+            for path in group.get("paths", []):
+                path_credits = 0
+                for raw in path.get("modules", []):
+                    resolved = ALIAS_CODES.get(raw, raw)
+                    if resolved not in known:
+                        errors.append(f"{programme_code}/{group['key']}/{path['key']}: missing path module {raw}")
+                        continue
+                    if resolved not in linked:
+                        errors.append(f"{programme_code}/{group['key']}/{path['key']}: path module {raw} not linked to programme")
+                    path_credits += module_by_code[resolved][2]
+                if path_credits < group["min_credits"]:
+                    errors.append(f"{programme_code}/{group['key']}/{path['key']}: path cannot meet credit minimum")
+
     # A completion path must at least be capable of reaching the programme's
     # published 384-credit requirement. Exact elective combinations are checked
     # through requirement groups rather than summing every optional module.
