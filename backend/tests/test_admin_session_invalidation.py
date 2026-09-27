@@ -1,5 +1,6 @@
 import jwt
 from fastapi import HTTPException
+from starlette.requests import Request
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -25,6 +26,10 @@ def setup_function():
     Base.metadata.create_all(bind=engine)
 
 
+def _request():
+    return Request({"type": "http", "method": "POST", "path": "/admin/login", "headers": [], "client": ("127.0.0.1", 12345)})
+
+
 def _admin(db, username="auditadmin", password="StrongPassword123!", super_admin=True):
     row = models.Admin(
         name="Audit Admin",
@@ -44,7 +49,7 @@ def test_admin_login_tokens_include_current_token_version():
     try:
         row = _admin(db)
         pair = admin.admin_login(
-            request=None,
+            request=_request(),
             payload=schemas.AdminLogin(username=row.username, password="StrongPassword123!"),
             db=db,
         )
@@ -59,7 +64,7 @@ def test_password_change_invalidates_old_access_and_refresh_tokens():
     try:
         row = _admin(db)
         pair = admin.admin_login(
-            request=None,
+            request=_request(),
             payload=schemas.AdminLogin(username=row.username, password="StrongPassword123!"),
             db=db,
         )
@@ -98,7 +103,7 @@ def test_super_admin_reset_invalidates_target_admin_tokens():
         super_admin = _admin(db, username="superadmin", password="SuperPassword123!")
         target = _admin(db, username="targetadmin", password="TargetPassword123!", super_admin=False)
         pair = admin.admin_login(
-            request=None,
+            request=_request(),
             payload=schemas.AdminLogin(username=target.username, password="TargetPassword123!"),
             db=db,
         )
