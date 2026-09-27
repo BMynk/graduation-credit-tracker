@@ -576,7 +576,7 @@ getModuleDetail: (
   updateAchievementShowcase: (achievementIds) =>
     request("/rewards/showcase", {
       method: "PUT",
-      body: JSON.stringify(achievementIds),
+      body: achievementIds,
     }),
 
 

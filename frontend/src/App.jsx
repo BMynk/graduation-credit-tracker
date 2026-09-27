@@ -972,11 +972,11 @@ function StudentLogin({ onLoggedIn, onBack }) {
 // ---------- Student Dashboard Components ----------
 
 function SummaryPanel({ summary }) {
+  // Hooks must run before any conditional return.
+  const [openYears, setOpenYears] = useState({});
+
   if (!summary) return null;
   const categories = Object.entries(summary.category_breakdown || {});
-  
-  // State for toggling each year's visibility
-  const [openYears, setOpenYears] = useState({});
 
   const toggleYear = (year) => {
     setOpenYears((prev) => ({

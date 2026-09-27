@@ -3,6 +3,16 @@ import { useState, useEffect } from "react";
 import { api } from "../../api";
 import Card from "../Card";
 
+function ErrorBanner({ message, onDismiss }) {
+  if (!message) return null;
+  return (
+    <div className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+      <span>{message}</span>
+      <button type="button" onClick={onDismiss} className="font-semibold" aria-label="Dismiss error">×</button>
+    </div>
+  );
+}
+
 function AdminModuleList() {
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(true);
