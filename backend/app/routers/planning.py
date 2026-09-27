@@ -157,7 +157,7 @@ def _validate_semester_value(
 
     semester = semester.strip().upper()
 
-    if not re.fullmatch(r"\\d{4}-S[12]", semester):
+    if not re.fullmatch(r"\d{4}-S[12]", semester):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
