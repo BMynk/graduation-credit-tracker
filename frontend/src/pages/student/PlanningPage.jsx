@@ -800,7 +800,21 @@ function EligibleModule({
 // Main Planning Page
 // ---------------------------------------------------------
 
-export default function PlanningPage({
+export default function PlanningPage(props) {
+  if (!props.audit) {
+    return (
+      <Card className="p-8">
+        <p className="text-sm text-zinc-500">
+          Graduation planning information is not available.
+        </p>
+      </Card>
+    );
+  }
+
+  return <PlanningPageContent {...props} />;
+}
+
+function PlanningPageContent({
   audit,
   eligible = [],
   onModuleClick,
@@ -812,16 +826,6 @@ export default function PlanningPage({
   const [showFullRoadmap, setShowFullRoadmap] =
     useState(false);
 
-  if (!audit) {
-    return (
-      <Card className="p-8">
-        <p className="text-sm text-zinc-500">
-          Graduation planning information is not
-          available.
-        </p>
-      </Card>
-    );
-  }
 
   const requirements =
     audit.requirements_breakdown || {};
