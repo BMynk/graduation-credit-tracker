@@ -283,7 +283,7 @@ function RolePicker({ onPick }) {
             {/* Desktop UFH brand */}
             <div className="mb-10 hidden flex-col items-center text-center lg:flex">
               <div className="flex w-[300px] justify-center">
-                <UfhLogo className="w-[250px] max-w-full mix-blend-multiply drop-shadow-sm" />
+                <UfhLogo className="w-[270px] max-w-full mix-blend-multiply" />
               </div>
             </div>
 
@@ -300,6 +300,10 @@ function RolePicker({ onPick }) {
                   Academic progress platform
                 </p>
               </div>
+            </div>
+
+            <div className="mb-5 text-center text-xl font-bold tracking-[0.18em] text-zinc-950 dark:text-white">
+              VUYO
             </div>
 
             <motion.div
@@ -702,9 +706,7 @@ function StudentLogin({ onLoggedIn, onBack }) {
         {/* =====================================================
             RIGHT LOGIN PANEL
         ====================================================== */}
-        <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_top_right,_rgba(59,130,246,0.10),_transparent_34%),linear-gradient(180deg,#fbfcff_0%,#f4f7fb_100%)] px-5 py-8 sm:px-8 dark:bg-zinc-950">
-          <div className="pointer-events-none absolute -right-24 top-20 size-72 rounded-full bg-blue-500/10 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-28 left-10 size-80 rounded-full bg-indigo-500/[0.07] blur-3xl" />
+        <section className="relative flex min-h-screen items-center justify-center bg-[#f8f9fb] px-5 py-8 sm:px-8 dark:bg-zinc-950">
 
           {/* Back button */}
           <button
@@ -716,11 +718,11 @@ function StudentLogin({ onLoggedIn, onBack }) {
             Back
           </button>
 
-          <div className="relative z-10 w-full max-w-[480px]">
+          <div className="w-full max-w-[460px]">
 
             {/* Desktop UFH brand — keep the existing phone layout unchanged */}
-            <div className="mb-7 hidden justify-center lg:flex">
-              <UfhLogo className="w-[250px] max-w-full mix-blend-multiply drop-shadow-sm" />
+            <div className="mb-8 hidden justify-center lg:flex">
+              <UfhLogo className="w-[270px] max-w-full mix-blend-multiply" />
             </div>
 
             {/* Mobile brand */}
@@ -768,7 +770,7 @@ function StudentLogin({ onLoggedIn, onBack }) {
               </div>
 
               {/* Login card */}
-              <div className="rounded-[28px] border border-white/80 bg-white/90 p-5 shadow-[0_24px_70px_-28px_rgba(15,23,42,0.28)] ring-1 ring-zinc-200/60 backdrop-blur-xl sm:p-7 dark:border-zinc-800 dark:bg-zinc-900/80 dark:ring-zinc-800">
+              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/70">
 
                 <ErrorBanner
                   message={error}
@@ -808,7 +810,7 @@ function StudentLogin({ onLoggedIn, onBack }) {
                         onChange={(e) =>
                           setStudentNumber(e.target.value)
                         }
-                        className="h-12 w-full rounded-xl border border-zinc-200 bg-zinc-50/70 pl-10 pr-4 text-sm text-zinc-950 outline-none transition placeholder:text-zinc-400 hover:border-zinc-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white dark:hover:border-zinc-600"
+                        className="h-12 w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-4 text-sm text-zinc-950 outline-none transition placeholder:text-zinc-400 hover:border-zinc-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white dark:hover:border-zinc-600"
                         required
                       />
                     </div>
@@ -838,7 +840,7 @@ function StudentLogin({ onLoggedIn, onBack }) {
                         onChange={(e) =>
                           setEmail(e.target.value)
                         }
-                        className="h-12 w-full rounded-xl border border-zinc-200 bg-zinc-50/70 pl-10 pr-4 text-sm text-zinc-950 outline-none transition placeholder:text-zinc-400 hover:border-zinc-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white dark:hover:border-zinc-600"
+                        className="h-12 w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-4 text-sm text-zinc-950 outline-none transition placeholder:text-zinc-400 hover:border-zinc-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white dark:hover:border-zinc-600"
                         required
                       />
                     </div>
@@ -888,7 +890,7 @@ function StudentLogin({ onLoggedIn, onBack }) {
                             )
                           )
                         }
-                        className="h-12 w-full rounded-xl border border-zinc-200 bg-zinc-50/70 pl-10 pr-12 text-sm tracking-[0.25em] text-zinc-950 outline-none transition placeholder:tracking-normal placeholder:text-zinc-400 hover:border-zinc-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white dark:hover:border-zinc-600"
+                        className="h-12 w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-12 text-sm tracking-[0.25em] text-zinc-950 outline-none transition placeholder:tracking-normal placeholder:text-zinc-400 hover:border-zinc-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white dark:hover:border-zinc-600"
                         required
                       />
 
