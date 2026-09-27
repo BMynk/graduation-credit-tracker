@@ -137,6 +137,14 @@ def get_current_admin(
         "admin",
     )
 
+    try:
+        payload = decode_token(token)
+    except (jwt.PyJWTError, ValueError, TypeError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+        )
+
     admin = (
         db.query(models.Admin)
         .filter(
@@ -145,7 +153,11 @@ def get_current_admin(
         .first()
     )
 
-    if admin is None or not admin.is_active:
+    if (
+        admin is None
+        or not admin.is_active
+        or payload.get("token_version") != admin.token_version
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
