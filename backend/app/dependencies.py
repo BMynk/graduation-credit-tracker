@@ -79,6 +79,14 @@ def get_current_student(
         "student",
     )
 
+    try:
+        payload = decode_token(token)
+    except (jwt.PyJWTError, ValueError, TypeError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+        )
+
     student = (
         db.query(models.Student)
         .filter(
@@ -87,7 +95,15 @@ def get_current_student(
         .first()
     )
 
-    if student is None or not student.is_active:
+    if (
+        student is None
+        or not student.is_active
+        or (
+            not payload.get("is_impersonation")
+            and payload.get("impersonated_by") is None
+            and payload.get("token_version") != student.token_version
+        )
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
@@ -244,6 +260,11 @@ def get_optional_current_user(
             if (
                 student is None
                 or not student.is_active
+                or (
+                    not payload.get("is_impersonation")
+                    and payload.get("impersonated_by") is None
+                    and payload.get("token_version") != student.token_version
+                )
             ):
                 return None
 
@@ -270,6 +291,7 @@ def get_optional_current_user(
             if (
                 admin is None
                 or not admin.is_active
+                or payload.get("token_version") != admin.token_version
             ):
                 return None
 

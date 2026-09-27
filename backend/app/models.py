@@ -445,6 +445,14 @@ class Student(Base):
         nullable=True,
     )
 
+    # Incremented whenever the student's PIN changes. JWTs carry the
+    # version that was current when issued, invalidating older sessions.
+    token_version = Column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+
     # --------------------------------------------------------
     # Academic information
     # --------------------------------------------------------
