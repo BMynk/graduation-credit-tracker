@@ -114,6 +114,24 @@ def build_progress_summary(db: Session, student: models.Student) -> dict:
     )
     passed_module_ids = {e.module_id for e in completed_enrolments}
 
+    # Degree progress must only count modules that belong to this programme's
+    # curriculum. Official history can legitimately contain extra modules
+    # (transfers, substitutions, or modules taken outside the programme), but
+    # those credits must not inflate progress toward this qualification.
+    curriculum_module_ids = {
+        module_id
+        for (module_id,) in (
+            db.query(models.ProgrammeModule.module_id)
+            .filter(models.ProgrammeModule.programme_id == programme.id)
+            .all()
+        )
+    }
+    curriculum_completed_enrolments = [
+        enrolment
+        for enrolment in completed_enrolments
+        if enrolment.module_id in curriculum_module_ids
+    ]
+
     all_failed = (
         db.query(models.Enrolment)
         .options(joinedload(models.Enrolment.module))
@@ -141,7 +159,7 @@ def build_progress_summary(db: Session, student: models.Student) -> dict:
         for e in pending_failed
     ]
 
-    credits_completed = sum(e.module.credits for e in completed_enrolments)
+    credits_completed = sum(e.module.credits for e in curriculum_completed_enrolments)
     credits_required = programme.total_credits_required
     credits_remaining = max(credits_required - credits_completed, 0)
     percentage = round((credits_completed / credits_required) * 100, 1) if credits_required else 0.0
@@ -162,7 +180,7 @@ def build_progress_summary(db: Session, student: models.Student) -> dict:
     )
 
     category_breakdown: dict = defaultdict(lambda: {"credits_completed": 0, "modules_completed": 0})
-    for e in completed_enrolments:
+    for e in curriculum_completed_enrolments:
         cat = e.module.category
         category_breakdown[cat]["credits_completed"] += e.module.credits
         category_breakdown[cat]["modules_completed"] += 1
@@ -194,7 +212,7 @@ def build_progress_summary(db: Session, student: models.Student) -> dict:
         "credits_remaining": credits_remaining,
         "percentage_complete": percentage,
         "weighted_average": weighted_average,
-        "modules_completed": len(completed_enrolments),
+        "modules_completed": len(curriculum_completed_enrolments),
         "modules_failed_pending_retake": len(pending_failed),
         "category_breakdown": dict(category_breakdown),
         "missing_compulsory_modules": missing_compulsory,

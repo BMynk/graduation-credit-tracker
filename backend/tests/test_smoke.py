@@ -184,3 +184,54 @@ def test_completed_history_is_read_only_through_progress_api():
     # Student progress API intentionally exposes no DELETE enrolment route.
     resp = client.delete(f"/progress/enrolments/{enrolment_id}", headers=headers)
     assert resp.status_code == 404
+
+
+def test_out_of_programme_completion_does_not_inflate_degree_progress():
+    register_and_login("S107")
+    db = SessionLocal()
+    try:
+        student = db.query(models.Student).filter(
+            models.Student.student_number == "S107"
+        ).first()
+        m1 = db.query(models.Module).filter(models.Module.code == "M1").first()
+        extra = models.Module(
+            code="EXTRA101",
+            name="Extra Module",
+            credits=40,
+            category="elective",
+            level=1,
+        )
+        db.add(extra)
+        db.flush()
+        db.add_all([
+            models.Enrolment(
+                student_id=student.id,
+                module_id=m1.id,
+                semester="2025-S1",
+                grade=70,
+                status="completed",
+                attempt=1,
+            ),
+            models.Enrolment(
+                student_id=student.id,
+                module_id=extra.id,
+                semester="2025-S1",
+                grade=90,
+                status="completed",
+                attempt=1,
+            ),
+        ])
+        db.commit()
+
+        summary = progress_service.build_progress_summary(db, student)
+
+        assert summary["credits_completed"] == 20
+        assert summary["credits_remaining"] == 40
+        assert summary["percentage_complete"] == 33.3
+        assert summary["modules_completed"] == 1
+        assert "elective" not in summary["category_breakdown"]
+        # The overall academic average intentionally still reflects recorded
+        # academic history, including an extra completed module.
+        assert summary["weighted_average"] == 80.0
+    finally:
+        db.close()
