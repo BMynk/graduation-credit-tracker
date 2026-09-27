@@ -803,3 +803,102 @@ def test_statistics_or_prerequisite_accepts_either_alternative():
     assert missing_prerequisite_codes(module, set()) == ["STM223", "STM224"]
     assert missing_prerequisite_codes(module, {223}) == []
     assert missing_prerequisite_codes(module, {224}) == []
+
+
+def test_prerequisite_warnings_respect_statistics_or_rule():
+    db = _session()
+    try:
+        programme = models.Programme(
+            code="STOR",
+            name="Statistics OR Test",
+            total_credits_required=32,
+        )
+        db.add(programme)
+        db.flush()
+
+        stm223 = models.Module(code="STM223", name="STM223", credits=16, level=2)
+        stm224 = models.Module(code="STM224", name="STM224", credits=16, level=2)
+        stm312 = models.Module(code="STM312", name="STM312", credits=16, level=3)
+        stm312.prerequisites = [stm223, stm224]
+        db.add_all([stm223, stm224, stm312])
+        db.flush()
+
+        db.add(models.ProgrammeModule(
+            programme_id=programme.id,
+            module_id=stm312.id,
+            year=3,
+            semester=1,
+            is_compulsory=True,
+        ))
+        student = models.Student(
+            name="OR Student",
+            student_number="OR001",
+            email="or@student.ufh.ac.za",
+            programme_id=programme.id,
+            current_year=3,
+            target_average=50,
+        )
+        db.add(student)
+        db.flush()
+        db.add(models.Enrolment(
+            student_id=student.id,
+            module_id=stm223.id,
+            semester="2026-S2",
+            grade=70,
+            status="completed",
+            attempt=1,
+        ))
+        db.commit()
+
+        audit = build_graduation_audit(db, student)
+        assert not any(
+            warning["module"] == "STM312"
+            for warning in audit["prerequisite_warnings"]
+        )
+    finally:
+        db.close()
+
+
+def test_normal_64_credit_curriculum_semester_projects_as_one_semester():
+    db = _session()
+    try:
+        programme = models.Programme(
+            code="LOAD64",
+            name="Normal Load Test",
+            total_credits_required=64,
+        )
+        db.add(programme)
+        db.flush()
+
+        for index in range(4):
+            module = models.Module(
+                code=f"L64{index}",
+                name=f"Load module {index}",
+                credits=16,
+                level=1,
+            )
+            db.add(module)
+            db.flush()
+            db.add(models.ProgrammeModule(
+                programme_id=programme.id,
+                module_id=module.id,
+                year=1,
+                semester=1,
+                is_compulsory=True,
+            ))
+
+        student = models.Student(
+            name="Load Student",
+            student_number="LOAD64001",
+            email="load64@student.ufh.ac.za",
+            programme_id=programme.id,
+            current_year=1,
+            target_average=50,
+        )
+        db.add(student)
+        db.commit()
+
+        audit = build_graduation_audit(db, student)
+        assert audit["projected_semesters_remaining"] == 1
+    finally:
+        db.close()
