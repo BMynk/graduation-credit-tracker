@@ -94,6 +94,7 @@ def request_pin(
         student.pin_hash = hash_password(
             new_pin
         )
+        student.token_version += 1
 
         db.commit()
 
@@ -203,10 +204,12 @@ def login(
         access_token=create_access_token(
             student.id,
             "student",
+            student.token_version,
         ),
         refresh_token=create_refresh_token(
             student.id,
             "student",
+            student.token_version,
         ),
     )
 
@@ -319,6 +322,16 @@ def refresh(
     # administrators from student-private areas.
     # --------------------------------------------------------
 
+    if role == "student" and not (
+        decoded.get("is_impersonation")
+        or decoded.get("impersonated_by") is not None
+    ):
+        if decoded.get("token_version") != entity.token_version:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired refresh token",
+            )
+
     if role == "student" and (
         decoded.get("is_impersonation")
         or decoded.get("impersonated_by") is not None
@@ -363,7 +376,7 @@ def refresh(
     # Generate fresh token pair
     # --------------------------------------------------------
 
-    token_version = None
+    token_version = entity.token_version if role == "student" else None
     if role == "admin":
         if decoded.get("token_version") != entity.token_version:
             raise HTTPException(
