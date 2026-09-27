@@ -11,6 +11,7 @@ from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
 from app.database import Base, engine
+from app.migrations import run_schema_migrations
 from app.rate_limit import limiter
 from app.routers.community import router as community_router
 from app.routers import (
@@ -39,8 +40,10 @@ logging.basicConfig(
 logger = logging.getLogger("credit_tracker")
 
 
-# Create database tables
+# Create missing database tables, then apply targeted compatibility
+# migrations for columns added after an existing deployment was created.
 Base.metadata.create_all(bind=engine)
+run_schema_migrations(engine)
 
 
 app = FastAPI(
