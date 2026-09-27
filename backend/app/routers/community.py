@@ -2,6 +2,7 @@
 
 from datetime import datetime
 import hashlib
+import re
 import time
 
 import httpx
@@ -849,6 +850,60 @@ def my_past_paper_achievements(
 # ============================================================
 
 PAST_PAPER_XP_MILESTONES = {1: 100, 5: 250, 10: 500, 25: 1000, 50: 2000}
+PAST_PAPER_MAX_BYTES = 8 * 1024 * 1024
+PAST_PAPER_MODULE_CODE_RE = re.compile(r"^[A-Z0-9][A-Z0-9_-]{1,29}$")
+
+
+def _normalise_past_paper_module_code(value: str) -> str:
+    code = value.strip().upper()
+    if not PAST_PAPER_MODULE_CODE_RE.fullmatch(code):
+        raise HTTPException(
+            status_code=400,
+            detail="Module code must be 2-30 characters using letters, numbers, hyphens, or underscores",
+        )
+    return code
+
+
+def _looks_like_pdf(data: bytes) -> bool:
+    # Upload metadata and filename are client-controlled. Require the PDF
+    # signature in the first bytes as an additional server-side check.
+    return data.startswith(b"%PDF-")
+
+
+async def _delete_cloudinary_raw(storage_key: str) -> bool:
+    """Delete one raw Cloudinary asset. Return False if storage deletion fails."""
+    if (
+        not storage_key
+        or not settings.cloudinary_cloud_name
+        or not settings.cloudinary_api_key
+        or not settings.cloudinary_api_secret
+    ):
+        return False
+
+    timestamp = int(time.time())
+    to_sign = f"public_id={storage_key}&timestamp={timestamp}&type=upload{settings.cloudinary_api_secret}"
+    signature = hashlib.sha1(to_sign.encode("utf-8")).hexdigest()
+    destroy_url = f"https://api.cloudinary.com/v1_1/{settings.cloudinary_cloud_name}/raw/destroy"
+
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.post(
+                destroy_url,
+                data={
+                    "api_key": settings.cloudinary_api_key,
+                    "public_id": storage_key,
+                    "timestamp": str(timestamp),
+                    "type": "upload",
+                    "signature": signature,
+                },
+            )
+    except httpx.HTTPError:
+        return False
+
+    if response.status_code >= 400:
+        return False
+    result = response.json().get("result")
+    return result in {"ok", "not found"}
 
 
 def _award_past_paper_milestone_xp(db: Session, student_id: int) -> None:
@@ -926,6 +981,7 @@ async def upload_past_paper(
 ):
     if not sharing_confirmed:
         raise HTTPException(status_code=400, detail="Confirm that you are allowed to share this paper")
+    module_code_clean = _normalise_past_paper_module_code(module_code)
     if file.content_type != "application/pdf" or not (file.filename or "").lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF past papers are supported")
     if not (1990 <= paper_year <= 2100) or not (1 <= level <= 10):
@@ -933,16 +989,16 @@ async def upload_past_paper(
     if semester not in (None, 1, 2):
         raise HTTPException(status_code=400, detail="Semester must be 1 or 2")
 
-    data = await file.read(8 * 1024 * 1024 + 1)
-    if len(data) > 8 * 1024 * 1024:
+    data = await file.read(PAST_PAPER_MAX_BYTES + 1)
+    if len(data) > PAST_PAPER_MAX_BYTES:
         raise HTTPException(status_code=413, detail="PDF must be 8 MB or smaller")
-    if not data.startswith(b"%PDF"):
+    if not _looks_like_pdf(data):
         raise HTTPException(status_code=400, detail="The uploaded file is not a valid PDF")
     if not settings.cloudinary_cloud_name or not settings.cloudinary_api_key or not settings.cloudinary_api_secret:
         raise HTTPException(status_code=503, detail="Past paper storage is not configured yet")
 
     timestamp = int(time.time())
-    public_id = f"gct/past-papers/{current_student.programme.code}/{module_code.strip().upper()}-{timestamp}-{current_student.id}"
+    public_id = f"gct/past-papers/{current_student.programme.code}/{module_code_clean}-{timestamp}-{current_student.id}"
     to_sign = f"public_id={public_id}&timestamp={timestamp}{settings.cloudinary_api_secret}"
     signature = hashlib.sha1(to_sign.encode("utf-8")).hexdigest()
     upload_url = f"https://api.cloudinary.com/v1_1/{settings.cloudinary_cloud_name}/raw/upload"
@@ -959,7 +1015,7 @@ async def upload_past_paper(
 
     row = models.PastPaper(
         uploader_id=current_student.id, programme_id=current_student.programme_id,
-        module_code=module_code.strip().upper()[:30], module_name=module_name.strip()[:180] or None,
+        module_code=module_code_clean, module_name=module_name.strip()[:180] or None,
         paper_year=paper_year, semester=semester, level=level,
         description=description.strip()[:500] or None, file_name=(file.filename or "past-paper.pdf")[:255],
         file_url=stored["secure_url"], storage_key=stored.get("public_id"), file_size=len(data),
@@ -972,7 +1028,7 @@ async def upload_past_paper(
 
 
 @router.delete("/past-papers/{paper_id}", status_code=204)
-def delete_own_past_paper(
+async def delete_own_past_paper(
     paper_id: int,
     db: Session = Depends(get_db),
     current_student: models.Student = Depends(get_current_real_student),
@@ -984,6 +1040,15 @@ def delete_own_past_paper(
     ).first()
     if row is None:
         raise HTTPException(status_code=404, detail="Past paper not found")
+
+    if row.storage_key:
+        deleted = await _delete_cloudinary_raw(row.storage_key)
+        if not deleted:
+            raise HTTPException(
+                status_code=502,
+                detail="Could not remove the stored past paper; nothing was deleted",
+            )
+
     row.is_active = False
     db.commit()
     return None
