@@ -1205,6 +1205,7 @@ def get_dashboard(
 
     active_students_list = (
         db.query(models.Student)
+        .options(joinedload(models.Student.programme))
         .filter(
             models.Student.is_active.is_(True)
         )
@@ -1354,6 +1355,7 @@ def get_admin_analytics(
 
     query = (
         db.query(models.Student)
+        .options(joinedload(models.Student.programme))
         .filter(models.Student.is_active.is_(True))
     )
 
@@ -1435,22 +1437,34 @@ def get_admin_analytics(
         ):
             graduation_ready_count += 1
 
-    bottleneck_modules = []
-    for module_id, count in sorted(
+    top_failures = sorted(
         fail_counts.items(),
         key=lambda item: (-item[1], item[0]),
-    )[:8]:
-        module = db.query(models.Module).filter(
-            models.Module.id == module_id
-        ).first()
-        if module:
-            bottleneck_modules.append(
-                schemas.BottleneckModuleOut(
-                    code=module.code,
-                    name=module.name,
-                    fail_count=count,
-                )
-            )
+    )[:8]
+    top_failure_counts = dict(top_failures)
+    top_failure_ids = list(top_failure_counts)
+
+    # Fetch bottleneck module metadata in one query instead of one query per
+    # module. Reapply the already-computed ranking after the bulk fetch.
+    modules_by_id = {
+        module.id: module
+        for module in (
+            db.query(models.Module)
+            .filter(models.Module.id.in_(top_failure_ids))
+            .all()
+            if top_failure_ids
+            else []
+        )
+    }
+    bottleneck_modules = [
+        schemas.BottleneckModuleOut(
+            code=modules_by_id[module_id].code,
+            name=modules_by_id[module_id].name,
+            fail_count=count,
+        )
+        for module_id, count in top_failures
+        if module_id in modules_by_id
+    ]
 
     programme_performance = []
     for code, values in sorted(programme_stats.items()):
