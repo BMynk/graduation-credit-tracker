@@ -8,8 +8,13 @@ from sqlalchemy.orm import Session
 
 from app import models
 from app.database import SessionLocal
+RETIRED_PROGRAMME_CODES = frozenset({
+    "40008", "40012", "40018", "40020", "40022", "40026", "40027",
+    "40028", "40029", "40032", "40033", "40034", "40035", "40036",
+    "40037", "40039", "40040", "40041", "40042", "40043",
+})
+
 from seed import (
-    ACTIVE_PROGRAMME_CODES,
     ALIAS_CODES,
     MODULES,
     PROGRAMMES,
@@ -22,7 +27,7 @@ from seed import (
 def _remove_retired_programmes(db: Session) -> None:
     retired = (
         db.query(models.Programme)
-        .filter(~models.Programme.code.in_(ACTIVE_PROGRAMME_CODES))
+        .filter(models.Programme.code.in_(RETIRED_PROGRAMME_CODES))
         .all()
     )
     for programme in retired:
