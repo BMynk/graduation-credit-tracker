@@ -1,11 +1,16 @@
 import os
 
-from app.database import SessionLocal
+from app.database import SessionLocal, engine
+from app.migrations import run_schema_migrations
 from app import models
 from app.security import hash_password
 
 
 def create_production_admin():
+    # Render runs this script before Uvicorn. Apply compatibility migrations
+    # first so ORM queries work against databases created by older releases.
+    run_schema_migrations(engine)
+
     username = os.getenv("PRODUCTION_ADMIN_USERNAME")
     password = os.getenv("PRODUCTION_ADMIN_PASSWORD")
 
