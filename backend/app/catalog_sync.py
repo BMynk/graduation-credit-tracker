@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app import models
 from app.database import SessionLocal
 from seed import (
+    ACTIVE_PROGRAMME_CODES,
     ALIAS_CODES,
     MODULES,
     PROGRAMMES,
@@ -18,7 +19,48 @@ from seed import (
 )
 
 
+def _remove_retired_programmes(db: Session) -> None:
+    retired = (
+        db.query(models.Programme)
+        .filter(~models.Programme.code.in_(ACTIVE_PROGRAMME_CODES))
+        .all()
+    )
+    for programme in retired:
+        student_count = (
+            db.query(models.Student)
+            .filter(models.Student.programme_id == programme.id)
+            .count()
+        )
+        if student_count:
+            raise RuntimeError(
+                f"Cannot remove retired programme {programme.code}: "
+                f"{student_count} student account(s) are still assigned to it."
+            )
+
+        groups = (
+            db.query(models.ProgrammeRequirementGroup)
+            .filter(models.ProgrammeRequirementGroup.programme_id == programme.id)
+            .all()
+        )
+        for group in groups:
+            db.delete(group)
+
+        links = (
+            db.query(models.ProgrammeModule)
+            .filter(models.ProgrammeModule.programme_id == programme.id)
+            .all()
+        )
+        for link in links:
+            db.delete(link)
+
+        db.flush()
+        db.delete(programme)
+
+    db.flush()
+
+
 def sync_2026_catalog(db: Session) -> None:
+    _remove_retired_programmes(db)
     programmes = {p.code: p for p in db.query(models.Programme).all()}
     for spec in PROGRAMMES:
         if spec["code"] not in programmes:
