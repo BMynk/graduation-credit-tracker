@@ -902,3 +902,39 @@ def test_normal_64_credit_curriculum_semester_projects_as_one_semester():
         assert audit["projected_semesters_remaining"] == 1
     finally:
         db.close()
+
+
+
+def test_choice_status_can_reuse_preloaded_passed_ids(monkeypatch):
+    db = _session()
+    try:
+        student, core, option_a, option_b = _choice_fixture(db)
+        db.add(models.Enrolment(
+            student_id=student.id,
+            module_id=option_a.id,
+            semester="2026-S1",
+            grade=70,
+            status="completed",
+            attempt=1,
+        ))
+        db.commit()
+
+        # A preloaded completion set must be sufficient; the helper should not
+        # issue its own passed-module query when the caller already has it.
+        monkeypatch.setattr(
+            "app.services.progress_service._passed_module_ids",
+            lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                AssertionError("duplicate passed-module query")
+            ),
+        )
+
+        status_info = _curriculum_choice_status(
+            db,
+            student,
+            passed_ids={option_a.id},
+        )[0]
+
+        assert status_info["satisfied"] is True
+        assert status_info["completed_options"] == ["OPT1"]
+    finally:
+        db.close()
