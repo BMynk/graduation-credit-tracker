@@ -2296,16 +2296,42 @@ function DashboardHome({ onSelectStudent, onNavigate }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      api.adminGetDashboard(),
-      api.adminGetAnalytics(),
-    ])
-      .then(([dashboardData, analyticsData]) => {
+    let cancelled = false;
+
+    async function loadDashboard() {
+      try {
+        // Load the core dashboard first. Both endpoints perform cohort-wide
+        // progress calculations, so running them together makes the database
+        // do the heaviest work twice at the same time.
+        const dashboardData = await api.adminGetDashboard();
+
+        if (cancelled) return;
+
         setStats(dashboardData);
-        setAnalytics(analyticsData);
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+        setLoading(false);
+
+        // Analytics are supplementary and the dashboard page already handles
+        // a null analytics value. Fetch them only after the useful overview is
+        // visible so they cannot block the initial admin experience.
+        try {
+          const analyticsData = await api.adminGetAnalytics();
+          if (!cancelled) setAnalytics(analyticsData);
+        } catch {
+          // Keep the core dashboard usable if supplementary analytics fail.
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.message);
+          setLoading(false);
+        }
+      }
+    }
+
+    loadDashboard();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (loading) {
