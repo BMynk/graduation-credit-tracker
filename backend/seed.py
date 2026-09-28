@@ -798,6 +798,20 @@ ALIAS_CODES = {
 }
 
 
+# Keep curriculum definitions scoped to the active 10-programme catalogue.
+# Module and prerequisite definitions remain available; only retired programme
+# associations are excluded.
+PROGRAMME_MODULES = {
+    code: spec
+    for code, spec in PROGRAMME_MODULES.items()
+    if code in ACTIVE_PROGRAMME_CODES
+}
+REQUIREMENT_GROUPS = {
+    code: groups
+    for code, groups in REQUIREMENT_GROUPS.items()
+    if code in ACTIVE_PROGRAMME_CODES
+}
+
 def seed():
     print("Dropping and recreating all tables...")
     Base.metadata.drop_all(bind=engine)
