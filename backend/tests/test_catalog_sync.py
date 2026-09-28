@@ -12,7 +12,7 @@ from app.catalog_sync import sync_2026_catalog
 from seed import PROGRAMMES
 
 
-def test_catalog_sync_keeps_original_10_and_preserves_unrelated_data():
+def test_catalog_sync_adds_all_programmes_without_removing_existing_data():
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
@@ -27,13 +27,7 @@ def test_catalog_sync_keeps_original_10_and_preserves_unrelated_data():
             faculty="Existing Faculty",
             total_credits_required=120,
         )
-        retired = models.Programme(
-            code="40043",
-            name="Retired Chemistry and Physics",
-            faculty="Science & Agriculture",
-            total_credits_required=384,
-        )
-        db.add_all([legacy, retired])
+        db.add(legacy)
         db.commit()
 
         sync_2026_catalog(db)
@@ -45,13 +39,9 @@ def test_catalog_sync_keeps_original_10_and_preserves_unrelated_data():
             ).all()
         }
         assert science_codes == {item["code"] for item in PROGRAMMES}
-        assert len(science_codes) == 10
+        assert len(science_codes) == 30
 
-        assert db.query(models.Programme).filter(
-            models.Programme.code == "40043"
-        ).first() is None
-
-        # Unrelated programme data is preserved.
+        # The sync is additive: unrelated production data is preserved.
         assert db.query(models.Programme).filter(
             models.Programme.code == "LEGACY"
         ).one().name == "Existing Programme"
@@ -60,6 +50,6 @@ def test_catalog_sync_keeps_original_10_and_preserves_unrelated_data():
         sync_2026_catalog(db)
         assert db.query(models.Programme).filter(
             models.Programme.code.in_([item["code"] for item in PROGRAMMES])
-        ).count() == 10
+        ).count() == 30
     finally:
         db.close()

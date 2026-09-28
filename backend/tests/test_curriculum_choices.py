@@ -757,6 +757,29 @@ def test_2026_geology_prerequisites_match_prospectus():
     assert PREREQUISITES["GLG323"] == expected
 
 
+def test_40043_uses_exact_prospectus_paths():
+    from seed import REQUIREMENT_GROUPS
+
+    groups = REQUIREMENT_GROUPS["40043"]
+    assert len(groups) == 4
+    assert all(group.get("paths") for group in groups)
+
+    y2s1 = next(group for group in groups if group["key"] == "y2s1-elective")
+    assert {tuple(path["modules"]) for path in y2s1["paths"]} == {
+        ("COC211", "COC212"),
+        ("MAT212", "MAT213"),
+        ("GLG212",),
+    }
+
+    y2s2 = next(group for group in groups if group["key"] == "y2s2-elective")
+    assert {tuple(path["modules"]) for path in y2s2["paths"]} == {
+        ("COC223", "COC224"),
+        ("MAT226", "MAT227"),
+        ("MAT226", "MAT228"),
+        ("GLG222",),
+    }
+
+
 def test_statistics_or_prerequisite_accepts_either_alternative():
     from app.data.prerequisite_rules import ANY_OF_PREREQUISITES
     from app.services.progress_service import missing_prerequisite_codes
