@@ -119,3 +119,41 @@ def test_legacy_student_table_gets_token_version_idempotently():
 
     assert row["student_number"] == "S001"
     assert row["token_version"] == 0
+
+
+
+def test_production_admin_bootstrap_runs_migrations_before_query(monkeypatch):
+    """Render starts create_production_admin.py before Uvicorn/main.py."""
+    import create_production_admin as bootstrap
+
+    events = []
+
+    monkeypatch.setattr(
+        bootstrap,
+        "run_schema_migrations",
+        lambda engine: events.append("migrate"),
+    )
+    monkeypatch.setattr(bootstrap, "engine", object())
+    monkeypatch.setenv("PRODUCTION_ADMIN_USERNAME", "admin")
+    monkeypatch.setenv("PRODUCTION_ADMIN_PASSWORD", "strong-test-password")
+
+    class ExistingAdminQuery:
+        def filter(self, *_args, **_kwargs):
+            return self
+
+        def first(self):
+            events.append("query")
+            return object()
+
+    class FakeSession:
+        def query(self, _model):
+            return ExistingAdminQuery()
+
+        def close(self):
+            events.append("close")
+
+    monkeypatch.setattr(bootstrap, "SessionLocal", lambda: FakeSession())
+
+    bootstrap.create_production_admin()
+
+    assert events[:2] == ["migrate", "query"]
