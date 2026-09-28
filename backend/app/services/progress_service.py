@@ -166,14 +166,13 @@ def build_progress_summary(db: Session, student: models.Student) -> dict:
 
     # Academic average: every recorded module mark counts equally.
     # Credits affect degree progress only; they never weight a mark.
-    graded = (
-        db.query(models.Enrolment)
-        .filter(
-            models.Enrolment.student_id == student.id,
-            models.Enrolment.grade.isnot(None),
-        )
-        .all()
-    )
+    # Reuse the terminal enrolments already loaded above instead of making
+    # another per-student database round trip for the academic average.
+    graded = [
+        enrolment
+        for enrolment in (*completed_enrolments, *all_failed)
+        if enrolment.grade is not None
+    ]
     weighted_average = (
         round(sum(e.grade for e in graded) / len(graded), 2)
         if graded else None
@@ -197,7 +196,11 @@ def build_progress_summary(db: Session, student: models.Student) -> dict:
     missing_compulsory = [link.module for link in compulsory_links if link.module_id not in passed_module_ids]
     missing_compulsory.sort(key=lambda m: (m.level, m.code))
 
-    choice_requirements = _curriculum_choice_status(db, student)
+    choice_requirements = _curriculum_choice_status(
+        db,
+        student,
+        passed_ids=passed_module_ids,
+    )
     missing_choice_requirements = [
         requirement
         for requirement in choice_requirements
@@ -222,9 +225,18 @@ def build_progress_summary(db: Session, student: models.Student) -> dict:
     }
 
 
-def _curriculum_choice_status(db: Session, student: models.Student) -> list[dict]:
-    """Evaluate prospectus OR/selection groups against passed modules."""
-    passed_ids = _passed_module_ids(db, student)
+def _curriculum_choice_status(
+    db: Session,
+    student: models.Student,
+    passed_ids: Optional[set] = None,
+) -> list[dict]:
+    """Evaluate prospectus OR/selection groups against passed modules.
+
+    Callers that already loaded completion state can pass passed_ids to avoid
+    repeating the same enrolment query.
+    """
+    if passed_ids is None:
+        passed_ids = _passed_module_ids(db, student)
     groups = (
         db.query(models.ProgrammeRequirementGroup)
         .options(
