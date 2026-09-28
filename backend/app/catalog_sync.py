@@ -8,6 +8,12 @@ from sqlalchemy.orm import Session
 
 from app import models
 from app.database import SessionLocal
+RETIRED_PROGRAMME_CODES = frozenset({
+    "40008", "40012", "40018", "40020", "40022", "40026", "40027",
+    "40028", "40029", "40032", "40033", "40034", "40035", "40036",
+    "40037", "40039", "40040", "40041", "40042", "40043",
+})
+
 from seed import (
     ALIAS_CODES,
     MODULES,
@@ -18,7 +24,48 @@ from seed import (
 )
 
 
+def _remove_retired_programmes(db: Session) -> None:
+    retired = (
+        db.query(models.Programme)
+        .filter(models.Programme.code.in_(RETIRED_PROGRAMME_CODES))
+        .all()
+    )
+    for programme in retired:
+        student_count = (
+            db.query(models.Student)
+            .filter(models.Student.programme_id == programme.id)
+            .count()
+        )
+        if student_count:
+            raise RuntimeError(
+                f"Cannot remove retired programme {programme.code}: "
+                f"{student_count} student account(s) are still assigned to it."
+            )
+
+        groups = (
+            db.query(models.ProgrammeRequirementGroup)
+            .filter(models.ProgrammeRequirementGroup.programme_id == programme.id)
+            .all()
+        )
+        for group in groups:
+            db.delete(group)
+
+        links = (
+            db.query(models.ProgrammeModule)
+            .filter(models.ProgrammeModule.programme_id == programme.id)
+            .all()
+        )
+        for link in links:
+            db.delete(link)
+
+        db.flush()
+        db.delete(programme)
+
+    db.flush()
+
+
 def sync_2026_catalog(db: Session) -> None:
+    _remove_retired_programmes(db)
     programmes = {p.code: p for p in db.query(models.Programme).all()}
     for spec in PROGRAMMES:
         if spec["code"] not in programmes:

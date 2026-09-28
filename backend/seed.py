@@ -11,7 +11,6 @@ from app.security import hash_password
 
 # ---------- PROGRAMMES ----------
 PROGRAMMES = [
-    {"code": "40008", "name": "BSc Botany and Entomology", "faculty": "Science & Agriculture"},
     {"code": "40009", "name": "BSc Botany and Microbiology", "faculty": "Science & Agriculture"},
     {"code": "40011", "name": "BSc Chemistry and Botany", "faculty": "Science & Agriculture"},
     {"code": "40013", "name": "BSc Chemistry and Geology", "faculty": "Science & Agriculture"},
@@ -22,26 +21,10 @@ PROGRAMMES = [
     {"code": "40023", "name": "BSc Geology and Physics", "faculty": "Science & Agriculture"},
     {"code": "40024", "name": "BSc Mathematics and Physics", "faculty": "Science & Agriculture"},
     {"code": "40025", "name": "BSc Computer Science and Mathematics", "faculty": "Science & Agriculture"},
-    {"code": "40029", "name": "BSc Statistics and Geology", "faculty": "Science & Agriculture"},
-    {"code": "40012", "name": "BSc Chemistry Single Major", "faculty": "Science & Agriculture"},
-    {"code": "40018", "name": "BSc Geography and GIS", "faculty": "Science & Agriculture"},
-    {"code": "40020", "name": "BSc GIS and Computer Science", "faculty": "Science & Agriculture"},
-    {"code": "40022", "name": "BSc Geology and GIS", "faculty": "Science & Agriculture"},
-    {"code": "40026", "name": "BSc Mathematics and Chemistry", "faculty": "Science & Agriculture"},
-    {"code": "40027", "name": "BSc Microbiology and Zoology", "faculty": "Science & Agriculture"},
-    {"code": "40028", "name": "BSc Mathematical Statistics and Mathematics", "faculty": "Science & Agriculture"},
-    {"code": "40032", "name": "BSc Entomology and Microbiology", "faculty": "Science & Agriculture"},
-    {"code": "40033", "name": "BSc GIS and Zoology", "faculty": "Science & Agriculture"},
-    {"code": "40034", "name": "BSc GIS and Entomology", "faculty": "Science & Agriculture"},
-    {"code": "40035", "name": "BSc Applied Mathematics and Mathematics", "faculty": "Science & Agriculture"},
-    {"code": "40036", "name": "BSc Applied Mathematics and Statistics", "faculty": "Science & Agriculture"},
-    {"code": "40037", "name": "BSc Applied Mathematics and Physics", "faculty": "Science & Agriculture"},
-    {"code": "40039", "name": "BSc Biochemistry and Microbiology", "faculty": "Science & Agriculture"},
-    {"code": "40040", "name": "BSc Biochemistry and Chemistry", "faculty": "Science & Agriculture"},
-    {"code": "40041", "name": "BSc Biochemistry and Computer Science", "faculty": "Science & Agriculture"},
-    {"code": "40042", "name": "BSc Botany and Zoology", "faculty": "Science & Agriculture"},
-    {"code": "40043", "name": "BSc Chemistry and Physics", "faculty": "Science & Agriculture"},
 ]
+
+ACTIVE_PROGRAMME_CODES = frozenset(item["code"] for item in PROGRAMMES)
+
 
 # ---------- ALL MODULES ----------
 MODULES = [
@@ -814,6 +797,20 @@ ALIAS_CODES = {
     "CSC224": "COC224",
 }
 
+
+# Keep curriculum definitions scoped to the active 10-programme catalogue.
+# Module and prerequisite definitions remain available; only retired programme
+# associations are excluded.
+PROGRAMME_MODULES = {
+    code: spec
+    for code, spec in PROGRAMME_MODULES.items()
+    if code in ACTIVE_PROGRAMME_CODES
+}
+REQUIREMENT_GROUPS = {
+    code: groups
+    for code, groups in REQUIREMENT_GROUPS.items()
+    if code in ACTIVE_PROGRAMME_CODES
+}
 
 def seed():
     print("Dropping and recreating all tables...")
