@@ -351,9 +351,10 @@ export default function AtRiskPage({
 
               <select
                 value={programmeFilter}
-                onChange={(event) =>
-                  setProgrammeFilter(event.target.value); setPage(1)
-                }
+                onChange={(event) => {
+                  setProgrammeFilter(event.target.value);
+                  setPage(1);
+                }}
                 className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-700 outline-none focus:border-blue-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200"
               >
                 <option value="all">All programmes</option>
@@ -373,9 +374,10 @@ export default function AtRiskPage({
 
               <select
                 value={reasonFilter}
-                onChange={(event) =>
-                  setReasonFilter(event.target.value); setPage(1)
-                }
+                onChange={(event) => {
+                  setReasonFilter(event.target.value);
+                  setPage(1);
+                }}
                 className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-700 outline-none focus:border-blue-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200"
               >
                 <option value="all">All reasons</option>
