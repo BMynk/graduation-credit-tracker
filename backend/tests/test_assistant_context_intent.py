@@ -21,7 +21,7 @@ def test_progress_question_skips_unrelated_context_queries():
             def all(self): return []
         class DB:
             def query(self, *args): return Query()
-        result = build_student_assistant_context(DB(), student, message="How many credits have I completed?")
+        result = build_student_assistant_context(DB(), student, message="How many credits remain?")
     assert result["progress"]["credits_completed"] == 32
     for mocked in (eligible, history, module_eligibility, papers, notifications):
         mocked.assert_not_called()
