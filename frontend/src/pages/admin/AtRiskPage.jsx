@@ -128,6 +128,9 @@ export default function AtRiskPage({
   const [programmeFilter, setProgrammeFilter] = useState("all");
   const [reasonFilter, setReasonFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [showStudents, setShowStudents] = useState(false);
+  const pageSize = 10;
 
   const programmeOptions = useMemo(
     () =>
@@ -181,6 +184,10 @@ export default function AtRiskPage({
     });
   }, [students, programmeFilter, reasonFilter, search]);
 
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const visibleStudents = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   const blockingCount = students.filter(
     (student) => Number(student.failed_blocking_count || 0) > 0
   ).length;
@@ -218,6 +225,7 @@ export default function AtRiskPage({
     setProgrammeFilter("all");
     setReasonFilter("all");
     setSearch("");
+    setPage(1);
   }
 
   return (
@@ -328,7 +336,7 @@ export default function AtRiskPage({
 
               <input
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => { setSearch(event.target.value); setPage(1); }}
                 placeholder="Name or student number..."
                 className="w-full rounded-xl border border-zinc-200 bg-white py-2.5 pl-9 pr-4 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white"
               />
@@ -343,9 +351,10 @@ export default function AtRiskPage({
 
               <select
                 value={programmeFilter}
-                onChange={(event) =>
-                  setProgrammeFilter(event.target.value)
-                }
+                onChange={(event) => {
+                  setProgrammeFilter(event.target.value);
+                  setPage(1);
+                }}
                 className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-700 outline-none focus:border-blue-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200"
               >
                 <option value="all">All programmes</option>
@@ -365,9 +374,10 @@ export default function AtRiskPage({
 
               <select
                 value={reasonFilter}
-                onChange={(event) =>
-                  setReasonFilter(event.target.value)
-                }
+                onChange={(event) => {
+                  setReasonFilter(event.target.value);
+                  setPage(1);
+                }}
                 className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-700 outline-none focus:border-blue-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200"
               >
                 <option value="all">All reasons</option>
@@ -430,11 +440,16 @@ export default function AtRiskPage({
           </div>
         </div>
 
-        {filtered.length === 0 ? (
+        {!showStudents ? (
+          <div className="px-6 py-12 text-center">
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">Use the filters above to narrow the list, or open the student records below.</p>
+            <button type="button" onClick={() => { setShowStudents(true); setPage(1); }} className="mt-4 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">View {filtered.length} at-risk students</button>
+          </div>
+        ) : filtered.length === 0 ? (
           <EmptyState filtered={filtersActive} />
         ) : (
           <div className="divide-y divide-zinc-100 dark:divide-zinc-900">
-            {filtered.map((student) => {
+            {visibleStudents.map((student) => {
               const hasAverage =
                 student.weighted_average !== null &&
                 student.weighted_average !== undefined;
@@ -545,6 +560,17 @@ export default function AtRiskPage({
                 </button>
               );
             })}
+          </div>
+        )}
+        {showStudents && filtered.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 px-5 py-4 text-sm dark:border-zinc-800 sm:px-6">
+            <span className="text-zinc-500">Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filtered.length)} of {filtered.length}</span>
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={() => setShowStudents(false)} className="mr-2 text-blue-600 hover:underline">Collapse list</button>
+              <button type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)} className="rounded-lg border border-zinc-200 px-3 py-1.5 disabled:opacity-40 dark:border-zinc-700">Previous</button>
+              <span className="text-zinc-500">{currentPage} / {pageCount}</span>
+              <button type="button" disabled={currentPage === pageCount} onClick={() => setPage(currentPage + 1)} className="rounded-lg border border-zinc-200 px-3 py-1.5 disabled:opacity-40 dark:border-zinc-700">Next</button>
+            </div>
           </div>
         )}
       </motion.section>
