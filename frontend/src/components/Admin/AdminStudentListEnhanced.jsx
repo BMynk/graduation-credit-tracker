@@ -106,6 +106,7 @@ export default function AdminStudentListEnhanced({
   onSelectStudent,
 }) {
   const [students, setStudents] = useState([]);
+  const [allProgrammes, setAllProgrammes] = useState([]);
   const [total, setTotal] = useState(0);
 
   const [searchInput, setSearchInput] = useState("");
@@ -123,6 +124,14 @@ export default function AdminStudentListEnhanced({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    api.listProgrammes()
+      .then((data) => { if (active) setAllProgrammes(Array.isArray(data) ? data : []); })
+      .catch(() => { /* Student records still provide fallback programme labels. */ });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -189,12 +198,19 @@ export default function AdminStudentListEnhanced({
   ]);
 
   const programmeOptions = useMemo(() => {
-    const values = students
-      .map(getProgrammeCode)
-      .filter((value) => value && value !== "—");
-
-    return [...new Set(values)].sort();
-  }, [students]);
+    const names = new Map();
+    for (const item of allProgrammes) {
+      if (item.code) names.set(item.code, item.name || "");
+    }
+    for (const student of students) {
+      const code = getProgrammeCode(student);
+      if (code && code !== "—" && !names.get(code)) {
+        names.set(code, getProgrammeName(student));
+      }
+    }
+    if (programme && !names.has(programme)) names.set(programme, "");
+    return [...names.entries()].sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }));
+  }, [allProgrammes, students, programme]);
 
   const activeOnPage = students.filter(
     (student) => student.is_active
@@ -393,9 +409,9 @@ export default function AdminStudentListEnhanced({
             >
               <option value="">All programmes</option>
 
-              {programmeOptions.map((code) => (
+              {programmeOptions.map(([code, name]) => (
                 <option key={code} value={code}>
-                  {code}
+                  {name ? `${code} — ${name}` : code}
                 </option>
               ))}
             </select>
