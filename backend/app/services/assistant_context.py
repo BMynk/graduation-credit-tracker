@@ -198,10 +198,7 @@ def _build_module_eligibility(
     # Curriculum choice state
     # ------------------------------------------------------
 
-    choice_requirements = progress_service._curriculum_choice_status(
-        db,
-        student,
-    )
+    choice_requirements = summary.get('choice_requirements', [])
     choice_by_module_code = {}
     for requirement in choice_requirements:
         option_codes = set(requirement.get("options") or [])
@@ -421,7 +418,21 @@ def _build_module_eligibility(
 def build_student_assistant_context(
     db: Session,
     student: models.Student,
+    *,
+    message: str | None = None,
+    current_page: str | None = None,
 ) -> dict:
+    # Existing callers without a question retain the complete context.
+    intent = (message or '').lower()
+    page = (current_page or '').lower()
+    full = message is None
+    def needs(*terms):
+        return full or any(term in intent for term in terms)
+    planning = full or page in {'planning', 'planner'} or needs('plan', 'next semester', 'eligible', 'can i take', 'prerequisite', 'module', 'retake')
+    history = full or page in {'history', 'timeline', 'yearly'} or needs('history', 'completed', 'failed', 'grade', 'mark', 'previous', 'timeline')
+    support = full or page == 'community' or needs('si', 'elep', 'facilitator', 'support', 'session', 'consultation', 'past paper', 'past exam', 'previous paper', 'study schedule', 'revision plan', 'study this week')
+    notifications = needs('notification', 'unread', 'message', 'chat request', 'anything i need', 'need to deal with')
+
 
     # ------------------------------------------------------
     # Existing verified progress calculations
@@ -434,23 +445,13 @@ def build_student_assistant_context(
         )
     )
 
-    eligible_results = (
-        progress_service.get_eligible_modules(
-            db,
-            student,
-        )
-    )
+    eligible_results = progress_service.get_eligible_modules(db, student) if (planning or support) else []
 
     # ------------------------------------------------------
     # Academic history
     # ------------------------------------------------------
 
-    academic_history = (
-        _build_academic_history(
-            db,
-            student,
-        )
-    )
+    academic_history = _build_academic_history(db, student) if (history or support) else []
 
     history_groups = (
         _split_history(
@@ -462,12 +463,7 @@ def build_student_assistant_context(
     # Full programme eligibility
     # ------------------------------------------------------
 
-    module_eligibility = (
-        _build_module_eligibility(
-            db,
-            student,
-        )
-    )
+    module_eligibility = _build_module_eligibility(db, student) if planning else []
 
     # ------------------------------------------------------
     # Missing compulsory modules
@@ -677,21 +673,16 @@ def build_student_assistant_context(
         # --------------------------------------------------
 
         "si_elep_support": _build_student_support_matches(
-            academic_history,
-            eligible_modules,
-        ),
+            academic_history, eligible_modules,
+        ) if support else None,
 
         "past_papers": _build_student_past_papers(
-            db,
-            student,
-            academic_history,
-            eligible_modules,
-        ),
+            db, student, academic_history, eligible_modules,
+        ) if support else None,
 
         "notifications": _build_student_notifications_summary(
-            db,
-            student,
-        ),
+            db, student,
+        ) if notifications else None,
 
         "equipped_marcel_cosmetic": next(
             (
