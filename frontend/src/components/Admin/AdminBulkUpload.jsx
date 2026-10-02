@@ -46,7 +46,7 @@ export default function AdminBulkUpload() {
       return;
     }
 
-    if (!validateFile(file)) return;
+    if (!validateFile(file)) { setStudentsFile(null); return; }
 
     setStudentsFile(file);
   };
@@ -61,7 +61,7 @@ export default function AdminBulkUpload() {
       return;
     }
 
-    if (!validateFile(file)) return;
+    if (!validateFile(file)) { setMarksFile(null); return; }
 
     setMarksFile(file);
   };
@@ -82,7 +82,7 @@ export default function AdminBulkUpload() {
         await api.adminUploadStudentsCsv(studentsFile);
 
       setStudentsReport(report);
-      setSuccess("Student CSV processing completed.");
+      setSuccess(`Student CSV processed: ${report.succeeded} successful, ${report.failed} failed.`);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -106,7 +106,7 @@ export default function AdminBulkUpload() {
         await api.adminUploadMarksCsv(marksFile);
 
       setMarksReport(report);
-      setSuccess("Marks CSV processing completed.");
+      setSuccess(`Marks CSV processed: ${report.succeeded} successful, ${report.failed} failed.`);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -509,7 +509,9 @@ function UploadReport({ title, report }) {
                     (item, index) => {
                       const successful =
                         item.status === "success" ||
-                        item.status === "succeeded";
+                        item.status === "succeeded" ||
+                        item.status === "created" ||
+                        item.status === "updated";
 
                       return (
                         <tr
@@ -540,9 +542,11 @@ function UploadReport({ title, report }) {
                                 }`}
                               />
 
-                              {successful
-                                ? "Success"
-                                : "Failed"}
+                              {item.status === "updated"
+                                ? "Updated"
+                                : item.status === "created"
+                                  ? "Created"
+                                  : successful ? "Success" : "Failed"}
                             </span>
                           </td>
 
