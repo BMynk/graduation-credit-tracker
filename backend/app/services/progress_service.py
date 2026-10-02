@@ -103,8 +103,27 @@ def _relevant_prerequisite_ids(db: Session, student: models.Student) -> set:
     return relevant
 
 
-def build_progress_summary(db: Session, student: models.Student) -> dict:
+def build_progress_summary(db: Session, student: models.Student, programme_cache: Optional[dict] = None) -> dict:
     programme = student.programme
+    metadata = None
+    if programme_cache is not None:
+        metadata = programme_cache.get(student.programme_id)
+        if metadata is None:
+            links = (db.query(models.ProgrammeModule)
+                .options(joinedload(models.ProgrammeModule.module).joinedload(models.Module.prerequisites))
+                .filter(models.ProgrammeModule.programme_id == student.programme_id).all())
+            groups = (db.query(models.ProgrammeRequirementGroup)
+                .options(joinedload(models.ProgrammeRequirementGroup.options).joinedload(models.ProgrammeRequirementOption.module),
+                         joinedload(models.ProgrammeRequirementGroup.paths).joinedload(models.ProgrammeRequirementPath.options).joinedload(models.ProgrammeRequirementPathOption.module))
+                .filter(models.ProgrammeRequirementGroup.programme_id == student.programme_id).all())
+            compulsory = [link for link in links if link.is_compulsory]
+            metadata = {
+                "module_ids": {link.module_id for link in links},
+                "compulsory": compulsory,
+                "prerequisites": {prereq.id for link in compulsory for prereq in link.module.prerequisites},
+                "groups": groups,
+            }
+            programme_cache[student.programme_id] = metadata
 
     completed_enrolments = (
         db.query(models.Enrolment)
@@ -118,7 +137,7 @@ def build_progress_summary(db: Session, student: models.Student) -> dict:
     # curriculum. Official history can legitimately contain extra modules
     # (transfers, substitutions, or modules taken outside the programme), but
     # those credits must not inflate progress toward this qualification.
-    curriculum_module_ids = {
+    curriculum_module_ids = metadata['module_ids'] if metadata is not None else {
         module_id
         for (module_id,) in (
             db.query(models.ProgrammeModule.module_id)
@@ -147,7 +166,7 @@ def build_progress_summary(db: Session, student: models.Student) -> dict:
         seen_modules.add(e.module_id)
         pending_failed.append(e)
 
-    relevant_prereq_ids = _relevant_prerequisite_ids(db, student)
+    relevant_prereq_ids = metadata['prerequisites'] if metadata is not None else _relevant_prerequisite_ids(db, student)
     failed_modules = [
         {
             "module": e.module,
@@ -184,7 +203,7 @@ def build_progress_summary(db: Session, student: models.Student) -> dict:
         category_breakdown[cat]["credits_completed"] += e.module.credits
         category_breakdown[cat]["modules_completed"] += 1
 
-    compulsory_links = (
+    compulsory_links = metadata['compulsory'] if metadata is not None else (
         db.query(models.ProgrammeModule)
         .options(joinedload(models.ProgrammeModule.module))
         .filter(
@@ -200,6 +219,7 @@ def build_progress_summary(db: Session, student: models.Student) -> dict:
         db,
         student,
         passed_ids=passed_module_ids,
+        groups=metadata['groups'] if metadata is not None else None,
     )
     missing_choice_requirements = [
         requirement
@@ -229,6 +249,7 @@ def _curriculum_choice_status(
     db: Session,
     student: models.Student,
     passed_ids: Optional[set] = None,
+    groups: Optional[list] = None,
 ) -> list[dict]:
     """Evaluate prospectus OR/selection groups against passed modules.
 
@@ -237,7 +258,8 @@ def _curriculum_choice_status(
     """
     if passed_ids is None:
         passed_ids = _passed_module_ids(db, student)
-    groups = (
+    if groups is None:
+        groups = (
         db.query(models.ProgrammeRequirementGroup)
         .options(
             joinedload(models.ProgrammeRequirementGroup.options)
