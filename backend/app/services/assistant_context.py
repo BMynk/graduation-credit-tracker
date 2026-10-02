@@ -198,7 +198,7 @@ def _build_module_eligibility(
     # Curriculum choice state
     # ------------------------------------------------------
 
-    choice_requirements = summary.get('choice_requirements', [])
+    choice_requirements = progress_service._curriculum_choice_status(db, student)
     choice_by_module_code = {}
     for requirement in choice_requirements:
         option_codes = set(requirement.get("options") or [])
