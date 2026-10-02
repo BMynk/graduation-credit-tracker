@@ -526,10 +526,7 @@ def build_student_assistant_context(
     # ------------------------------------------------------
     # Prospectus curriculum choices / elective requirements
     # ------------------------------------------------------
-    choice_requirements = progress_service._curriculum_choice_status(
-        db,
-        student,
-    )
+    choice_requirements = summary.get('choice_requirements', [])
 
     # ======================================================
     # Final verified student context
