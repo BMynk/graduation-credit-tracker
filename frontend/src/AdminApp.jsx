@@ -1266,6 +1266,10 @@ useEffect(() => {
 
   async function handleRecordMark(e) {
     e.preventDefault();
+    if (!markForm.module_code) {
+      setError("Please select a module before recording a mark.");
+      return;
+    }
 
     setError("");
     setSuccess("");
@@ -2135,7 +2139,6 @@ useEffect(() => {
     disabled={loadingModules}
     loading={loadingModules}
   />
-  <input type="hidden" name="module_code" value={markForm.module_code} required />
 
   {!loadingModules && programmeModules.length === 0 && (
     <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
