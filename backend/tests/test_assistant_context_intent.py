@@ -7,12 +7,14 @@ def test_progress_question_skips_unrelated_context_queries():
     student = type("Student", (), {"current_year": 2, "id": 1})()
     programme = type("Programme", (), {"code": "TEST", "name": "Test", "total_credits_required": 64})()
     summary = {"programme": programme, "failed_modules": [], "missing_compulsory_modules": [], "choice_requirements": [], "credits_completed": 32}
-    with patch("app.services.assistant_context.progress_service.build_progress_summary", return_value=summary), \\
-         patch("app.services.assistant_context.progress_service.get_eligible_modules") as eligible, \\
-         patch("app.services.assistant_context._build_academic_history") as history, \\
-         patch("app.services.assistant_context._build_module_eligibility") as module_eligibility, \\
-         patch("app.services.assistant_context._build_student_past_papers") as papers, \\
-         patch("app.services.assistant_context._build_student_notifications_summary") as notifications:
+    with (
+        patch("app.services.assistant_context.progress_service.build_progress_summary", return_value=summary),
+        patch("app.services.assistant_context.progress_service.get_eligible_modules") as eligible,
+        patch("app.services.assistant_context._build_academic_history") as history,
+        patch("app.services.assistant_context._build_module_eligibility") as module_eligibility,
+        patch("app.services.assistant_context._build_student_past_papers") as papers,
+        patch("app.services.assistant_context._build_student_notifications_summary") as notifications,
+    ):
         # Cosmetics are independent of academic context; stub the database query.
         class Query:
             def filter(self, *args): return self
