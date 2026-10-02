@@ -1531,20 +1531,18 @@ def get_programme_breakdown(
         .all()
     )
 
+    # Load active students once rather than issuing one query per programme.
+    all_students = db.query(models.Student).filter(models.Student.is_active.is_(True)).all()
+    students_by_programme = {}
+    for student in all_students:
+        students_by_programme.setdefault(student.programme_id, []).append(student)
+
+    # Bottleneck module metadata is shared across programme results.
+    module_lookup = {module.id: module for module in db.query(models.Module).all()}
     breakdown = []
 
     for programme in programmes:
-        students = (
-            db.query(models.Student)
-            .filter(
-                models.Student.programme_id
-                == programme.id,
-                models.Student.is_active.is_(
-                    True
-                ),
-            )
-            .all()
-        )
+        students = students_by_programme.get(programme.id, [])
 
         percentages = []
         averages = []
@@ -1595,14 +1593,7 @@ def get_programme_breakdown(
         bottleneck_modules = []
 
         for module_id, count in top_modules:
-            module = (
-                db.query(models.Module)
-                .filter(
-                    models.Module.id
-                    == module_id
-                )
-                .first()
-            )
+            module = module_lookup.get(module_id)
 
             if module:
                 bottleneck_modules.append(
