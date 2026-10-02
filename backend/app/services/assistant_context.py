@@ -429,7 +429,7 @@ def build_student_assistant_context(
     def needs(*terms):
         return full or any(term in intent for term in terms)
     planning = full or page in {'planning', 'planner'} or needs('plan', 'next semester', 'eligible', 'can i take', 'prerequisite', 'module', 'retake')
-    history = full or page in {'history', 'timeline', 'yearly'} or needs('history', 'completed', 'failed', 'grade', 'mark', 'previous', 'timeline')
+    history = full or page in {'history', 'timeline', 'yearly'} or needs('history', 'completed', 'fail', 'grade', 'mark', 'previous', 'timeline')
     support = full or page == 'community' or needs('si', 'elep', 'facilitator', 'support', 'session', 'consultation', 'past paper', 'past exam', 'previous paper', 'study schedule', 'revision plan', 'study this week')
     notifications = needs('notification', 'unread', 'message', 'chat request', 'anything i need', 'need to deal with')
 

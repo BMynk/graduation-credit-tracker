@@ -226,7 +226,7 @@ def select_relevant_student_context(
             selected[key] = context.get(key)
 
     if page in {"history", "timeline", "yearly"} or wants(
-        "history", "completed", "failed", "grade", "mark",
+        "history", "completed", "fail", "grade", "mark",
         "previous", "timeline",
     ):
         for key in (
