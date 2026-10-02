@@ -47,6 +47,30 @@ import {
   Sun,
 } from "lucide-react";
 
+// Reuse the expensive cohort response when moving between overview tabs.
+// Expire it quickly so academic changes are reflected on a later visit.
+let overviewCache = null;
+let overviewFetchedAt = 0;
+let overviewPending = null;
+const OVERVIEW_CACHE_MS = 60_000;
+function getOverviewDashboard() {
+  if (overviewCache && Date.now() - overviewFetchedAt < OVERVIEW_CACHE_MS) {
+    return Promise.resolve(overviewCache);
+  }
+  if (!overviewPending) {
+    overviewPending = api.adminGetDashboard().then((data) => {
+      overviewCache = data;
+      overviewFetchedAt = Date.now();
+      return data;
+    }).finally(() => { overviewPending = null; });
+  }
+  return overviewPending;
+}
+function invalidateOverviewDashboard() {
+  overviewCache = null;
+  overviewFetchedAt = 0;
+}
+
 // ---------- Shared UI Components ----------
 function Card({ title, children, className = "" }) {
   return (
@@ -2303,7 +2327,7 @@ function DashboardHome({ onSelectStudent, onNavigate }) {
         // Load the core dashboard first. Both endpoints perform cohort-wide
         // progress calculations, so running them together makes the database
         // do the heaviest work twice at the same time.
-        const dashboardData = await api.adminGetDashboard();
+        const dashboardData = await getOverviewDashboard();
 
         if (cancelled) return;
 
@@ -2384,7 +2408,7 @@ function AtRiskStudents({ onSelectStudent }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.adminGetDashboard()
+    getOverviewDashboard()
       .then(setStats)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -2924,9 +2948,10 @@ function AdminDashboard({ onLogout }) {
               onBack={() =>
                 setSelectedStudentId(null)
               }
-              onChanged={() =>
-                setRefreshKey((key) => key + 1)
-              }
+              onChanged={() => {
+                invalidateOverviewDashboard();
+                setRefreshKey((key) => key + 1);
+              }}
             />
           ) : (
             <>
@@ -2968,6 +2993,7 @@ function AdminDashboard({ onLogout }) {
               {tab === "add" && (
                 <CreateStudentForm
                   onCreated={() => {
+                    invalidateOverviewDashboard();
                     setRefreshKey(
                       (key) => key + 1
                     );
