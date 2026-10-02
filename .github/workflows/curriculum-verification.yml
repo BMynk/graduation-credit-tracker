@@ -11,6 +11,7 @@ on:
       - "backend/app/routers/admin.py"
       - "backend/app/routers/planning.py"
       - "backend/tests/test_curriculum_choices.py"
+      - "backend/tests/test_marcel_accuracy_performance.py"
       - "backend/sync_2026_curriculum.py"
       - ".github/workflows/curriculum-verification.yml"
   workflow_dispatch:
