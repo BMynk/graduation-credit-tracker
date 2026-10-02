@@ -182,6 +182,7 @@ export default function AdminBulkUpload() {
           onUpload={uploadStudents}
           uploading={uploading === "students"}
           disabled={uploading !== null}
+          templateUrl="/templates/students-upload-template.csv"
           columns={[
             "name",
             "student_number",
@@ -201,6 +202,7 @@ export default function AdminBulkUpload() {
           onUpload={uploadMarks}
           uploading={uploading === "marks"}
           disabled={uploading !== null}
+          templateUrl="/templates/marks-upload-template.csv"
           columns={[
             "student_number",
             "module_code",
@@ -263,6 +265,7 @@ function UploadCard({
   uploading,
   disabled,
   columns,
+  templateUrl,
 }) {
   const inputRef = useRef(null);
 
@@ -327,6 +330,8 @@ function UploadCard({
             ))}
           </div>
         </div>
+
+        <a href={templateUrl} download className="mt-3 inline-flex text-xs font-semibold text-blue-600 underline-offset-2 hover:underline dark:text-blue-400">Download CSV template</a>
 
         {/* Drop area */}
         <div
