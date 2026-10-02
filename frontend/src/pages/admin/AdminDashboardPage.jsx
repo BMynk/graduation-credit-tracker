@@ -478,7 +478,7 @@ export default function AdminDashboardPage({
 
               <div className="absolute text-center">
                 <p className="text-2xl font-semibold text-zinc-950 dark:text-white">
-                  {activePercentage.toFixed(0)}%
+                  {activePercentage.toFixed(1)}%
                 </p>
 
                 <p className="text-xs text-zinc-500">
