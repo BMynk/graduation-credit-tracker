@@ -141,6 +141,8 @@ def get_verified_role(
 def build_verified_context(
     current_user: dict | None,
     db: Session,
+    message: str | None = None,
+    current_page: str | None = None,
 ) -> dict | None:
     """
     Build private assistant context from the verified
@@ -170,8 +172,7 @@ def build_verified_context(
         and current_user.get("impersonated_by") is None
     ):
         return build_student_assistant_context(
-            db,
-            user,
+            db, user, message=message, current_page=current_page,
         )
 
     if role == "admin" or current_user.get("is_impersonation"):
@@ -364,8 +365,7 @@ def chat_with_assistant(
         # --------------------------------------------------
 
         verified_context = build_verified_context(
-            current_user,
-            db,
+            current_user, db, message=payload.message, current_page=payload.current_page,
         )
         verified_context = select_relevant_student_context(
             verified_context,
@@ -487,8 +487,7 @@ def stream_chat_with_assistant(
     # ------------------------------------------------------
 
     verified_context = build_verified_context(
-        current_user,
-        db,
+        current_user, db, message=payload.message, current_page=payload.current_page,
     )
     verified_context = select_relevant_student_context(
         verified_context,
