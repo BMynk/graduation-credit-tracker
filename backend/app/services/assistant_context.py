@@ -21,6 +21,21 @@ def _module_to_dict(module) -> dict:
     }
 
 
+def _serialize_failed_modules(items: list[dict]) -> list[dict]:
+    """Preserve verified failure details from progress summary descriptors."""
+    return [
+        {
+            "module": _module_to_dict(item["module"]),
+            "semester": item.get("semester"),
+            "grade": item.get("grade"),
+            "attempt": item.get("attempt"),
+            "is_prerequisite_for_major": item.get("is_prerequisite_for_major"),
+        }
+        for item in items
+        if item.get("module") is not None
+    ]
+
+
 # ==========================================================
 # Academic history
 # ==========================================================
@@ -470,13 +485,7 @@ def build_student_assistant_context(
     # Failed modules
     # ------------------------------------------------------
 
-    failed_modules = [
-        _module_to_dict(module)
-        for module in summary.get(
-            "failed_modules",
-            [],
-        )
-    ]
+    failed_modules = _serialize_failed_modules(summary.get("failed_modules", []))
 
     # ------------------------------------------------------
     # Eligible modules
