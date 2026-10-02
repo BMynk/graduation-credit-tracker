@@ -46,7 +46,7 @@ export default function AdminBulkUpload() {
       return;
     }
 
-    if (!validateFile(file)) return;
+    if (!validateFile(file)) { setStudentsFile(null); return; }
 
     setStudentsFile(file);
   };
@@ -61,7 +61,7 @@ export default function AdminBulkUpload() {
       return;
     }
 
-    if (!validateFile(file)) return;
+    if (!validateFile(file)) { setMarksFile(null); return; }
 
     setMarksFile(file);
   };
@@ -82,7 +82,7 @@ export default function AdminBulkUpload() {
         await api.adminUploadStudentsCsv(studentsFile);
 
       setStudentsReport(report);
-      setSuccess("Student CSV processing completed.");
+      setSuccess(`Student CSV processed: ${report.succeeded} successful, ${report.failed} failed.`);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -106,7 +106,7 @@ export default function AdminBulkUpload() {
         await api.adminUploadMarksCsv(marksFile);
 
       setMarksReport(report);
-      setSuccess("Marks CSV processing completed.");
+      setSuccess(`Marks CSV processed: ${report.succeeded} successful, ${report.failed} failed.`);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -182,6 +182,7 @@ export default function AdminBulkUpload() {
           onUpload={uploadStudents}
           uploading={uploading === "students"}
           disabled={uploading !== null}
+          templateUrl="/templates/students-upload-template.csv"
           columns={[
             "name",
             "student_number",
@@ -201,6 +202,7 @@ export default function AdminBulkUpload() {
           onUpload={uploadMarks}
           uploading={uploading === "marks"}
           disabled={uploading !== null}
+          templateUrl="/templates/marks-upload-template.csv"
           columns={[
             "student_number",
             "module_code",
@@ -263,6 +265,7 @@ function UploadCard({
   uploading,
   disabled,
   columns,
+  templateUrl,
 }) {
   const inputRef = useRef(null);
 
@@ -327,6 +330,8 @@ function UploadCard({
             ))}
           </div>
         </div>
+
+        <a href={templateUrl} download className="mt-3 inline-flex text-xs font-semibold text-blue-600 underline-offset-2 hover:underline dark:text-blue-400">Download CSV template</a>
 
         {/* Drop area */}
         <div
@@ -509,7 +514,9 @@ function UploadReport({ title, report }) {
                     (item, index) => {
                       const successful =
                         item.status === "success" ||
-                        item.status === "succeeded";
+                        item.status === "succeeded" ||
+                        item.status === "created" ||
+                        item.status === "updated";
 
                       return (
                         <tr
@@ -540,9 +547,11 @@ function UploadReport({ title, report }) {
                                 }`}
                               />
 
-                              {successful
-                                ? "Success"
-                                : "Failed"}
+                              {item.status === "updated"
+                                ? "Updated"
+                                : item.status === "created"
+                                  ? "Created"
+                                  : successful ? "Success" : "Failed"}
                             </span>
                           </td>
 
