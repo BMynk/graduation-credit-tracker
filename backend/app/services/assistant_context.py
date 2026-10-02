@@ -470,12 +470,19 @@ def build_student_assistant_context(
     # Failed modules
     # ------------------------------------------------------
 
+    # Progress summaries return failed enrolment descriptors, not Module
+    # objects. Preserve the verified failure details for Marcel rather
+    # than trying to serialize the descriptor as a module.
     failed_modules = [
-        _module_to_dict(module)
-        for module in summary.get(
-            "failed_modules",
-            [],
-        )
+        {
+            "module": _module_to_dict(item["module"]),
+            "semester": item.get("semester"),
+            "grade": item.get("grade"),
+            "attempt": item.get("attempt"),
+            "is_prerequisite_for_major": item.get("is_prerequisite_for_major"),
+        }
+        for item in summary.get("failed_modules", [])
+        if item.get("module") is not None
     ]
 
     # ------------------------------------------------------
