@@ -6,6 +6,7 @@ import AdminStudentListEnhanced from "./components/Admin/AdminStudentListEnhance
 import AdminViewAsStudent from "./components/Admin/AdminViewAsStudent";
 import AdminBulkEmail from "./components/Admin/AdminBulkEmail";
 import AdminAccountManagement from "./components/Admin/AdminAccountManagement";
+import ModulePicker from "./components/Admin/ModulePicker";
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
 import AtRiskPage from "./pages/admin/AtRiskPage";
 import AdminBulkUpload from "./components/Admin/AdminBulkUpload";
@@ -1265,6 +1266,10 @@ useEffect(() => {
 
   async function handleRecordMark(e) {
     e.preventDefault();
+    if (!markForm.module_code) {
+      setError("Please select a module before recording a mark.");
+      return;
+    }
 
     setError("");
     setSuccess("");
@@ -2127,32 +2132,13 @@ useEffect(() => {
     Module
   </label>
 
-  <select
+  <ModulePicker
+    modules={programmeModules}
     value={markForm.module_code}
-    onChange={(e) =>
-      setMarkForm((form) => ({
-        ...form,
-        module_code: e.target.value,
-      }))
-    }
-    required
+    onChange={(module_code) => setMarkForm((form) => ({ ...form, module_code }))}
     disabled={loadingModules}
-    className={`${fieldClass} disabled:cursor-not-allowed disabled:opacity-60`}
-  >
-    <option value="">
-      {loadingModules ? "Loading modules..." : "Select module"}
-    </option>
-
-    {programmeModules.map((item) => (
-      <option
-        key={item.module_code}
-        value={item.module_code}
-      >
-        {item.module_code} — {item.module_name}
-        {item.is_compulsory ? " • Compulsory" : " • Elective"}
-      </option>
-    ))}
-  </select>
+    loading={loadingModules}
+  />
 
   {!loadingModules && programmeModules.length === 0 && (
     <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
