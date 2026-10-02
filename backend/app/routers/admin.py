@@ -1216,6 +1216,7 @@ def get_dashboard(
     averages = []
     at_risk = []
 
+    programme_cache = {}
     for student in active_students_list:
         entry = programme_counts.setdefault(
             student.programme.code,
@@ -1228,10 +1229,7 @@ def get_dashboard(
         entry["count"] += 1
 
         summary = (
-            progress_service.build_progress_summary(
-                db,
-                student,
-            )
+            progress_service.build_progress_summary(db, student, programme_cache=programme_cache)
         )
 
         if (
@@ -1384,6 +1382,7 @@ def get_admin_analytics(
     failed_prerequisite_count = 0
     below_target_count = 0
 
+    programme_cache = {}
     for student in students:
         summary = progress_service.build_progress_summary(db, student)
         percentage = float(summary["percentage_complete"] or 0)
@@ -1539,6 +1538,7 @@ def get_programme_breakdown(
 
     # Bottleneck module metadata is shared across programme results.
     module_lookup = {module.id: module for module in db.query(models.Module).all()}
+    programme_cache = {}
     breakdown = []
 
     for programme in programmes:
@@ -1550,10 +1550,7 @@ def get_programme_breakdown(
 
         for student in students:
             summary = (
-                progress_service.build_progress_summary(
-                    db,
-                    student,
-                )
+                progress_service.build_progress_summary(db, student, programme_cache=programme_cache)
             )
 
             percentages.append(
