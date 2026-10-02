@@ -4,7 +4,7 @@ from app.services.assistant_context import build_student_assistant_context
 
 
 def test_progress_question_skips_unrelated_context_queries():
-    student = type("Student", (), {"current_year": 2})()
+    student = type("Student", (), {"current_year": 2, "id": 1})()
     programme = type("Programme", (), {"code": "TEST", "name": "Test", "total_credits_required": 64})()
     summary = {"programme": programme, "failed_modules": [], "missing_compulsory_modules": [], "choice_requirements": [], "credits_completed": 32}
     with patch("app.services.assistant_context.progress_service.build_progress_summary", return_value=summary), \\
