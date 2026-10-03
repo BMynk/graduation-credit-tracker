@@ -104,13 +104,44 @@ export default function PastPapersPanel({ student }) {
         </form>
       )}
 
-      <div className="flex flex-col gap-2 rounded-2xl border border-zinc-200 bg-white p-4 sm:flex-row dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="relative flex-1"><Search size={16} className="absolute left-3 top-3 text-zinc-400"/><input value={moduleFilter} onChange={(e) => setModuleFilter(e.target.value)} placeholder="Search module code…" className="w-full rounded-xl border border-zinc-200 bg-transparent py-2.5 pl-9 pr-3 text-sm dark:border-zinc-700"/></div>
-        <select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)} className="rounded-xl border border-zinc-200 bg-transparent px-3 py-2.5 text-sm dark:border-zinc-700"><option value="">All levels</option>{[1,2,3,4,5,6].map((n)=><option key={n} value={n}>Level {n}</option>)}</select>
-        <input aria-label="Paper year" type="number" min="1990" max="2100" value={yearFilter} onChange={(e) => setYearFilter(e.target.value)} placeholder="Paper year" className="w-full rounded-xl border border-zinc-200 bg-transparent px-3 py-2.5 text-sm sm:w-32 dark:border-zinc-700" />
-        <select aria-label="Semester" value={semesterFilter} onChange={(e) => setSemesterFilter(e.target.value)} className="rounded-xl border border-zinc-200 bg-transparent px-3 py-2.5 text-sm dark:border-zinc-700"><option value="">All semesters</option><option value="1">Semester 1</option><option value="2">Semester 2</option></select>
-        <button onClick={load} className="rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-semibold dark:border-zinc-700">Search</button>
-      </div>
+      <section aria-label="Filter past papers" className="rounded-2xl border border-zinc-200 bg-white p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="mb-4">
+          <h3 className="text-sm font-semibold text-zinc-900 dark:text-white">Find a past paper</h3>
+          <p className="mt-1 text-xs text-zinc-500">Filter by module, academic level, paper year or semester.</p>
+        </div>
+        <form onSubmit={(event) => { event.preventDefault(); load(); }} className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(180px,2fr)_minmax(110px,1fr)_minmax(110px,1fr)_minmax(135px,1fr)_auto] xl:items-end">
+          <label className="block min-w-0">
+            <span className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-300">Module</span>
+            <span className="relative block">
+              <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"/>
+              <input value={moduleFilter} onChange={(event) => setModuleFilter(event.target.value)} placeholder="e.g. CSC324" className="h-10 w-full rounded-xl border border-zinc-200 bg-transparent pl-9 pr-3 text-sm dark:border-zinc-700 dark:text-white"/>
+            </span>
+          </label>
+          <label className="block min-w-0">
+            <span className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-300">Academic level</span>
+            <select value={levelFilter} onChange={(event) => setLevelFilter(event.target.value)} className="h-10 w-full rounded-xl border border-zinc-200 bg-transparent px-3 text-sm dark:border-zinc-700 dark:text-white">
+              <option value="">All levels</option>
+              {[1, 2, 3, 4, 5, 6].map((level) => <option key={level} value={level}>Level {level}</option>)}
+            </select>
+          </label>
+          <label className="block min-w-0">
+            <span className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-300">Paper year</span>
+            <input type="number" min="1990" max="2100" value={yearFilter} onChange={(event) => setYearFilter(event.target.value)} placeholder="Any year" className="h-10 w-full rounded-xl border border-zinc-200 bg-transparent px-3 text-sm dark:border-zinc-700 dark:text-white"/>
+          </label>
+          <label className="block min-w-0">
+            <span className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-300">Semester</span>
+            <select value={semesterFilter} onChange={(event) => setSemesterFilter(event.target.value)} className="h-10 w-full rounded-xl border border-zinc-200 bg-transparent px-3 text-sm dark:border-zinc-700 dark:text-white">
+              <option value="">All semesters</option>
+              <option value="1">Semester 1</option>
+              <option value="2">Semester 2</option>
+            </select>
+          </label>
+          <div className="flex gap-2 sm:col-span-2 xl:col-span-1">
+            <button type="submit" className="h-10 flex-1 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700">Search</button>
+            <button type="button" onClick={() => { setModuleFilter(""); setLevelFilter(""); setYearFilter(""); setSemesterFilter(""); api.getPastPapers().then(setPapers).catch((err) => setError(err.message)); }} className="h-10 rounded-xl border border-zinc-200 px-3 text-sm font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800">Clear</button>
+          </div>
+        </form>
+      </section>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {papers.length === 0 && <div className="rounded-2xl border border-dashed border-zinc-300 p-10 text-center text-sm text-zinc-500 md:col-span-2 xl:col-span-3 dark:border-zinc-700">No past papers found yet. Students can help build the library by uploading permitted PDFs.</div>}
