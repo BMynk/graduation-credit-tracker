@@ -13,6 +13,9 @@ const CATEGORY_LABELS = {
 export default function RewardsShop({ onWalletChange }) {
   const [data, setData] = useState(null);
   const [category, setCategory] = useState("all");
+  const [shopSearch, setShopSearch] = useState("");
+  const [shopSort, setShopSort] = useState("recommended");
+  const [affordableOnly, setAffordableOnly] = useState(false);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [achievements, setAchievements] = useState([]);
@@ -36,10 +39,12 @@ export default function RewardsShop({ onWalletChange }) {
 
   const rewards = useMemo(() => {
     const all = data?.rewards || [];
-    if (category === "all") return all;
-    if (category === "collection") return all.filter((item) => item.owned);
-    return all.filter((item) => item.category === category);
-  }, [data, category]);
+    const filtered = all.filter((item) => (category === "all" || (category === "collection" ? item.owned : item.category === category)) && `${item.name} ${item.description}`.toLowerCase().includes(shopSearch.trim().toLowerCase()) && (!affordableOnly || item.owned || (item.level_unlocked && item.cost_xp <= (data?.available_xp || 0))));
+    if (shopSort === "low") filtered.sort((a, b) => a.cost_xp - b.cost_xp);
+    if (shopSort === "high") filtered.sort((a, b) => b.cost_xp - a.cost_xp);
+    if (shopSort === "name") filtered.sort((a, b) => a.name.localeCompare(b.name));
+    return filtered;
+  }, [data, category, shopSearch, shopSort, affordableOnly]);
 
   async function toggleShowcase(achievementId) {
     const current = data?.showcase || [];
@@ -111,10 +116,17 @@ export default function RewardsShop({ onWalletChange }) {
             </button>
           ))}
         </div>
+        <div className="mt-4 grid gap-3 rounded-xl border border-zinc-100 p-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-end dark:border-zinc-800">
+          <label className="block min-w-0"><span className="mb-1 block text-xs font-medium text-zinc-500">Find a reward</span><input type="search" value={shopSearch} onChange={(event) => setShopSearch(event.target.value)} placeholder="Search titles, themes and frames…" className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"/></label>
+          <label className="block"><span className="mb-1 block text-xs font-medium text-zinc-500">Sort rewards</span><select value={shopSort} onChange={(event) => setShopSort(event.target.value)} className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"><option value="recommended">Default</option><option value="low">Lowest price</option><option value="high">Highest price</option><option value="name">Name A–Z</option></select></label>
+          <label className="flex h-10 items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-300"><input type="checkbox" checked={affordableOnly} onChange={(event) => setAffordableOnly(event.target.checked)} className="size-4 accent-brand-600"/> Affordable or owned</label>
+        </div>
+        <p className="mt-2 text-xs text-zinc-500">{rewards.length} {rewards.length === 1 ? "reward" : "rewards"} shown</p>
         {error && <p className="mt-3 text-xs font-medium text-red-500">{error}</p>}
       </div>
 
       <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
+        {rewards.length === 0 && <p className="rounded-xl border border-dashed border-zinc-200 p-6 text-sm text-zinc-500 md:col-span-2 xl:col-span-3">No matching rewards. Try another category or clear your search.</p>}
         {rewards.map((reward) => {
           const locked = !reward.level_unlocked;
           const affordable = (data?.available_xp || 0) >= reward.cost_xp;
