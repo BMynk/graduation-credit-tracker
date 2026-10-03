@@ -6,6 +6,8 @@ export default function PastPapersPanel({ student }) {
   const [papers, setPapers] = useState([]);
   const [moduleFilter, setModuleFilter] = useState("");
   const [levelFilter, setLevelFilter] = useState("");
+  const [yearFilter, setYearFilter] = useState("");
+  const [semesterFilter, setSemesterFilter] = useState("");
   const [showUpload, setShowUpload] = useState(false);
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -14,7 +16,7 @@ export default function PastPapersPanel({ student }) {
   async function load() {
     try {
       const [paperData, achievementData] = await Promise.all([
-        api.getPastPapers({ module: moduleFilter, level: levelFilter }),
+        api.getPastPapers({ module: moduleFilter, level: levelFilter, year: yearFilter, semester: semesterFilter }),
         api.getPastPaperAchievements(),
       ]);
       setPapers(paperData);
@@ -105,6 +107,8 @@ export default function PastPapersPanel({ student }) {
       <div className="flex flex-col gap-2 rounded-2xl border border-zinc-200 bg-white p-4 sm:flex-row dark:border-zinc-800 dark:bg-zinc-900">
         <div className="relative flex-1"><Search size={16} className="absolute left-3 top-3 text-zinc-400"/><input value={moduleFilter} onChange={(e) => setModuleFilter(e.target.value)} placeholder="Search module code…" className="w-full rounded-xl border border-zinc-200 bg-transparent py-2.5 pl-9 pr-3 text-sm dark:border-zinc-700"/></div>
         <select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)} className="rounded-xl border border-zinc-200 bg-transparent px-3 py-2.5 text-sm dark:border-zinc-700"><option value="">All levels</option>{[1,2,3,4,5,6].map((n)=><option key={n} value={n}>Level {n}</option>)}</select>
+        <input aria-label="Paper year" type="number" min="1990" max="2100" value={yearFilter} onChange={(e) => setYearFilter(e.target.value)} placeholder="Paper year" className="w-full rounded-xl border border-zinc-200 bg-transparent px-3 py-2.5 text-sm sm:w-32 dark:border-zinc-700" />
+        <select aria-label="Semester" value={semesterFilter} onChange={(e) => setSemesterFilter(e.target.value)} className="rounded-xl border border-zinc-200 bg-transparent px-3 py-2.5 text-sm dark:border-zinc-700"><option value="">All semesters</option><option value="1">Semester 1</option><option value="2">Semester 2</option></select>
         <button onClick={load} className="rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-semibold dark:border-zinc-700">Search</button>
       </div>
 
