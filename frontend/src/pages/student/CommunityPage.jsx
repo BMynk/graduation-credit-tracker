@@ -125,6 +125,8 @@ export default function CommunityPage({ student }) {
     setReplyTo(null);
     setThreadRootId(null);
     setMessageSearch("");
+    setModulesExpanded(false);
+    setModuleSearch("");
 
     const communityRequest =
       scope === "all" ? api.getProgrammeCommunity() : api.getMyCommunity();
@@ -421,7 +423,7 @@ export default function CommunityPage({ student }) {
           {moduleChannels.length > 0 && (
             <div className="mt-5 border-t border-zinc-200 pt-3 dark:border-zinc-800">
               <button type="button" onClick={() => setModulesExpanded((value) => !value)}
-                aria-expanded={modulesExpanded || moduleChannels.some((channel) => channel.id === activeChannelId)}
+                aria-expanded={modulesExpanded}
                 className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left hover:bg-white dark:hover:bg-zinc-800">
                 <span className="text-xs font-bold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">My modules <span className="ml-1 rounded-md bg-zinc-200 px-1.5 py-0.5 text-[10px] dark:bg-zinc-800">{moduleChannels.length}</span></span>
                 <span className="text-xs text-zinc-500">{modulesExpanded || moduleChannels.some((channel) => channel.id === activeChannelId) ? "Hide −" : "Show +"}</span>
