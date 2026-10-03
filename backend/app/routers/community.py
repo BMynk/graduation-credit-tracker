@@ -83,6 +83,40 @@ def _get_or_create_community(
     return community
 
 
+def _sync_module_channels(db: Session, community: models.Community):
+    """Add curriculum module channels to existing and newly created communities."""
+    query = (
+        db.query(models.ProgrammeModule)
+        .options(joinedload(models.ProgrammeModule.module))
+        .filter(models.ProgrammeModule.programme_id == community.programme_id)
+    )
+    if community.year_level != ALL_YEARS_LEVEL:
+        query = query.filter(models.ProgrammeModule.year == community.year_level)
+    links = query.all()
+    existing = {channel.slug for channel in community.channels}
+    changed = False
+    for link in links:
+        # Module IDs are stable and prevent collisions from similar module codes.
+        slug = f"module-{link.module_id}"
+        if slug in existing:
+            continue
+        db.add(models.CommunityChannel(
+            community_id=community.id,
+            slug=slug,
+            name=link.module.code[:80],
+            description=f"{link.module.name}: module discussion and study support"[:240],
+        ))
+        existing.add(slug)
+        changed = True
+    if changed:
+        try:
+            db.commit()
+            db.expire(community, ["channels"])
+        except IntegrityError:
+            db.rollback()
+            db.refresh(community)
+
+
 def _student_channel(db: Session, student: models.Student, channel_id: int):
     channel = (
         db.query(models.CommunityChannel)
@@ -140,6 +174,7 @@ def get_my_community(
 ):
     community = _get_or_create_community(db, current_student)
     db.refresh(community)
+    _sync_module_channels(db, community)
     return schemas.CommunityOut(
         id=community.id,
         year_level=community.year_level,
