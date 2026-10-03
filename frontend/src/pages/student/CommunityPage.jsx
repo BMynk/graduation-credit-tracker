@@ -70,6 +70,8 @@ export default function CommunityPage({ student }) {
   const [activeChannelId, setActiveChannelId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState("");
+  const [messageSearch, setMessageSearch] = useState("");
+  const [threadRootId, setThreadRootId] = useState(null);
   const [replyTo, setReplyTo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -82,6 +84,25 @@ export default function CommunityPage({ student }) {
   const [privateMessages, setPrivateMessages] = useState([]);
   const [privateDraft, setPrivateDraft] = useState("");
   const messagesEndRef = useRef(null);
+
+  const visibleMessages = useMemo(() => {
+    const byId = new Map(messages.map((message) => [message.id, message]));
+    const matchesThread = (message) => {
+      if (threadRootId === null) return true;
+      let cursor = message;
+      const visited = new Set();
+      while (cursor && !visited.has(cursor.id)) {
+        if (cursor.id === threadRootId) return true;
+        visited.add(cursor.id);
+        cursor = byId.get(cursor.parent_message_id);
+      }
+      return false;
+    };
+    const term = messageSearch.trim().toLowerCase();
+    return messages.filter((message) => matchesThread(message) && (!term ||
+      message.content?.toLowerCase().includes(term) ||
+      message.author.name.toLowerCase().includes(term)));
+  }, [messages, messageSearch, threadRootId]);
 
   const activeChannel = useMemo(
     () => community?.channels?.find((channel) => channel.id === activeChannelId),
@@ -96,6 +117,8 @@ export default function CommunityPage({ student }) {
     setActiveChannelId(null);
     setMessages([]);
     setReplyTo(null);
+    setThreadRootId(null);
+    setMessageSearch("");
 
     const communityRequest =
       scope === "all" ? api.getProgrammeCommunity() : api.getMyCommunity();
@@ -135,6 +158,8 @@ export default function CommunityPage({ student }) {
     setError("");
     setMessages([]);
     setReplyTo(null);
+    setThreadRootId(null);
+    setMessageSearch("");
     loadMessages();
 
     // Lightweight polling keeps classmates' messages and reactions fresh
@@ -406,8 +431,14 @@ export default function CommunityPage({ student }) {
             <p className="mt-1 text-xs text-zinc-500">{activeChannel?.description}</p>
           </header>
 
+          <div className="border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
+            <label htmlFor="community-message-search" className="sr-only">Search channel messages</label>
+            <input id="community-message-search" type="search" value={messageSearch} onChange={(event) => setMessageSearch(event.target.value)} placeholder="Search messages or classmates…" className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-white" />
+            {threadRootId !== null && <button type="button" onClick={() => setThreadRootId(null)} className="mt-2 text-xs font-semibold text-brand-600 hover:underline dark:text-brand-300">← Back to all messages</button>}
+            {threadRootId === null && <p className="mt-1 text-[11px] text-zinc-400">Select View thread on a message to focus on its replies.</p>}
+          </div>
           <div className="flex-1 space-y-1 overflow-y-auto p-3 sm:p-5">
-            {messages.length === 0 && (
+            {visibleMessages.length === 0 && (
               <div className="flex min-h-[360px] flex-col items-center justify-center text-center">
                 <div className="flex size-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-300">
                   <MessageCircle size={22} />
@@ -417,7 +448,7 @@ export default function CommunityPage({ student }) {
               </div>
             )}
 
-            {messages.map((message) => {
+            {visibleMessages.map((message) => {
               const mine = message.author.id === student?.id;
               return (
                 <article key={message.id} className="group rounded-xl px-3 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
@@ -464,6 +495,7 @@ export default function CommunityPage({ student }) {
                         <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-zinc-700 dark:text-zinc-300">{message.content}</p>
                       )}
 
+                      {threadRootId === null && !message.parent_message_id && messages.some((item) => item.parent_message_id === message.id) && <button type="button" onClick={() => { setThreadRootId(message.id); setMessageSearch(""); }} className="mt-2 text-xs font-semibold text-brand-600 hover:underline dark:text-brand-300">View thread ({messages.filter((item) => item.parent_message_id === message.id).length} direct replies)</button>}
                       {!message.is_deleted && (
                         <div className="mt-2 flex flex-wrap items-center gap-1.5">
                           {message.reactions?.map((reaction) => (
