@@ -564,6 +564,9 @@ getModuleDetail: (
   getRewards: () =>
     request("/rewards"),
 
+  getXpLeaderboard: () =>
+    request("/rewards/leaderboard"),
+
   purchaseReward: (rewardId) =>
     request(`/rewards/${rewardId}/purchase`, { method: "POST" }),
 
