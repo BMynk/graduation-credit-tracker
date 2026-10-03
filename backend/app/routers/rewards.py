@@ -237,7 +237,7 @@ def get_xp_leaderboard(
     """Privacy-first ranking: never disclose classmates' names or identifiers."""
     # Refresh only the requesting student's wallet; other rows are stored snapshots.
     _wallet(db, current_student)
-    query = (db.query(models.StudentRewardWallet.student_id, models.StudentRewardWallet.lifetime_xp)
+    query = (db.query(models.StudentRewardWallet.student_id, models.Student.name, models.StudentRewardWallet.lifetime_xp)
         .join(models.Student, models.Student.id == models.StudentRewardWallet.student_id)
         .filter(models.Student.is_active.is_(True)))
     if division in ("programme", "programme_year"):
@@ -248,14 +248,14 @@ def get_xp_leaderboard(
     leaderboard = []
     my_rank = None
     my_xp = 0
-    for position, (student_id, xp) in enumerate(rows, start=1):
+    for position, (student_id, student_name, xp) in enumerate(rows, start=1):
         if student_id == current_student.id:
             my_rank = position
             my_xp = int(xp or 0)
         if position <= 10:
             leaderboard.append({
                 "rank": position,
-                "label": "You" if student_id == current_student.id else f"Scholar {position}",
+                "label": student_name,
                 "xp": int(xp or 0),
                 "is_me": student_id == current_student.id,
             })
