@@ -979,6 +979,7 @@ def list_past_papers(
     module: str | None = Query(default=None, max_length=30),
     level: int | None = Query(default=None, ge=1, le=10),
     year: int | None = Query(default=None, ge=1990, le=2100),
+    semester: int | None = Query(default=None, ge=1, le=2),
     db: Session = Depends(get_db),
     current_student: models.Student = Depends(get_current_real_student),
 ):
@@ -996,6 +997,8 @@ def list_past_papers(
         query = query.filter(models.PastPaper.level == level)
     if year:
         query = query.filter(models.PastPaper.paper_year == year)
+    if semester:
+        query = query.filter(models.PastPaper.semester == semester)
     return [_paper_out(row) for row in query.order_by(models.PastPaper.created_at.desc()).limit(200).all()]
 
 
