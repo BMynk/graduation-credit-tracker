@@ -20,7 +20,7 @@ export default function XpLeaderboard() {
     <Card className="overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 p-5 dark:border-zinc-800">
         <div><div className="flex items-center gap-2"><Trophy className="size-5 text-amber-500"/><h2 className="font-bold text-zinc-900 dark:text-white">EXP leaderboard</h2></div>
-          <p className="mt-1 text-xs text-zinc-500">Lifetime EXP ranking · Anonymous classmates</p></div>
+          <p className="mt-1 text-xs text-zinc-500">Lifetime EXP ranking · Student names</p></div>
         <button type="button" onClick={refresh} disabled={loading} className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 px-3 py-2 text-xs font-semibold dark:border-zinc-700"><RefreshCw className="size-3.5"/>Refresh</button>
       </div>
       <div className="p-5">
