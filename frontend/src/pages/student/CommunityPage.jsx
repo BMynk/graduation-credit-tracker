@@ -71,6 +71,8 @@ export default function CommunityPage({ student }) {
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState("");
   const [messageSearch, setMessageSearch] = useState("");
+  const [moduleSearch, setModuleSearch] = useState("");
+  const [modulesExpanded, setModulesExpanded] = useState(false);
   const [threadRootId, setThreadRootId] = useState(null);
   const [replyTo, setReplyTo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -104,6 +106,10 @@ export default function CommunityPage({ student }) {
       message.author.name.toLowerCase().includes(term)));
   }, [messages, messageSearch, threadRootId]);
 
+  const generalChannels = useMemo(() => community?.channels?.filter((channel) => !channel.slug.startsWith("module-")) ?? [], [community]);
+  const moduleChannels = useMemo(() => (community?.channels?.filter((channel) => channel.slug.startsWith("module-")) ?? []).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })), [community]);
+  const filteredModuleChannels = useMemo(() => moduleChannels.filter((channel) => `${channel.name} ${channel.description ?? ""}`.toLowerCase().includes(moduleSearch.trim().toLowerCase())), [moduleChannels, moduleSearch]);
+
   const activeChannel = useMemo(
     () => community?.channels?.find((channel) => channel.id === activeChannelId),
     [community, activeChannelId]
@@ -119,6 +125,8 @@ export default function CommunityPage({ student }) {
     setReplyTo(null);
     setThreadRootId(null);
     setMessageSearch("");
+    setModulesExpanded(false);
+    setModuleSearch("");
 
     const communityRequest =
       scope === "all" ? api.getProgrammeCommunity() : api.getMyCommunity();
@@ -401,25 +409,46 @@ export default function CommunityPage({ student }) {
       </div>
 
       <div className="grid min-h-[650px] overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm md:grid-cols-[220px_1fr] dark:border-zinc-800 dark:bg-zinc-900">
-        <aside className="border-b border-zinc-200 bg-zinc-50/70 p-3 md:border-b-0 md:border-r dark:border-zinc-800 dark:bg-zinc-950/50">
-          <p className="px-2 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400">Channels</p>
-          <div className="flex gap-2 overflow-x-auto md:block md:space-y-1">
-            {community?.channels?.map((channel) => (
-              <button
-                key={channel.id}
-                type="button"
-                onClick={() => setActiveChannelId(channel.id)}
-                className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition md:w-full ${
-                  activeChannelId === channel.id
-                    ? "bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300"
-                    : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                }`}
-              >
-                <Hash size={16} />
-                {channel.name}
+        <aside className="min-w-0 border-b border-zinc-200 bg-zinc-50/70 p-3 md:max-h-[750px] md:overflow-y-auto md:border-b-0 md:border-r dark:border-zinc-800 dark:bg-zinc-950/50">
+          <p className="px-2 pb-2 pt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400">Community spaces</p>
+          <nav aria-label="Community channels" className="space-y-1">
+            {generalChannels.map((channel) => (
+              <button key={channel.id} type="button" onClick={() => setActiveChannelId(channel.id)}
+                aria-current={activeChannelId === channel.id ? "page" : undefined}
+                className={`flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition ${activeChannelId === channel.id ? "bg-brand-50 text-brand-700 ring-1 ring-brand-100 dark:bg-brand-500/10 dark:text-brand-300 dark:ring-brand-500/20" : "text-zinc-600 hover:bg-white dark:text-zinc-400 dark:hover:bg-zinc-800"}`}>
+                <Hash size={16} className="shrink-0"/><span className="truncate">{channel.name}</span>
               </button>
             ))}
-          </div>
+          </nav>
+          {moduleChannels.length > 0 && (
+            <div className="mt-5 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+              <button type="button" onClick={() => setModulesExpanded((value) => !value)}
+                aria-expanded={modulesExpanded}
+                className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left hover:bg-white dark:hover:bg-zinc-800">
+                <span className="text-xs font-bold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">My modules <span className="ml-1 rounded-md bg-zinc-200 px-1.5 py-0.5 text-[10px] dark:bg-zinc-800">{moduleChannels.length}</span></span>
+                <span className="text-xs text-zinc-500">{modulesExpanded || moduleChannels.some((channel) => channel.id === activeChannelId) ? "Hide −" : "Show +"}</span>
+              </button>
+              {(modulesExpanded || moduleChannels.some((channel) => channel.id === activeChannelId)) && (
+                <div className="mt-2 space-y-2">
+                  <label className="sr-only" htmlFor="community-module-search">Find a module</label>
+                  <input id="community-module-search" type="search" value={moduleSearch} onChange={(event) => setModuleSearch(event.target.value)}
+                    placeholder="Find a module…" className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs outline-none focus:border-brand-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"/>
+                  <nav aria-label="Module discussions" className="max-h-72 space-y-1 overflow-y-auto pr-1 md:max-h-[420px]">
+                    {filteredModuleChannels.map((channel) => (
+                      <button key={channel.id} type="button" onClick={() => setActiveChannelId(channel.id)}
+                        aria-current={activeChannelId === channel.id ? "page" : undefined}
+                        title={channel.description || channel.name}
+                        className={`flex w-full min-w-0 items-start gap-2 rounded-xl px-3 py-2.5 text-left transition ${activeChannelId === channel.id ? "bg-brand-50 text-brand-700 ring-1 ring-brand-100 dark:bg-brand-500/10 dark:text-brand-300 dark:ring-brand-500/20" : "text-zinc-600 hover:bg-white dark:text-zinc-400 dark:hover:bg-zinc-800"}`}>
+                        <span className="mt-0.5 shrink-0 rounded-md bg-white px-1.5 py-0.5 text-[10px] font-bold text-brand-600 dark:bg-zinc-800 dark:text-brand-300">MOD</span>
+                        <span className="min-w-0"><span className="block truncate text-sm font-semibold">{channel.name}</span><span className="block truncate text-[11px] text-zinc-400">{channel.description?.split(":")[0] || "Module discussion"}</span></span>
+                      </button>
+                    ))}
+                    {filteredModuleChannels.length === 0 && <p className="px-2 py-3 text-xs text-zinc-500">No matching modules.</p>}
+                  </nav>
+                </div>
+              )}
+            </div>
+          )}
         </aside>
 
         <section className="flex min-w-0 flex-col">
