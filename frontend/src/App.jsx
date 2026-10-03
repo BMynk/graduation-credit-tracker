@@ -10,6 +10,7 @@ import HistoryPage from "./pages/student/HistoryPage";
 import PlanningPage from "./pages/student/PlanningPage";
 import TimelinePage from "./pages/student/TimelinePage";
 import AchievementsPage from "./pages/student/AchievementsPage";
+import XpLeaderboard from "./pages/student/XpLeaderboard";
 import CommunityPage from "./pages/student/CommunityPage";
 import AssistantWidget from "./components/assistant/AssistantWidget";
 import UfhLogo from "./components/branding/UfhLogo";
@@ -1212,6 +1213,7 @@ const STUDENT_TABS = [
   { id: "predictor", label: "Predictor" },
   { id: "planner", label: "Planner" },
   { id: "achievements", label: "Achievements" },
+  { id: "leaderboard", label: "EXP Leaderboard" },
   { id: "peers", label: "Peers" },
   { id: "yearly", label: "Yearly" },
 ];
@@ -1348,6 +1350,7 @@ function StudentDashboard({ onLogout, onPageChange }) {
     onModuleClick={handleModuleClick}
   />
 )}
+      {!loading && tab === "leaderboard" && <XpLeaderboard />}
       {!loading && tab === "achievements" && (
   <AchievementsPage />
 )}
