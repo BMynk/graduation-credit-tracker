@@ -564,6 +564,9 @@ getModuleDetail: (
   getRewards: () =>
     request("/rewards"),
 
+  getXpLeaderboard: (division = "overall") =>
+    request(`/rewards/leaderboard?division=${encodeURIComponent(division)}`),
+
   purchaseReward: (rewardId) =>
     request(`/rewards/${rewardId}/purchase`, { method: "POST" }),
 

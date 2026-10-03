@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app import models
@@ -226,3 +226,46 @@ def update_showcase(
         ))
     db.commit()
     return _state(db, current_student)
+
+
+@router.get("/leaderboard")
+def get_xp_leaderboard(
+    division: str = Query(default="overall", pattern="^(overall|programme|year|programme_year)$"),
+    current_student: models.Student = Depends(get_current_student),
+    db: Session = Depends(get_db),
+):
+    """Privacy-first ranking: never disclose classmates' names or identifiers."""
+    # Refresh only the requesting student's wallet; other rows are stored snapshots.
+    _wallet(db, current_student)
+    query = (db.query(models.StudentRewardWallet.student_id, models.StudentRewardWallet.lifetime_xp)
+        .join(models.Student, models.Student.id == models.StudentRewardWallet.student_id)
+        .filter(models.Student.is_active.is_(True)))
+    if division in ("programme", "programme_year"):
+        query = query.filter(models.Student.programme_id == current_student.programme_id)
+    if division in ("year", "programme_year"):
+        query = query.filter(models.Student.current_year == current_student.current_year)
+    rows = query.order_by(models.StudentRewardWallet.lifetime_xp.desc(), models.StudentRewardWallet.student_id.asc()).all()
+    leaderboard = []
+    my_rank = None
+    my_xp = 0
+    for position, (student_id, xp) in enumerate(rows, start=1):
+        if student_id == current_student.id:
+            my_rank = position
+            my_xp = int(xp or 0)
+        if position <= 10:
+            leaderboard.append({
+                "rank": position,
+                "label": "You" if student_id == current_student.id else f"Scholar {position}",
+                "xp": int(xp or 0),
+                "is_me": student_id == current_student.id,
+            })
+    return {
+        "division": division,
+        "year": current_student.current_year if division in ("year", "programme_year") else None,
+        "programme": db.query(models.Programme.name).filter(models.Programme.id == current_student.programme_id).scalar() if division in ("programme", "programme_year") else None,
+        "leaders": leaderboard,
+        "my_rank": my_rank,
+        "my_xp": my_xp,
+        "participants": len(rows),
+        "note": "Anonymous ranking of active students with an initialized EXP wallet. Other students' totals are stored snapshots and may update when they visit the shop.",
+    }
