@@ -11,6 +11,7 @@ const tabs = [
   ["planner", "Planner"],
   ["community", "Community"],
   ["achievements", "Achievements"],
+  ["leaderboard", "EXP Leaderboard"],
   ["peers", "Peers"],
   ["yearly", "Yearly"],
 ];
