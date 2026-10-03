@@ -461,16 +461,17 @@ function LevelHero({ data, unlocked, total }) {
 
 function XpLeaderboard() {
   const [board, setBoard] = useState(null);
+  const [division, setDivision] = useState("overall");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   async function refresh() {
     setLoading(true);
     setError("");
-    try { setBoard(await api.getXpLeaderboard()); }
+    try { setBoard(await api.getXpLeaderboard(division)); }
     catch (err) { setError(err?.message || "Unable to load leaderboard."); }
     finally { setLoading(false); }
   }
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => { refresh(); }, [division]);
   return (
     <Card className="overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 p-5 dark:border-zinc-800">
@@ -479,6 +480,14 @@ function XpLeaderboard() {
         <button type="button" onClick={refresh} disabled={loading} className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 px-3 py-2 text-xs font-semibold dark:border-zinc-700"><RefreshCw className="size-3.5"/>Refresh</button>
       </div>
       <div className="p-5">
+        <div role="group" aria-label="Leaderboard division" className="mb-4 flex flex-wrap gap-2">
+          {[["overall", "Overall"], ["programme", "My programme"], ["year", "My year"], ["programme_year", "Programme + year"]].map(([id, label]) => (
+            <button key={id} type="button" onClick={() => { setBoard(null); setDivision(id); }}
+              aria-pressed={division === id}
+              className={`rounded-full px-3 py-2 text-xs font-semibold transition ${division === id ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300"}`}>{label}</button>
+          ))}
+        </div>
+        {board && <p className="mb-3 text-xs text-zinc-500">{[board.programme, board.year ? `Year ${board.year}` : null].filter(Boolean).join(" · ") || "All participating students"} · {board.participants} ranked</p>}
         {loading && <p className="text-sm text-zinc-500">Loading rankings…</p>}
         {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
         {!loading && board && <>
