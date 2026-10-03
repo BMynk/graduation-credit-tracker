@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app import models
@@ -230,19 +230,21 @@ def update_showcase(
 
 @router.get("/leaderboard")
 def get_xp_leaderboard(
+    division: str = Query(default="overall", pattern="^(overall|programme|year|programme_year)$"),
     current_student: models.Student = Depends(get_current_student),
     db: Session = Depends(get_db),
 ):
     """Privacy-first ranking: never disclose classmates' names or identifiers."""
     # Refresh only the requesting student's wallet; other rows are stored snapshots.
     _wallet(db, current_student)
-    rows = (
-        db.query(models.StudentRewardWallet.student_id, models.StudentRewardWallet.lifetime_xp)
+    query = (db.query(models.StudentRewardWallet.student_id, models.StudentRewardWallet.lifetime_xp)
         .join(models.Student, models.Student.id == models.StudentRewardWallet.student_id)
-        .filter(models.Student.is_active.is_(True))
-        .order_by(models.StudentRewardWallet.lifetime_xp.desc(), models.StudentRewardWallet.student_id.asc())
-        .all()
-    )
+        .filter(models.Student.is_active.is_(True)))
+    if division in ("programme", "programme_year"):
+        query = query.filter(models.Student.programme_id == current_student.programme_id)
+    if division in ("year", "programme_year"):
+        query = query.filter(models.Student.current_year == current_student.current_year)
+    rows = query.order_by(models.StudentRewardWallet.lifetime_xp.desc(), models.StudentRewardWallet.student_id.asc()).all()
     leaderboard = []
     my_rank = None
     my_xp = 0
@@ -258,6 +260,9 @@ def get_xp_leaderboard(
                 "is_me": student_id == current_student.id,
             })
     return {
+        "division": division,
+        "year": current_student.current_year if division in ("year", "programme_year") else None,
+        "programme": db.query(models.Programme.name).filter(models.Programme.id == current_student.programme_id).scalar() if division in ("programme", "programme_year") else None,
         "leaders": leaderboard,
         "my_rank": my_rank,
         "my_xp": my_xp,
