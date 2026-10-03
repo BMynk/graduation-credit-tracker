@@ -595,6 +595,8 @@ export default function AchievementsPage() {
 
   const [rarityFilter, setRarityFilter] =
     useState("all");
+  const [achievementSearch, setAchievementSearch] = useState("");
+  const [achievementSort, setAchievementSort] = useState("default");
 
   const [loading, setLoading] =
     useState(true);
@@ -667,14 +669,22 @@ export default function AchievementsPage() {
         return (
           categoryMatches &&
           rarityMatches &&
-          statusMatches
+          statusMatches &&
+          `${achievement.title} ${achievement.description}`.toLowerCase().includes(achievementSearch.trim().toLowerCase())
         );
+      }).sort((left, right) => {
+        if (achievementSort === "xp") return (right.xp || 0) - (left.xp || 0);
+        if (achievementSort === "name") return left.title.localeCompare(right.title);
+        if (achievementSort === "locked") return Number(left.unlocked) - Number(right.unlocked);
+        return 0;
       }),
     [
       achievements,
       filter,
       statusFilter,
       rarityFilter,
+      achievementSearch,
+      achievementSort,
     ],
   );
 
@@ -983,6 +993,20 @@ export default function AchievementsPage() {
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end">
+          <label className="block min-w-0">
+            <span className="mb-1 block text-xs font-medium text-zinc-500">Find an achievement</span>
+            <input type="search" value={achievementSearch} onChange={(event) => setAchievementSearch(event.target.value)} placeholder="Search achievements…" className="h-10 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"/>
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-zinc-500">Sort by</span>
+            <select value={achievementSort} onChange={(event) => setAchievementSort(event.target.value)} className="h-10 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
+              <option value="default">Default order</option><option value="xp">Highest XP</option><option value="name">Name A–Z</option><option value="locked">To unlock first</option>
+            </select>
+          </label>
+          <button type="button" onClick={() => { setFilter("all"); setStatusFilter("all"); setRarityFilter("all"); setAchievementSearch(""); setAchievementSort("default"); }} className="h-10 rounded-xl border border-zinc-200 px-4 text-xs font-semibold text-zinc-600 dark:border-zinc-700 dark:text-zinc-300">Reset filters</button>
         </div>
 
         {/* Rarity filters */}
