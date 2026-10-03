@@ -6,6 +6,7 @@ import {
   Calculator,
   BookOpenCheck,
   Trophy,
+  Medal,
   Users,
   ChartNoAxesColumnIncreasing,
   LogOut,
@@ -84,6 +85,11 @@ const navigation = [
         id: "achievements",
         label: "Achievements",
         icon: Trophy,
+      },
+      {
+        id: "leaderboard",
+        label: "EXP Leaderboard",
+        icon: Medal,
       },
       {
         id: "peers",
