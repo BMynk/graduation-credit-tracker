@@ -400,6 +400,8 @@ export const api = {
   // Public endpoints
   // ==========================================================
 
+  adminCurriculumVerification: () => request('/programmes/verification/report'),
+
   listProgrammes: () =>
     request(
       "/programmes",

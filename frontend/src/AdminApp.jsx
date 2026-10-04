@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { api } from "./api";
 import ProgrammeBreakdownView from "./components/ProgrammeBreakdown";
+import CurriculumVerification from "./pages/admin/CurriculumVerification";
 import AdminStudentListEnhanced from "./components/Admin/AdminStudentListEnhanced";
 import AdminViewAsStudent from "./components/Admin/AdminViewAsStudent";
 import AdminBulkEmail from "./components/Admin/AdminBulkEmail";
@@ -2505,6 +2506,11 @@ const ADMIN_NAV_GROUPS = [
         label: "Programme breakdown",
         icon: BarChart3,
       },
+      {
+        id: "curriculum-verification",
+        label: "Curriculum verification",
+        icon: ShieldCheck,
+      },
     ],
   },
   {
@@ -2966,6 +2972,8 @@ function AdminDashboard({ onLogout }) {
                   }
                 />
               )}
+
+              {tab === "curriculum-verification" && <CurriculumVerification />}
 
               {tab === "students" && (
                 <AdminStudentListEnhanced
