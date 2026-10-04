@@ -42,6 +42,7 @@ def get_curriculum_verification_report(
 ):
     """Read-only drift audit against the bundled 2026 reference, not official certification."""
     from seed import PROGRAMMES, MODULES, PROGRAMME_MODULES, REQUIREMENT_GROUPS, ALIAS_CODES, curriculum_position
+    from types import SimpleNamespace
 
     reference_modules = {m[0]: m for m in MODULES}
     actual_programmes = {p.code: p for p in db.query(models.Programme).all()}
@@ -73,7 +74,7 @@ def get_curriculum_verification_report(
                 if link is None:
                     issues.append({"module": module_code, "type": "missing_module", "detail": "Reference module not linked"})
                     continue
-                expected_year, expected_semester = curriculum_position(link.module)
+                expected_year, expected_semester = curriculum_position(SimpleNamespace(code=module_code, level=ref[4]))
                 for field, observed, target in (
                     ("credits", link.module.credits, ref[2]),
                     ("year", link.year, expected_year),
