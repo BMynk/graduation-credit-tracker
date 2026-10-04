@@ -86,6 +86,8 @@ export default function CommunityPage({ student }) {
   const [privateMessages, setPrivateMessages] = useState([]);
   const [privateDraft, setPrivateDraft] = useState("");
   const messagesEndRef = useRef(null);
+  const privateEndRef = useRef(null);
+  const activeConversationId = activeConversation?.id;
 
   const visibleMessages = useMemo(() => {
     const byId = new Map(messages.map((message) => [message.id, message]));
@@ -239,6 +241,31 @@ export default function CommunityPage({ student }) {
   }
 
   useEffect(() => { refreshPrivateArea(); }, []);
+
+  useEffect(() => {
+    if (!activeConversationId) return;
+    let alive = true;
+    const refresh = async () => {
+      if (document.visibilityState === "hidden") return;
+      try {
+        const latest = await api.getPrivateMessages(activeConversationId);
+        if (!alive) return;
+        setPrivateMessages(latest);
+        if (latest.some((item) => item.sender.id !== student?.id && !item.read_at)) {
+          await api.markPrivateConversationRead(activeConversationId);
+        }
+      } catch {
+        // Keep existing messages visible during temporary connection problems.
+      }
+    };
+    refresh();
+    const interval = window.setInterval(refresh, 3000);
+    return () => { alive = false; window.clearInterval(interval); };
+  }, [activeConversationId, student?.id]);
+
+  useEffect(() => {
+    if (activeConversationId) privateEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [activeConversationId, privateMessages.length]);
 
 
   async function openProfile(studentId) {
@@ -606,7 +633,7 @@ export default function CommunityPage({ student }) {
       )}
 
       {profile && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setProfile(null)}>
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-0 sm:p-4" onClick={() => setProfile(null)}>
           <div className={`w-full max-w-md rounded-2xl border border-zinc-200 bg-gradient-to-br p-6 shadow-2xl dark:border-zinc-800 ${THEME_CLASSES[profile.equipped_theme] || "from-white via-white to-zinc-50 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-950"}`} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
@@ -635,17 +662,18 @@ export default function CommunityPage({ student }) {
 
       {activeConversation && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setActiveConversation(null)}>
-          <div className="flex h-[70vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900" onClick={(e) => e.stopPropagation()}>
+          <div className="flex h-[100dvh] w-full max-w-3xl flex-col overflow-hidden bg-white shadow-2xl sm:h-[82vh] sm:rounded-2xl sm:border sm:border-zinc-200 dark:bg-zinc-900 dark:sm:border-zinc-800" onClick={(e) => e.stopPropagation()}>
             <header className="flex items-center justify-between border-b border-zinc-200 p-4 dark:border-zinc-800">
-              <div><h2 className="font-bold text-zinc-950 dark:text-white">{activeConversation.other_student.name}</h2><p className="text-xs text-zinc-500">Private conversation · accepted connection</p></div>
+              <div><h2 className="font-bold text-zinc-950 dark:text-white">{activeConversation.other_student.name}</h2><p className="text-xs text-zinc-500">Private chat · messages refresh automatically</p></div>
               <button onClick={() => setActiveConversation(null)} className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"><X size={18}/></button>
             </header>
-            <div className="flex-1 space-y-3 overflow-y-auto p-4">
+            <div className="flex-1 space-y-3 overflow-y-auto bg-zinc-50 p-4 dark:bg-zinc-950/60">
               {privateMessages.length === 0 && <p className="mt-10 text-center text-sm text-zinc-400">You are connected. Start your private conversation.</p>}
               {privateMessages.map((message) => {
                 const mine = message.sender.id === student?.id;
-                return <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}><div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${mine ? "bg-brand-500 text-white" : "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"}`}><p className="whitespace-pre-wrap break-words">{message.content}</p><p className={`mt-1 text-[10px] ${mine ? "text-white/70" : "text-zinc-400"}`}>{timeLabel(message.created_at)}</p></div></div>;
+                return <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}><div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${mine ? "bg-brand-500 text-white" : "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"}`}><p className="whitespace-pre-wrap break-words">{message.content}</p><p className={`mt-1 text-[10px] ${mine ? "text-white/70" : "text-zinc-400"}`}>{timeLabel(message.created_at)}{mine && <span className={message.read_at ? "ml-1 font-bold text-sky-300" : "ml-1"} aria-label={message.read_at ? "Read" : "Sent"}>{message.read_at ? "✓✓" : "✓"}</span>}</p></div></div>;
               })}
+              <div ref={privateEndRef} />
             </div>
             <form onSubmit={sendPrivate} className="flex gap-2 border-t border-zinc-200 p-4 dark:border-zinc-800">
               <input value={privateDraft} onChange={(e) => setPrivateDraft(e.target.value)} maxLength={2000} placeholder="Write a private message…" className="h-11 flex-1 rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm outline-none focus:border-brand-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"/>
