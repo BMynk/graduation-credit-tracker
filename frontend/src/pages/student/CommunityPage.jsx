@@ -85,6 +85,8 @@ export default function CommunityPage({ student }) {
   const [activeConversation, setActiveConversation] = useState(null);
   const [privateMessages, setPrivateMessages] = useState([]);
   const [privateDraft, setPrivateDraft] = useState("");
+  const [conversationSearch, setConversationSearch] = useState("");
+  const [privateMessageSearch, setPrivateMessageSearch] = useState("");
   const messagesEndRef = useRef(null);
   const privateEndRef = useRef(null);
   const activeConversationId = activeConversation?.id;
@@ -301,6 +303,7 @@ export default function CommunityPage({ student }) {
 
   async function openConversation(conversation) {
     setActiveConversation(conversation);
+    setPrivateMessageSearch("");
     setProfile(null);
     try {
       setPrivateMessages(await api.getPrivateMessages(conversation.id));
@@ -424,9 +427,11 @@ export default function CommunityPage({ student }) {
         </div>
         <div className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
           <div className="flex items-center gap-2"><MessageCircle size={16} /><h2 className="font-semibold text-zinc-900 dark:text-white">Private conversations</h2></div>
+          <label className="sr-only" htmlFor="private-conversation-search">Search private conversations</label>
+          <input id="private-conversation-search" type="search" value={conversationSearch} onChange={(event) => setConversationSearch(event.target.value)} placeholder="Search conversations…" className="mt-3 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-white" />
           <div className="mt-3 flex flex-wrap gap-2">
             {conversations.length === 0 && <p className="text-xs text-zinc-500">Accepted conversations will appear here.</p>}
-            {conversations.map((conversation) => (
+            {conversations.filter((conversation) => conversation.other_student.name.toLowerCase().includes(conversationSearch.trim().toLowerCase())).map((conversation) => (
               <button key={conversation.id} onClick={() => openConversation(conversation)} className="rounded-xl border border-zinc-200 px-3 py-2 text-left text-sm font-medium text-zinc-700 hover:border-brand-300 hover:bg-brand-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-brand-500/10">
                 {conversation.other_student.name}<span className="block text-[11px] font-normal text-zinc-400">Year {conversation.other_student.current_year}</span>
               </button>
@@ -667,9 +672,10 @@ export default function CommunityPage({ student }) {
               <div><h2 className="font-bold text-zinc-950 dark:text-white">{activeConversation.other_student.name}</h2><p className="text-xs text-zinc-500">Private chat · messages refresh automatically</p></div>
               <button onClick={() => setActiveConversation(null)} className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"><X size={18}/></button>
             </header>
+            <div className="border-b border-zinc-200 px-4 py-2 dark:border-zinc-800"><label htmlFor="private-message-search" className="sr-only">Search messages in this chat</label><input id="private-message-search" type="search" value={privateMessageSearch} onChange={(event) => setPrivateMessageSearch(event.target.value)} placeholder="Search messages in this chat…" className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-white" /></div>
             <div className="flex-1 space-y-3 overflow-y-auto bg-zinc-50 p-4 dark:bg-zinc-950/60">
               {privateMessages.length === 0 && <p className="mt-10 text-center text-sm text-zinc-400">You are connected. Start your private conversation.</p>}
-              {privateMessages.map((message) => {
+              {privateMessages.filter((message) => message.content.toLowerCase().includes(privateMessageSearch.trim().toLowerCase())).map((message) => {
                 const mine = message.sender.id === student?.id;
                 return <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}><div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${mine ? "bg-brand-500 text-white" : "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"}`}><p className="whitespace-pre-wrap break-words">{message.content}</p><p className={`mt-1 text-[10px] ${mine ? "text-white/70" : "text-zinc-400"}`}>{timeLabel(message.created_at)}{mine && <span className={message.read_at ? "ml-1 font-bold text-sky-300" : "ml-1"} aria-label={message.read_at ? "Read" : "Sent"}>{message.read_at ? "✓✓" : "✓"}</span>}</p></div></div>;
               })}
