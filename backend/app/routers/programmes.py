@@ -41,7 +41,7 @@ def get_curriculum_verification_report(
     admin=Depends(get_current_admin),
 ):
     """Read-only drift audit against the bundled 2026 reference, not official certification."""
-    from seed import PROGRAMMES, MODULES, PROGRAMME_MODULES, ALIAS_CODES
+    from seed import PROGRAMMES, MODULES, PROGRAMME_MODULES, REQUIREMENT_GROUPS, ALIAS_CODES, curriculum_position
 
     reference_modules = {m[0]: m for m in MODULES}
     actual_programmes = {p.code: p for p in db.query(models.Programme).all()}
@@ -50,11 +50,16 @@ def get_curriculum_verification_report(
         code = spec["code"]
         programme = actual_programmes.get(code)
         expected = {}
+        choice_codes = {
+            ALIAS_CODES.get(raw, raw)
+            for requirement in REQUIREMENT_GROUPS.get(code, [])
+            for raw in requirement["options"]
+        }
         for group in ("compulsory", "elective"):
             for raw_code in PROGRAMME_MODULES.get(code, {}).get(group, []):
                 module_code = ALIAS_CODES.get(raw_code, raw_code)
                 if module_code in reference_modules:
-                    expected[module_code] = reference_modules[module_code]
+                    expected[module_code] = (reference_modules[module_code], group == "compulsory" and module_code not in choice_codes)
         issues = []
         if programme is None:
             issues.append({"module": None, "type": "missing_programme", "detail": "Programme missing from database"})
@@ -63,19 +68,17 @@ def get_curriculum_verification_report(
                 joinedload(models.ProgrammeModule.module)
             ).filter(models.ProgrammeModule.programme_id == programme.id).all()
             actual = {link.module.code: link for link in links if link.module}
-            for module_code, ref in expected.items():
+            for module_code, (ref, compulsory) in expected.items():
                 link = actual.get(module_code)
                 if link is None:
                     issues.append({"module": module_code, "type": "missing_module", "detail": "Reference module not linked"})
                     continue
-                expected_year = ref[4]
-                expected_semester = 1
-                if len(module_code) >= 2 and module_code[-2] in ("1", "2"):
-                    expected_semester = int(module_code[-2])
+                expected_year, expected_semester = curriculum_position(link.module)
                 for field, observed, target in (
                     ("credits", link.module.credits, ref[2]),
                     ("year", link.year, expected_year),
                     ("semester", link.semester, expected_semester),
+                    ("compulsory", link.is_compulsory, compulsory),
                 ):
                     if observed != target:
                         issues.append({"module": module_code, "type": "mismatch",
@@ -86,7 +89,7 @@ def get_curriculum_verification_report(
                         "issues": issues, "issue_count": len(issues)})
     return {
         "reference": "Bundled 2026 dataset — NOT independently verified against the official UFH prospectus",
-        "warning": "Earlier registration years may follow different valid curricula. No student records are modified.",
+        "warning": "These are differences from the bundled dataset, not proven prospectus errors. Review programme entry year and official UFH documentation before applying changes. No student records are modified.",
         "programmes": reports,
     }
 
