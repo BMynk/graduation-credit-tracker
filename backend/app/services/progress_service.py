@@ -13,47 +13,6 @@ from app.exceptions import DuplicateModuleCompletionError, PrerequisiteNotMetErr
 from app.data.prerequisite_rules import ANY_OF_PREREQUISITES
 
 
-def estimate_remaining_semesters(outstanding_links, completed_ids, *, start_semester=1, max_credits=64):
-    """Conservative curriculum-based estimate; never treat year groups as sequential.
-
-    Schedule prerequisites before dependants and only offer modules in their
-    curriculum semester. Return None when a valid schedule cannot be inferred
-    (for example, a missing prerequisite outside the selected requirements).
-    This is a planning estimate, not an enrolment or graduation guarantee.
-    """
-    remaining = {link.module_id: link for link in outstanding_links if link.module is not None}
-    passed = set(completed_ids)
-    if not remaining:
-        return 0
-    # Two offerings per academic year; allow enough time for long chains.
-    for term_index in range(max(len(remaining) * 2 + 2, 8)):
-        semester = (start_semester - 1 + term_index) % 2 + 1
-        available = [
-            link for link in remaining.values()
-            if link.semester == semester
-            and not missing_prerequisite_codes(link.module, passed)
-        ]
-        # Prioritise prerequisites that unlock other outstanding modules.
-        available.sort(key=lambda link: (
-            -sum(link.module_id in {p.id for p in other.module.prerequisites}
-                 for other in remaining.values()),
-            link.year, link.module.code,
-        ))
-        selected = []
-        credits = 0
-        for link in available:
-            if credits + link.module.credits <= max_credits:
-                selected.append(link)
-                credits += link.module.credits
-        # Prerequisites completed this term become available only next term.
-        for link in selected:
-            remaining.pop(link.module_id)
-        passed.update(link.module_id for link in selected)
-        if not remaining:
-            return term_index + 1
-    return None
-
-
 def _passed_module_ids(db: Session, student: models.Student) -> set:
     rows = (
         db.query(models.Enrolment.module_id)
@@ -1038,13 +997,29 @@ def build_graduation_audit(
             1,
         )
 
-    # Estimate from modules that can actually be combined in future terms.
-    # Use the next academic semester; in Jan-Jun the next is S2, otherwise S1.
-    # This assumes normal offerings and a 64-credit planning ceiling.
-    next_semester = 2 if datetime.utcnow().month <= 6 else 1
-    projected_semesters_remaining = estimate_remaining_semesters(
-        outstanding_links, completed_ids, start_semester=next_semester,
+    # Project from the actual outstanding curriculum. GCT has two
+    # semesters per academic year. Use the normal 64-credit curriculum
+    # load shown throughout the 2026 BSc programme tables as the projection
+    # capacity. Each curriculum semester contributes at least one future
+    # semester when it still contains requirements; only a load above that
+    # normal curriculum amount requires an additional projected semester.
+    MAX_CREDITS_PER_SEMESTER = 64
+    outstanding_by_curriculum_semester = defaultdict(int)
+
+    for link in outstanding_links:
+        if link.module is None:
+            continue
+        key = (link.year, link.semester)
+        outstanding_by_curriculum_semester[key] += link.module.credits
+
+    projected_semesters_remaining = sum(
+        max(1, math.ceil(credits / MAX_CREDITS_PER_SEMESTER))
+        for credits in outstanding_by_curriculum_semester.values()
+        if credits > 0
     )
+
+    if not outstanding_by_curriculum_semester:
+        projected_semesters_remaining = 0
 
     # ---------------------------------------------------------
     # FINAL RESPONSE
