@@ -35,6 +35,62 @@ def list_programmes(
     )
 
 
+@router.get("/verification/report")
+def get_curriculum_verification_report(
+    db: Session = Depends(get_db),
+    admin=Depends(get_current_admin),
+):
+    """Read-only drift audit against the bundled 2026 reference, not official certification."""
+    from seed import PROGRAMMES, MODULES, PROGRAMME_MODULES, ALIAS_CODES
+
+    reference_modules = {m[0]: m for m in MODULES}
+    actual_programmes = {p.code: p for p in db.query(models.Programme).all()}
+    reports = []
+    for spec in PROGRAMMES:
+        code = spec["code"]
+        programme = actual_programmes.get(code)
+        expected = {}
+        for group in ("compulsory", "elective"):
+            for raw_code in PROGRAMME_MODULES.get(code, {}).get(group, []):
+                module_code = ALIAS_CODES.get(raw_code, raw_code)
+                if module_code in reference_modules:
+                    expected[module_code] = reference_modules[module_code]
+        issues = []
+        if programme is None:
+            issues.append({"module": None, "type": "missing_programme", "detail": "Programme missing from database"})
+        else:
+            links = db.query(models.ProgrammeModule).options(
+                joinedload(models.ProgrammeModule.module)
+            ).filter(models.ProgrammeModule.programme_id == programme.id).all()
+            actual = {link.module.code: link for link in links if link.module}
+            for module_code, ref in expected.items():
+                link = actual.get(module_code)
+                if link is None:
+                    issues.append({"module": module_code, "type": "missing_module", "detail": "Reference module not linked"})
+                    continue
+                expected_year = ref[4]
+                expected_semester = 1
+                if len(module_code) >= 2 and module_code[-2] in ("1", "2"):
+                    expected_semester = int(module_code[-2])
+                for field, observed, target in (
+                    ("credits", link.module.credits, ref[2]),
+                    ("year", link.year, expected_year),
+                    ("semester", link.semester, expected_semester),
+                ):
+                    if observed != target:
+                        issues.append({"module": module_code, "type": "mismatch",
+                                       "detail": f"{field}: database={observed}, reference={target}"})
+            for module_code in sorted(actual.keys() - expected.keys()):
+                issues.append({"module": module_code, "type": "extra_module", "detail": "Not in bundled reference"})
+        reports.append({"programme_code": code, "programme_name": spec["name"],
+                        "issues": issues, "issue_count": len(issues)})
+    return {
+        "reference": "Bundled 2026 dataset — NOT independently verified against the official UFH prospectus",
+        "warning": "Earlier registration years may follow different valid curricula. No student records are modified.",
+        "programmes": reports,
+    }
+
+
 @router.get(
     "/{code}",
     response_model=schemas.ProgrammeOut,
