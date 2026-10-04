@@ -5,12 +5,15 @@ The bundled curriculum must first be checked against the official 2026 prospectu
 Students following earlier curriculum years require a separate reference.
 """
 import json
-from collections import Counter
+from pathlib import Path
 from app import models
 from app.database import SessionLocal
 from seed import PROGRAMME_MODULES, ALIAS_CODES
 
 def audit():
+    # Do not infer entry year from current year or student number.
+    mapping_path = Path(__file__).with_name("student_registration_years.json")
+    registration_years = json.loads(mapping_path.read_text()) if mapping_path.exists() else {}
     db = SessionLocal()
     try:
         report = []
@@ -19,6 +22,16 @@ def audit():
             programme = db.query(models.Programme).filter_by(id=student.programme_id).first()
             if programme is None:
                 report.append({"student_id": student.id, "issue": "missing_programme"})
+                continue
+            entry_year = registration_years.get(student.student_number)
+            if entry_year is None:
+                report.append({"student_id": student.id, "programme": programme.code,
+                               "issue": "registration_year_required", "action": "do_not_modify"})
+                continue
+            if str(entry_year) != "2026":
+                report.append({"student_id": student.id, "programme": programme.code,
+                               "registration_year": entry_year,
+                               "issue": "cohort_prospectus_required", "action": "do_not_modify"})
                 continue
             groups = PROGRAMME_MODULES.get(programme.code)
             if groups is None:
@@ -36,6 +49,7 @@ def audit():
             report.append({
                 "student_id": student.id,
                 "programme": programme.code,
+                "registration_year": entry_year,
                 "missing_reference_links": sorted(reference_codes - live_codes),
                 "extra_live_links": sorted(live_codes - reference_codes),
                 "enrolments_outside_reference": sorted(historical_codes - reference_codes),
