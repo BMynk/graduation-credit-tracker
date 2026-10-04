@@ -86,6 +86,8 @@ export default function CommunityPage({ student }) {
   const [privateMessages, setPrivateMessages] = useState([]);
   const [privateDraft, setPrivateDraft] = useState("");
   const messagesEndRef = useRef(null);
+  const privateEndRef = useRef(null);
+  const activeConversationId = activeConversation?.id;
 
   const visibleMessages = useMemo(() => {
     const byId = new Map(messages.map((message) => [message.id, message]));
@@ -239,6 +241,31 @@ export default function CommunityPage({ student }) {
   }
 
   useEffect(() => { refreshPrivateArea(); }, []);
+
+  useEffect(() => {
+    if (!activeConversationId) return;
+    let alive = true;
+    const refresh = async () => {
+      if (document.visibilityState === "hidden") return;
+      try {
+        const latest = await api.getPrivateMessages(activeConversationId);
+        if (!alive) return;
+        setPrivateMessages(latest);
+        if (latest.some((item) => item.sender.id !== student?.id && !item.read_at)) {
+          await api.markPrivateConversationRead(activeConversationId);
+        }
+      } catch {
+        // Keep existing messages visible during temporary connection problems.
+      }
+    };
+    refresh();
+    const interval = window.setInterval(refresh, 3000);
+    return () => { alive = false; window.clearInterval(interval); };
+  }, [activeConversationId, student?.id]);
+
+  useEffect(() => {
+    if (activeConversationId) privateEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [activeConversationId, privateMessages.length]);
 
 
   async function openProfile(studentId) {
