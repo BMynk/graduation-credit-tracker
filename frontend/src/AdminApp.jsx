@@ -1201,6 +1201,7 @@ function StudentDetail({ studentId, onBack, onChanged }) {
 
       setEditForm({
         name: s.name,
+        student_number: s.student_number,
         email: s.email,
         programme_code: s.programme.code,
         current_year: s.current_year,
@@ -1393,6 +1394,7 @@ useEffect(() => {
 
     setEditForm({
       name: student.name,
+      student_number: student.student_number,
       email: student.email,
       programme_code: student.programme.code,
       current_year: student.current_year,
@@ -1911,7 +1913,7 @@ useEffect(() => {
                   </div>
                 </div>
 
-                {/* Student number read-only */}
+                {/* Student number */}
                 <div>
                   <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                     Student number
@@ -1924,9 +1926,15 @@ useEffect(() => {
                     />
 
                     <input
-                      value={student.student_number}
-                      disabled
-                      className="w-full cursor-not-allowed rounded-xl border border-zinc-200 bg-zinc-50 py-3 pl-10 pr-3.5 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-500"
+                      value={editForm.student_number}
+                      onChange={(e) =>
+                        setEditForm((form) => ({
+                          ...form,
+                          student_number: e.target.value,
+                        }))
+                      }
+                      required
+                      className={`${fieldClass} pl-10`}
                     />
                   </div>
                 </div>
