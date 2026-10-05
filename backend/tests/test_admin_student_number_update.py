@@ -10,7 +10,6 @@ from sqlalchemy.pool import StaticPool
 from app import models, schemas
 from app.database import Base
 from app.routers.admin import update_student
-from app.security import hash_password
 
 
 def _session():
@@ -22,7 +21,7 @@ def _session():
 def _students(db):
     programme = models.Programme(code="TEST", name="Test", total_credits_required=384)
     db.add(programme); db.flush()
-    a = models.Student(name="224040182", student_number="Zothani Nzimande", email="a@example.com", programme_id=programme.id, current_year=2, pin_hash=hash_password("123456"))
+    a = models.Student(name="224040182", student_number="Zothani Nzimande", email="a@example.com", programme_id=programme.id, current_year=2, pin_hash="test-pin-hash")
     b = models.Student(name="Other Student", student_number="999999999", email="b@example.com", programme_id=programme.id, current_year=1, pin_hash=hash_password("654321"))
     db.add_all([a, b]); db.commit(); db.refresh(a); db.refresh(b)
     return a, b
