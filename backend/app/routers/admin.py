@@ -519,6 +519,23 @@ def update_student(
         exclude_unset=True
     )
 
+    if "student_number" in updates:
+        new_student_number = updates["student_number"].strip()
+        duplicate = (
+            db.query(models.Student)
+            .filter(
+                models.Student.student_number == new_student_number,
+                models.Student.id != student.id,
+            )
+            .first()
+        )
+        if duplicate is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Student number is already assigned to another student.",
+            )
+        updates["student_number"] = new_student_number
+
     if "programme_code" in updates:
         programme = _get_programme_or_404(
             db,
