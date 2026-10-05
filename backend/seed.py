@@ -474,13 +474,15 @@ PROGRAMME_MODULES = {
         "compulsory": [
             "CSC113", "MAT111", "PHY111", "PHY112", "STA111",
             "CSC121", "MAT121", "PHY121", "PHY122", "STA121",
-            "COC211", "COC212", "STM213", "STM214", "DCS211", "DCS212",
-            "COC223", "COC224", "STM223", "STM224", "DCS223", "DCS224",
+            "COC211", "COC212", "DCS211", "DCS212",
+            "COC223", "COC224", "DCS223", "DCS224",
             "CSC312", "CSC313", "STM312", "STM313",
             "CSC323", "CSC324", "STM322", "STM323",
         ],
         "elective": [
+            "STM213", "STM214",
             "MAT212", "MAT213", "PHY213", "PHY214", "MAP212",
+            "STM223", "STM224",
             "MAT226", "MAT225", "MAT228", "PHY223", "PHY224", "MAP222",
         ],
     },
