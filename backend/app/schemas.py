@@ -133,6 +133,7 @@ class AdminStudentCreate(BaseModel):
 
 class AdminStudentUpdate(BaseModel):
     name: Optional[str] = None
+    student_number: Optional[str] = Field(default=None, min_length=3, max_length=30)
     email: Optional[EmailStr] = None
     programme_code: Optional[str] = None
     current_year: Optional[int] = Field(default=None, ge=1, le=4)
