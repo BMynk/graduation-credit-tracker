@@ -19,7 +19,7 @@ def _session():
 
 
 def _students(db):
-    programme = models.Programme(code="TEST", name="Test", total_credits_required=384)
+    programme = models.Programme(code="TST99", name="Student Number Update Test Programme", total_credits_required=384)
     db.add(programme); db.flush()
     a = models.Student(name="224040182", student_number="Zothani Nzimande", email="a@example.com", programme_id=programme.id, current_year=2, pin_hash="test-pin-hash")
     b = models.Student(name="Other Student", student_number="999999999", email="b@example.com", programme_id=programme.id, current_year=1, pin_hash="test-pin-hash")
